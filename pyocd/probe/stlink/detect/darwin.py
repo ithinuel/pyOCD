@@ -43,9 +43,9 @@ def _plist_from_popen(popen):
 
 
 def _prune(current, keys):
-    """ Reduce the amount of data we have to sift through to only
-        include the specified keys, and children that contain the
-        specified keys
+    """Reduce the amount of data we have to sift through to only
+    include the specified keys, and children that contain the
+    specified keys
     """
     pruned_current = {k: current[k] for k in keys if k in current}
     pruned_children = list(
@@ -63,8 +63,8 @@ def _prune(current, keys):
 
 
 def _dfs_usb_info(obj, parents):
-    """ Find all of the usb info that we can from this particular IORegistry
-        tree with depth first search (and searching the parent stack....)
+    """Find all of the usb info that we can from this particular IORegistry
+    tree with depth first search (and searching the parent stack....)
     """
     output = {}
     if (
@@ -85,8 +85,7 @@ def _dfs_usb_info(obj, parents):
 
 
 class StlinkDetectDarwin(StlinkDetectBase):
-    """ mbed-enabled platform detection on Mac OS X
-    """
+    """mbed-enabled platform detection on Mac OS X"""
 
     def __init__(self, **kwargs):
         StlinkDetectBase.__init__(self, **kwargs)
@@ -110,7 +109,7 @@ class StlinkDetectDarwin(StlinkDetectBase):
         ]
 
     def _mount_points(self):
-        """ Returns map {volume_id: mount_point} """
+        """Returns map {volume_id: mount_point}"""
         diskutil_ls = subprocess.Popen(
             ["diskutil", "list", "-plist"], stdout=subprocess.PIPE
         )
@@ -122,7 +121,7 @@ class StlinkDetectDarwin(StlinkDetectBase):
         }
 
     def _volumes(self):
-        """ returns a map {volume_id: {serial:, vendor_id:, product_id:, tty:}"""
+        """returns a map {volume_id: {serial:, vendor_id:, product_id:, tty:}"""
 
         # to find all the possible mbed volumes, we look for registry entries
         # under all possible USB tree which have a "BSD Name" that starts with
@@ -136,10 +135,10 @@ class StlinkDetectDarwin(StlinkDetectBase):
             # Leaving these here for reference. The code nominally scanned each controller,
             # but a bug (?) caused it to only pay attention to the last one. That seems to
             # work fine, so the others are commented out.
-#             "AppleUSBXHCI",
-#             "AppleUSBUHCI",
-#             "AppleUSBEHCI",
-#             "AppleUSBOHCI",
+            # "AppleUSBXHCI",
+            # "AppleUSBUHCI",
+            # "AppleUSBEHCI",
+            # "AppleUSBOHCI",
             "IOUSBHostDevice",
         ]
 

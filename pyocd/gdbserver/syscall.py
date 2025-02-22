@@ -31,6 +31,7 @@ O_EXCL = 0x800
 # non-zero for semihosting).
 FD_OFFSET = 4
 
+
 class GDBSyscallIOHandler(SemihostIOHandler):
     """@brief Semihosting file I/O handler that performs GDB syscalls."""
 
@@ -46,82 +47,85 @@ class GDBSyscallIOHandler(SemihostIOHandler):
 
         # Convert mode string to flags.
         modeval = 0
-        hasplus = '+' in mode
-        if 'r' in mode:
+        hasplus = "+" in mode
+        if "r" in mode:
             if hasplus:
                 modeval |= O_RDWR
             else:
                 modeval |= O_RDONLY
-        elif 'w' in mode:
+        elif "w" in mode:
             if hasplus:
                 modeval |= O_RDWR | O_CREAT | O_TRUNC
             else:
                 modeval |= O_WRONLY | O_CREAT | O_TRUNC
-        elif 'a' in mode:
+        elif "a" in mode:
             if hasplus:
                 modeval |= O_RDWR | O_APPEND | O_CREAT
             else:
                 modeval |= O_WRONLY | O_APPEND | O_CREAT
 
-        result, self._errno = self._server.syscall('open,%x/%x,%x,%x' % (fnptr, fnlen + 1, modeval, 0o777))
+        result, self._errno = self._server.syscall(
+            "open,%x/%x,%x,%x" % (fnptr, fnlen + 1, modeval, 0o777)
+        )
         if result != -1:
             result += FD_OFFSET
         return result
 
     def close(self, fd):
         fd -= FD_OFFSET
-        result, self._errno = self._server.syscall('close,%x' % (fd))
+        result, self._errno = self._server.syscall("close,%x" % (fd))
         return result
 
     # syscall return: number of bytes written
     # semihost return: 0 is success, or number of bytes not written
     def write(self, fd, ptr, length):
         fd -= FD_OFFSET
-        result, self._errno = self._server.syscall('write,%x,%x,%x' % (fd, ptr, length))
+        result, self._errno = self._server.syscall("write,%x,%x,%x" % (fd, ptr, length))
         return length - result
 
     # syscall return: number of bytes read
     # semihost return: 0 is success, length is EOF, number of bytes not read
     def read(self, fd, ptr, length):
         fd -= FD_OFFSET
-        result, self._errno = self._server.syscall('read,%x,%x,%x' % (fd, ptr, length))
+        result, self._errno = self._server.syscall("read,%x,%x,%x" % (fd, ptr, length))
         return length - result
 
     def readc(self):
         assert self.agent
-        ptr = self.agent.context.read_core_register('sp') - 4
+        ptr = self.agent.context.read_core_register("sp") - 4
         assert isinstance(ptr, int)
-        result, self._errno = self._server.syscall('read,0,%x,1' % (ptr))
+        result, self._errno = self._server.syscall("read,0,%x,1" % (ptr))
         if result != -1:
             result = self.agent.context.read8(ptr)
         return result
 
     def istty(self, fd):
         fd -= FD_OFFSET
-        result, self._errno = self._server.syscall('isatty,%x' % (fd))
+        result, self._errno = self._server.syscall("isatty,%x" % (fd))
         return result
 
     def seek(self, fd, pos):
         fd -= FD_OFFSET
-        result, self._errno = self._server.syscall('lseek,%x,%x,0' % (fd, pos))
+        result, self._errno = self._server.syscall("lseek,%x,%x,0" % (fd, pos))
         return 0 if result != -1 else -1
 
     def flen(self, fd):
         assert self.agent
         fd -= FD_OFFSET
-        ptr = self.agent.context.read_core_register('sp') - 64
+        ptr = self.agent.context.read_core_register("sp") - 64
         assert isinstance(ptr, int)
-        result, self._errno = self._server.syscall('fstat,%x,%x' % (fd, ptr))
+        result, self._errno = self._server.syscall("fstat,%x,%x" % (fd, ptr))
         if result != -1:
             # Fields in stat struct are big endian as written by gdb.
             size = self.agent.context.read_memory_block8(ptr, 8)
-            result = (size[0] << 56) \
-                    | (size[1] << 48) \
-                    | (size[2] << 40) \
-                    | (size[3] << 32) \
-                    | (size[4] << 24) \
-                    | (size[5] << 16) \
-                    | (size[6] << 8) \
-                    | (size[7])
+            result = (
+                (size[0] << 56)
+                | (size[1] << 48)
+                | (size[2] << 40)
+                | (size[3] << 32)
+                | (size[4] << 24)
+                | (size[5] << 16)
+                | (size[6] << 8)
+                | (size[7])
+            )
         return result
-

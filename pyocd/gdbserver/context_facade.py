@@ -20,7 +20,7 @@ from xml.etree import ElementTree
 from itertools import groupby
 
 from ..utility import conversion
-from ..utility.mask import (align_up, round_up_div)
+from ..utility.mask import align_up, round_up_div
 from ..core import exceptions
 from ..core.target import Target
 from ..core.memory_map import MemoryType
@@ -38,22 +38,23 @@ TARGET_XML_HEADER = b"""<?xml version="1.0"?>
 
 ## @brief Maps the fault code found in the IPSR to a GDB signal value.
 FAULT = [
-            signals.SIGSTOP,
-            signals.SIGSTOP,    # Reset
-            signals.SIGINT,     # NMI
-            signals.SIGSEGV,    # HardFault
-            signals.SIGSEGV,    # MemManage
-            signals.SIGBUS,     # BusFault
-            signals.SIGILL,     # UsageFault
-                                                # The rest are not faults
-         ]
+    signals.SIGSTOP,
+    signals.SIGSTOP,  # Reset
+    signals.SIGINT,  # NMI
+    signals.SIGSEGV,  # HardFault
+    signals.SIGSEGV,  # MemManage
+    signals.SIGBUS,  # BusFault
+    signals.SIGILL,  # UsageFault
+    # The rest are not faults
+]
 
 ## @brief Map from the memory type enums to gdb's memory region type names.
 GDB_TYPE_MAP = {
-    MemoryType.RAM: 'ram',
-    MemoryType.ROM: 'rom',
-    MemoryType.FLASH: 'flash',
-    }
+    MemoryType.RAM: "ram",
+    MemoryType.ROM: "rom",
+    MemoryType.FLASH: "flash",
+}
+
 
 class GDBDebugContextFacade(object):
     """@brief Provides GDB specific transformations to a DebugContext."""
@@ -70,8 +71,14 @@ class GDBDebugContextFacade(object):
         #
         # This list is in the order expected by the g/G commands for reading/writing full register contexts.
         # It contains de-duplicated core registers with a valid GDB regnum, sorted by regnum.
-        self._register_list = sorted(set(self._context.core.core_registers.iter_matching(
-                lambda reg: reg.gdb_regnum is not None)), key=lambda v: v.gdb_regnum)
+        self._register_list = sorted(
+            set(
+                self._context.core.core_registers.iter_matching(
+                    lambda reg: reg.gdb_regnum is not None
+                )
+            ),
+            key=lambda v: v.gdb_regnum,
+        )
 
         ## List of internal register numbers corresponding to gdb registers.
         self._full_reg_num_list = [reg.index for reg in self._register_list]
@@ -95,7 +102,7 @@ class GDBDebugContextFacade(object):
         @exception CoreRegisterAccessError
         """
         LOG.debug("GDB getting register context")
-        resp = b''
+        resp = b""
         try:
             vals = self._context.read_core_registers_raw(self._full_reg_num_list)
         except exceptions.CoreRegisterAccessError:
@@ -108,8 +115,12 @@ class GDBDebugContextFacade(object):
             else:
                 r = conversion.uint_to_hex_le(reg_value, reg.bitsize).encode()
             resp += r
-            LOG.debug("GDB get_reg_context: %s = %s -> %s", reg.name,
-                    "None" if (reg_value is None) else ("0x%08X" % reg_value), r)
+            LOG.debug(
+                "GDB get_reg_context: %s = %s -> %s",
+                reg.name,
+                "None" if (reg_value is None) else ("0x%08X" % reg_value),
+                r,
+            )
 
         return resp
 
@@ -126,7 +137,7 @@ class GDBDebugContextFacade(object):
             if offset >= len(data):
                 break
             hex_byte_count = align_up(reg.bitsize // 4, 2)
-            reg_data = data[offset:(offset + hex_byte_count)]
+            reg_data = data[offset : (offset + hex_byte_count)]
             reg_value = conversion.hex_le_to_uint(reg_data, reg.bitsize)
             offset += hex_byte_count
             reg_num_list.append(reg.index)
@@ -162,7 +173,7 @@ class GDBDebugContextFacade(object):
         """
         reg = self._gdb_regnum_map.get(gdb_regnum, None)
         if reg is None:
-            return b''
+            return b""
 
         try:
             reg_value = self._context.read_core_register_raw(reg.name)
@@ -182,12 +193,12 @@ class GDBDebugContextFacade(object):
         - The current value of the important registers (sp, lr, pc).
         """
         if force_signal is not None:
-            response = ('T' + conversion.byte_to_hex2(force_signal)).encode()
+            response = ("T" + conversion.byte_to_hex2(force_signal)).encode()
         else:
-            response = ('T' + conversion.byte_to_hex2(self.get_signal_value())).encode()
+            response = ("T" + conversion.byte_to_hex2(self.get_signal_value())).encode()
 
         # Append fp(r7), sp(r13), lr(r14), pc(r15)
-        response += self._get_reg_index_value_pairs(['r7', 'sp', 'lr', 'pc'])
+        response += self._get_reg_index_value_pairs(["r7", "sp", "lr", "pc"])
 
         return response
 
@@ -199,7 +210,7 @@ class GDBDebugContextFacade(object):
         signal = signals.SIGSTOP
 
         if self._context.core.is_vector_catch():
-            fault = self._context.core.read_core_register('ipsr')
+            fault = self._context.core.read_core_register("ipsr")
             try:
                 signal = FAULT[fault]
             except IndexError:
@@ -216,7 +227,7 @@ class GDBDebugContextFacade(object):
         for the T response string.  NN is the index of the
         register to follow MMMMMMMM is the value of the register.
         """
-        result = b''
+        result = b""
         try:
             reg_values = self._context.read_core_registers_raw(reg_list)
         except exceptions.CoreRegisterAccessError:
@@ -228,28 +239,32 @@ class GDBDebugContextFacade(object):
             reg = self._context.core.core_registers.by_name[reg_name]
             assert reg_value is not None
             encoded_reg = conversion.uint_to_hex_le(reg_value, reg.bitsize)
-            result += (conversion.byte_to_hex2(reg.gdb_regnum) + ':' + encoded_reg + ';').encode()
+            result += (
+                conversion.byte_to_hex2(reg.gdb_regnum) + ":" + encoded_reg + ";"
+            ).encode()
         return result
 
     def get_memory_map_xml(self):
-        """@brief Generate GDB memory map XML.
-        """
-        root = ElementTree.Element('memory-map')
-        for r in  self._context.core.memory_map:
+        """@brief Generate GDB memory map XML."""
+        root = ElementTree.Element("memory-map")
+        for r in self._context.core.memory_map:
             # Look up the region type name. Regions default to ram if gdb doesn't
             # have a concept of the region type.
-            gdb_type = GDB_TYPE_MAP.get(r.type, 'ram')
+            gdb_type = GDB_TYPE_MAP.get(r.type, "ram")
 
             start = hex(r.start).rstrip("L")
             length = hex(r.length).rstrip("L")
-            mem = ElementTree.SubElement(root, 'memory', type=gdb_type, start=start, length=length)
+            mem = ElementTree.SubElement(
+                root, "memory", type=gdb_type, start=start, length=length
+            )
             if r.is_flash:
-                prop = ElementTree.SubElement(mem, 'property', name='blocksize')
+                prop = ElementTree.SubElement(mem, "property", name="blocksize")
                 prop.text = hex(r.blocksize).rstrip("L")
         return MAP_XML_HEADER + ElementTree.tostring(root)
 
     def _define_xpsr_control_fields(self, xml_feature):
         """@brief Define XPSR and CONTROL register types with fields."""
+        # fmt: off
         control = ElementTree.SubElement(xml_feature, 'flags', id="control", size="4")
         ElementTree.SubElement(control, "field", name="nPRIV", start="0", end="0", type="bool")
         ElementTree.SubElement(control, "field", name="SPSEL", start="1", end="1", type="bool")
@@ -273,11 +288,17 @@ class GDBDebugContextFacade(object):
         ElementTree.SubElement(xpsr, "field", name="xpsr", type="uint32")
         ElementTree.SubElement(xpsr, "field", name="apsr", type="apsr")
         ElementTree.SubElement(xpsr, "field", name="ipsr", type="ipsr")
+        # fmt: on
 
     def _build_target_xml(self):
         # Extract list of registers, group into gdb features.
-        regs_sorted_by_feature = sorted(self._register_list, key=lambda r: r.gdb_feature) # Must sort for groupby().
-        regs_by_feature = {k: list(g) for k, g in groupby(regs_sorted_by_feature, key=lambda r: r.gdb_feature)}
+        regs_sorted_by_feature = sorted(
+            self._register_list, key=lambda r: r.gdb_feature
+        )  # Must sort for groupby().
+        regs_by_feature = {
+            k: list(g)
+            for k, g in groupby(regs_sorted_by_feature, key=lambda r: r.gdb_feature)
+        }
         unordered_features = list(regs_by_feature.keys())
         features = []
 
@@ -289,9 +310,11 @@ class GDBDebugContextFacade(object):
         # Add any remaining features at the end of the feature list.
         features += unordered_features
 
-        use_xpsr_control_fields = self._context.session.options.get('xpsr_control_fields')
+        use_xpsr_control_fields = self._context.session.options.get(
+            "xpsr_control_fields"
+        )
 
-        xml_root = ElementTree.Element('target')
+        xml_root = ElementTree.Element("target")
 
         for feature_name in features:
             regs = regs_by_feature[feature_name]
@@ -299,17 +322,26 @@ class GDBDebugContextFacade(object):
             xml_feature = ElementTree.SubElement(xml_root, "feature", name=feature_name)
 
             # Special case for XPSR and CONTROL bitfield presentation.
-            if (feature_name == "org.gnu.gdb.arm.m-profile") and use_xpsr_control_fields:
+            if (
+                feature_name == "org.gnu.gdb.arm.m-profile"
+            ) and use_xpsr_control_fields:
                 self._define_xpsr_control_fields(xml_feature)
 
             # Add XML for the registers in this feature.
             for reg in regs:
-                if use_xpsr_control_fields and (reg.name in ('xpsr', 'control')):
+                if use_xpsr_control_fields and (reg.name in ("xpsr", "control")):
                     reg_type = reg.name
                 else:
                     reg_type = reg.gdb_type
-                ElementTree.SubElement(xml_feature, 'reg', name=reg.name, bitsize=str(reg.bitsize),
-                        type=reg_type, group=reg.group, regnum=str(reg.gdb_regnum))
+                ElementTree.SubElement(
+                    xml_feature,
+                    "reg",
+                    name=reg.name,
+                    bitsize=str(reg.bitsize),
+                    type=reg_type,
+                    group=reg.group,
+                    regnum=str(reg.gdb_regnum),
+                )
 
         return TARGET_XML_HEADER + ElementTree.tostring(xml_root)
 
@@ -318,5 +350,3 @@ class GDBDebugContextFacade(object):
 
     def flush(self):
         self._context.core.flush()
-
-

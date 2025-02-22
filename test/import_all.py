@@ -24,16 +24,17 @@ import pyocd
 # Total count of modules imported.
 import_count = 0
 
+
 def process_dir(dotted_path: str, dir_path: Path) -> None:
     global import_count
     for entry in sorted(dir_path.iterdir(), key=lambda v: v.name):
-        is_subpackage = (entry.is_dir() and (entry / "__init__.py").exists())
+        is_subpackage = entry.is_dir() and (entry / "__init__.py").exists()
         is_module = entry.suffix == ".py"
 
         if not (is_subpackage or is_module):
             continue
 
-        module_path = dotted_path + '.' + entry.stem
+        module_path = dotted_path + "." + entry.stem
         print(f"Importing: {module_path}")
         import_module(module_path)
         import_count += 1
@@ -42,11 +43,13 @@ def process_dir(dotted_path: str, dir_path: Path) -> None:
         if is_subpackage:
             process_dir(module_path, entry)
 
+
 def main() -> None:
     pyocd_path = Path(pyocd.__file__).parent.resolve()
     print(f"pyocd package path: {pyocd_path}")
     process_dir("pyocd", pyocd_path)
     print(f"Imported {import_count} modules successfully")
+
 
 if __name__ == "__main__":
     main()

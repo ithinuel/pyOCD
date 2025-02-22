@@ -21,10 +21,23 @@ import logging
 from contextlib import contextmanager
 from functools import total_ordering
 from enum import Enum
-from typing import (Any, Callable, Dict, Generator, Optional, TYPE_CHECKING, Sequence, Set, Tuple, Type, Union, overload)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Optional,
+    TYPE_CHECKING,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    overload,
+)
 from typing_extensions import Literal
 
-from ..core import (exceptions, memory_interface)
+from ..core import exceptions, memory_interface
 from ..core.target import Target
 from ..utility.concurrency import locked
 
@@ -45,10 +58,10 @@ AP_IDR = 0xFC
 ## Offset of IDR register in an APv2.
 APv2_IDR = 0xDFC
 
-A32 = 0x0c
+A32 = 0x0C
 APSEL_SHIFT = 24
-APSEL = 0xff000000
-APBANKSEL = 0x000000f0
+APSEL = 0xFF000000
+APBANKSEL = 0x000000F0
 APSEL_APBANKSEL = APSEL | APBANKSEL
 
 ## @brief Mask for register address within the AP address space.
@@ -56,14 +69,14 @@ APSEL_APBANKSEL = APSEL | APBANKSEL
 # v1 APs have a 256 byte register space. v2 APs have a 4 kB register space. This mask is
 # larger than the APv1 register space, but this is not problematic because v1 APs only have
 # the 8-bit APSEL in bits 31:24 of the address, thus no possibility of conflict.
-APREG_MASK = 0x00000ffc
+APREG_MASK = 0x00000FFC
 
 # AP BASE register masks
 AP_BASE_FORMAT_MASK = 0x2
 AP_BASE_ENTRY_PRESENT_MASK = 0x1
-AP_BASE_BASEADDR_MASK = 0xfffffffc
-AP_BASE_LEGACY_NOTPRESENT = 0xffffffff # Legacy not present value
-AP_BASE_LEGACY_BASEADDR_MASK = 0xfffff000
+AP_BASE_BASEADDR_MASK = 0xFFFFFFFC
+AP_BASE_LEGACY_NOTPRESENT = 0xFFFFFFFF  # Legacy not present value
+AP_BASE_LEGACY_BASEADDR_MASK = 0xFFFFF000
 
 # AP IDR bitfields:
 # [31:28] Revision
@@ -73,18 +86,18 @@ AP_BASE_LEGACY_BASEADDR_MASK = 0xfffff000
 # [12:8]  Reserved
 # [7:4]   AP Variant (non-zero for JTAG-AP)
 # [3:0]   AP Type
-AP_IDR_REVISION_MASK = 0xf0000000
+AP_IDR_REVISION_MASK = 0xF0000000
 AP_IDR_REVISION_SHIFT = 28
-AP_IDR_JEP106_MASK = 0x0ffe0000
+AP_IDR_JEP106_MASK = 0x0FFE0000
 AP_IDR_JEP106_SHIFT = 17
-AP_IDR_CLASS_MASK = 0x0001e000
+AP_IDR_CLASS_MASK = 0x0001E000
 AP_IDR_CLASS_SHIFT = 13
-AP_IDR_VARIANT_MASK = 0x000000f0
+AP_IDR_VARIANT_MASK = 0x000000F0
 AP_IDR_VARIANT_SHIFT = 4
-AP_IDR_TYPE_MASK = 0x0000000f
+AP_IDR_TYPE_MASK = 0x0000000F
 
 # The CoreSight ARCHID value for the CSSOC-600 APv1 Adapter.
-UNKNOWN_AP_ARCHID = 0x0a47
+UNKNOWN_AP_ARCHID = 0x0A47
 
 ## The control registers for a v2 MEM-AP start at an offset.
 MEM_APv2_CONTROL_REG_OFFSET = 0xD00
@@ -93,16 +106,16 @@ MEM_APv2_CONTROL_REG_OFFSET = 0xD00
 MEM_AP_CSW = 0x00
 MEM_AP_TAR = 0x04
 MEM_AP_DRW = 0x0C
-MEM_AP_TRR = 0x24 # Only APv2 with ERRv1
+MEM_AP_TRR = 0x24  # Only APv2 with ERRv1
 MEM_AP_BASE_HI = 0xF0
 MEM_AP_CFG = 0xF4
 MEM_AP_BASE = 0xF8
 
-MEM_AP_CFG_TARINC_MASK = 0x000f0000
+MEM_AP_CFG_TARINC_MASK = 0x000F0000
 MEM_AP_CFG_TARINC_SHIFT = 16
-MEM_AP_CFG_ERR_MASK = 0x00000f00
+MEM_AP_CFG_ERR_MASK = 0x00000F00
 MEM_AP_CFG_ERR_SHIFT = 8
-MEM_AP_CFG_DARSIZE_MASK = 0x000000f0
+MEM_AP_CFG_DARSIZE_MASK = 0x000000F0
 MEM_AP_CFG_DARSIZE_SHIFT = 4
 MEM_AP_CFG_LD_MASK = 0x00000004
 MEM_AP_CFG_LA_MASK = 0x00000002
@@ -111,6 +124,7 @@ MEM_AP_CFG_ERR_V1 = 1
 
 MEM_AP_TRR_ERR_MASK = 0x00000001
 
+# fmt: off
 # AP Control and Status Word definitions
 CSW_SIZE     =  0x00000007
 CSW_SIZE8    =  0x00000000
@@ -133,18 +147,20 @@ CSW_MSTRTYPE =  0x20000000 # Only present in M3/M3 AHB-AP, RES0 in others
 CSW_MSTRCORE =  0x00000000
 CSW_MSTRDBG  =  0x20000000
 CSW_DBGSWEN  =  0x80000000 # Only present in CSSoC-400 APB-AP, RES0 in others
+# fmt: on
 
 DEFAULT_CSW_VALUE = CSW_SADDRINC
 
-TRANSFER_SIZE = {8: CSW_SIZE8,
-                 16: CSW_SIZE16,
-                 32: CSW_SIZE32,
-                 64: CSW_SIZE64,
-                 128: CSW_SIZE128,
-                 256: CSW_SIZE256,
-                 }
+TRANSFER_SIZE = {
+    8: CSW_SIZE8,
+    16: CSW_SIZE16,
+    32: CSW_SIZE32,
+    64: CSW_SIZE64,
+    128: CSW_SIZE128,
+    256: CSW_SIZE256,
+}
 
-CSW_HPROT_MASK = 0x0f000000 # HPROT[3:0]
+CSW_HPROT_MASK = 0x0F000000  # HPROT[3:0]
 CSW_HPROT_SHIFT = 24
 
 CSW_HNONSEC_MASK = 0x40000000
@@ -173,14 +189,17 @@ HPROT_NONSHAREABLE = 0x00
 # Debug Exception and Monitor Control Register
 DEMCR = 0xE000EDFC
 # DWTENA in armv6 architecture reference manual
-DEMCR_TRCENA = (1 << 24)
+DEMCR_TRCENA = 1 << 24
+
 
 class APVersion(Enum):
     """@brief Supported versions of APs."""
+
     ## APv1 from ADIv5.x.
     APv1 = 1
     ## APv2 from ADIv6.
     APv2 = 2
+
 
 @total_ordering
 class APAddressBase:
@@ -249,9 +268,11 @@ class APAddressBase:
         Supports comparing against raw (int) nominal addresses, in which case the DP index is ignored.
         """
         if isinstance(other, APAddressBase):
-            return (self.nominal_address == other.nominal_address) and (self.dp_index == other.dp_index)
+            return (self.nominal_address == other.nominal_address) and (
+                self.dp_index == other.dp_index
+            )
         elif isinstance(other, int):
-            return (self.nominal_address == other)
+            return self.nominal_address == other
         else:
             return False
 
@@ -261,9 +282,11 @@ class APAddressBase:
         Supports comparing against raw (int) nominal addresses, in which case the DP index is ignored.
         """
         if isinstance(other, APAddressBase):
-            return (self.nominal_address < other.nominal_address) and (self.dp_index < other.dp_index)
+            return (self.nominal_address < other.nominal_address) and (
+                self.dp_index < other.dp_index
+            )
         elif isinstance(other, int):
-            return (self.nominal_address < other)
+            return self.nominal_address < other
         else:
             return False
 
@@ -271,7 +294,10 @@ class APAddressBase:
         raise NotImplementedError()
 
     def __repr__(self) -> str:
-        return "<{}@{:#x} {} dp={}>".format(self.__class__.__name__, id(self), str(self), self.dp_index)
+        return "<{}@{:#x} {} dp={}>".format(
+            self.__class__.__name__, id(self), str(self), self.dp_index
+        )
+
 
 class APv1Address(APAddressBase):
     """@brief Represents the address for an APv1.
@@ -302,6 +328,7 @@ class APv1Address(APAddressBase):
     def __str__(self) -> str:
         return "#%d" % self.apsel
 
+
 class APv2Address(APAddressBase):
     """@brief Represents the address for an APv2.
 
@@ -328,6 +355,7 @@ class APv2Address(APAddressBase):
     def __str__(self) -> str:
         return "@0x%x" % self.address
 
+
 class AccessPort:
     """@brief Base class for a CoreSight Access Port (AP) instance."""
 
@@ -346,10 +374,10 @@ class AccessPort:
 
     @staticmethod
     def create(
-            dp: DebugPort,
-            ap_address: APAddressBase,
-            cmpid: Optional[CoreSightComponentID] = None
-        ) -> "AccessPort":
+        dp: DebugPort,
+        ap_address: APAddressBase,
+        cmpid: Optional[CoreSightComponentID] = None,
+    ) -> "AccessPort":
         """@brief Create a new AP object.
 
         Determines the type of the AP by examining the IDR value and creates a new
@@ -394,14 +422,14 @@ class AccessPort:
         return ap
 
     def __init__(
-                self,
-                dp: DebugPort,
-                ap_address: APAddressBase,
-                idr: Optional[int] = None,
-                name: Optional[str] = None,
-                flags: int = 0,
-                cmpid: Optional[CoreSightComponentID] = None
-            ) -> None:
+        self,
+        dp: DebugPort,
+        ap_address: APAddressBase,
+        idr: Optional[int] = None,
+        name: Optional[str] = None,
+        flags: int = 0,
+        cmpid: Optional[CoreSightComponentID] = None,
+    ) -> None:
         """@brief AP constructor.
         @param self
         @param dp The DebugPort object.
@@ -429,7 +457,7 @@ class AccessPort:
 
     @property
     def description(self) -> str:
-        """ @brief The AP's type and version description.
+        """@brief The AP's type and version description.
 
         If the AP is an unknown proprietary type, then only the string "proprietary" is returned.
 
@@ -442,7 +470,7 @@ class AccessPort:
 
     @property
     def short_description(self) -> str:
-        """ @brief The AP's name and address."""
+        """@brief The AP's name and address."""
         return self.type_name + str(self.address)
 
     @property
@@ -471,20 +499,16 @@ class AccessPort:
         pass
 
     @overload
-    def read_reg(self, addr: int) -> int:
-        ...
+    def read_reg(self, addr: int) -> int: ...
 
     @overload
-    def read_reg(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_reg(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_reg(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_reg(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_reg(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_reg(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     @locked
     def read_reg(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
@@ -516,7 +540,13 @@ class AccessPort:
 
     def __repr__(self) -> str:
         return "<{}@{:x} {} idr={:08x} rom={:08x}>".format(
-            self.__class__.__name__, id(self), self.short_description, self.idr, self.rom_addr)
+            self.__class__.__name__,
+            id(self),
+            self.short_description,
+            self.idr,
+            self.rom_addr,
+        )
+
 
 class MEM_AP(AccessPort, memory_interface.MemoryInterface):
     """@brief MEM-AP component.
@@ -541,14 +571,14 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
     """
 
     def __init__(
-                self,
-                dp: DebugPort,
-                ap_address: APAddressBase,
-                idr: Optional[int] = None,
-                name: Optional[str] = None,
-                flags: int = 0,
-                cmpid: Optional[CoreSightComponentID] = None
-            ) -> None:
+        self,
+        dp: DebugPort,
+        ap_address: APAddressBase,
+        idr: Optional[int] = None,
+        name: Optional[str] = None,
+        flags: int = 0,
+        cmpid: Optional[CoreSightComponentID] = None,
+    ) -> None:
         super().__init__(dp, ap_address, idr, name, flags, cmpid)
 
         # Check AP version and set the offset to the control and status registers.
@@ -588,13 +618,15 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         # The AP_4K_WRAP flag indicates a 4 kB wrap size. Otherwise it defaults to the smallest
         # size supported by all targets. A size smaller than the supported size will decrease
         # performance due to the extra address writes, but will not create any read/write errors.
-        self.auto_increment_page_size: int = 0x1000 if (self._flags & AP_4K_WRAP) else 0x400
+        self.auto_increment_page_size: int = (
+            0x1000 if (self._flags & AP_4K_WRAP) else 0x400
+        )
 
         ## Number of DAR registers.
         self._dar_count: int = 0
 
         ## Mask of addresses. This indicates whether 32-bit or 64-bit addresses are supported.
-        self._address_mask: int = 0xffffffff
+        self._address_mask: int = 0xFFFFFFFF
 
         ## Whether the Large Data extension is supported.
         self._has_large_data: bool = False
@@ -602,9 +634,14 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         # Ask the probe for an accelerated memory interface for this AP. If it provides one,
         # then bind our memory interface APIs to its methods. Otherwise use our standard
         # memory interface based on AP register accesses.
-        self._accelerated_memory_interface = self.dp.probe.get_memory_interface_for_ap(self.address)
+        self._accelerated_memory_interface = self.dp.probe.get_memory_interface_for_ap(
+            self.address
+        )
         if self._accelerated_memory_interface is not None:
-            LOG.debug("Using accelerated memory access interface for %s", self.short_description)
+            LOG.debug(
+                "Using accelerated memory access interface for %s",
+                self.short_description,
+            )
             self.write_memory = self._accelerated_write_memory
             self.read_memory = self._accelerated_read_memory
             self.write_memory_block32 = self._accelerated_write_memory_block32
@@ -618,7 +655,9 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
             self.read_memory_block32 = self._read_memory_block32
 
         # Subscribe to reset events.
-        self.dp.session.subscribe(self._reset_did_occur, (Target.Event.PRE_RESET, Target.Event.POST_RESET))
+        self.dp.session.subscribe(
+            self._reset_did_occur, (Target.Event.PRE_RESET, Target.Event.POST_RESET)
+        )
 
     @property
     def supported_transfer_sizes(self) -> Set[int]:
@@ -689,7 +728,7 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
 
             # Check for 64-bit address support.
             if cfg & MEM_AP_CFG_LA_MASK:
-                self._address_mask = 0xffffffffffffffff
+                self._address_mask = 0xFFFFFFFFFFFFFFFF
 
             # Check for Large Data extension.
             if cfg & MEM_AP_CFG_LD_MASK:
@@ -748,10 +787,14 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
                 size.
                 """
                 # Write CSW_SIZE to select requested transfer size.
-                AccessPort.write_reg(self, self._reg_offset + MEM_AP_CSW, original_csw & ~CSW_SIZE | sz)
+                AccessPort.write_reg(
+                    self, self._reg_offset + MEM_AP_CSW, original_csw & ~CSW_SIZE | sz
+                )
 
                 # Read back CSW and see if SIZE matches what we wrote.
-                csw_cb = AccessPort.read_reg(self, self._reg_offset + MEM_AP_CSW, now=False)
+                csw_cb = AccessPort.read_reg(
+                    self, self._reg_offset + MEM_AP_CSW, now=False
+                )
 
                 return lambda: (csw_cb() & CSW_SIZE) == sz
 
@@ -759,10 +802,18 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
 
             if self._has_large_data:
                 # Need to scan all sizes except 32-bit, which is required.
-                SIZES_TO_TEST = (CSW_SIZE8, CSW_SIZE16, CSW_SIZE64, CSW_SIZE128, CSW_SIZE256)
+                SIZES_TO_TEST = (
+                    CSW_SIZE8,
+                    CSW_SIZE16,
+                    CSW_SIZE64,
+                    CSW_SIZE128,
+                    CSW_SIZE256,
+                )
 
                 sz_result_cbs = ((sz, _test_transfer_size(sz)) for sz in SIZES_TO_TEST)
-                self._transfer_sizes = {32} | {(8 * (1 << sz)) for sz, cb in sz_result_cbs if cb()}
+                self._transfer_sizes = {32} | {
+                    (8 * (1 << sz)) for sz, cb in sz_result_cbs if cb()
+                }
                 # self._transfer_sizes.sort()
 
             elif _test_transfer_size(CSW_SIZE16)():
@@ -776,17 +827,29 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
             """
             default_hprot = (original_csw & CSW_HPROT_MASK) >> CSW_HPROT_SHIFT
             default_hnonsec = (original_csw & CSW_HNONSEC_MASK) >> CSW_HNONSEC_SHIFT
-            LOG.debug("%s default HPROT=%x HNONSEC=%x", self.short_description, default_hprot, default_hnonsec)
+            LOG.debug(
+                "%s default HPROT=%x HNONSEC=%x",
+                self.short_description,
+                default_hprot,
+                default_hnonsec,
+            )
 
             # Now attempt to see which HPROT and HNONSEC bits are implemented.
-            AccessPort.write_reg(self, self._reg_offset + MEM_AP_CSW,
-                    original_csw | CSW_HNONSEC_MASK | CSW_HPROT_MASK)
+            AccessPort.write_reg(
+                self,
+                self._reg_offset + MEM_AP_CSW,
+                original_csw | CSW_HNONSEC_MASK | CSW_HPROT_MASK,
+            )
             csw = AccessPort.read_reg(self, self._reg_offset + MEM_AP_CSW)
 
             self._impl_hprot = (csw & CSW_HPROT_MASK) >> CSW_HPROT_SHIFT
             self._impl_hnonsec = (csw & CSW_HNONSEC_MASK) >> CSW_HNONSEC_SHIFT
-            LOG.debug("%s implemented HPROT=%x HNONSEC=%x", self.short_description, self._impl_hprot,
-                    self._impl_hnonsec)
+            LOG.debug(
+                "%s implemented HPROT=%x HNONSEC=%x",
+                self.short_description,
+                self._impl_hprot,
+                self._impl_hnonsec,
+            )
 
             # Update current HPROT and HNONSEC, and the current base CSW value.
             self.hprot = self._hprot & self._impl_hprot
@@ -800,13 +863,17 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
             is_legacy_base_present = not is_adiv5_base and not is_base_present
             if is_legacy_base_present:
                 self.has_rom_table = True
-                self.rom_addr = base & AP_BASE_LEGACY_BASEADDR_MASK # clear format and present bits
+                self.rom_addr = (
+                    base & AP_BASE_LEGACY_BASEADDR_MASK
+                )  # clear format and present bits
             elif (base == AP_BASE_LEGACY_NOTPRESENT) or (not is_base_present):
                 self.has_rom_table = False
                 self.rom_addr = 0
             elif is_adiv5_base and is_base_present:
                 self.has_rom_table = True
-                self.rom_addr = base & AP_BASE_BASEADDR_MASK # clear format and present bits
+                self.rom_addr = (
+                    base & AP_BASE_BASEADDR_MASK
+                )  # clear format and present bits
             else:
                 raise exceptions.TargetError("invalid AP BASE value 0x%08x" % base)
 
@@ -824,11 +891,14 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         try:
             if self.has_rom_table:
                 if not self.is_enabled:
-                    LOG.warning("Skipping CoreSight discovery for %s because it is disabled", self.short_description)
+                    LOG.warning(
+                        "Skipping CoreSight discovery for %s because it is disabled",
+                        self.short_description,
+                    )
                     return
 
                 # Import locally to work around circular import.
-                from .rom_table import (CoreSightComponentID, ROMTable)
+                from .rom_table import CoreSightComponentID, ROMTable
 
                 # Read the ROM table component IDs.
                 cmpid = CoreSightComponentID(None, self, self.rom_addr)
@@ -839,8 +909,12 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
                     self.rom_table = ROMTable.create(self, cmpid, self.rom_addr)
                     self.rom_table.init()
         except exceptions.TransferError as error:
-            LOG.error("Transfer error while reading %s ROM table: %s", self.short_description, error,
-                exc_info=self.dp.session.log_tracebacks)
+            LOG.error(
+                "Transfer error while reading %s ROM table: %s",
+                self.short_description,
+                error,
+                exc_info=self.dp.session.log_tracebacks,
+            )
 
     @property
     def implemented_hprot_mask(self) -> int:
@@ -872,8 +946,7 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         """
         self._hprot = value & (CSW_HPROT_MASK >> CSW_HPROT_SHIFT)
 
-        self._csw = ((self._csw & ~CSW_HPROT_MASK)
-                            | (self._hprot << CSW_HPROT_SHIFT))
+        self._csw = (self._csw & ~CSW_HPROT_MASK) | (self._hprot << CSW_HPROT_SHIFT)
 
     @property
     def hnonsec(self) -> int:
@@ -891,8 +964,9 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         """
         self._hnonsec = value & (CSW_HNONSEC_MASK >> CSW_HNONSEC_SHIFT)
 
-        self._csw = ((self._csw & ~CSW_HNONSEC_MASK)
-                            | (self._hnonsec << CSW_HNONSEC_SHIFT))
+        self._csw = (self._csw & ~CSW_HNONSEC_MASK) | (
+            self._hnonsec << CSW_HNONSEC_SHIFT
+        )
 
     class _MemAttrContext:
         """@brief Context manager for temporarily setting HPROT and/or HNONSEC.
@@ -900,7 +974,10 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         The AP is locked during the lifetime of the context manager. This means that only the
         calling thread can perform memory transactions.
         """
-        def __init__(self, ap: MEM_AP, hprot: Optional[int] = None, hnonsec: Optional[int] = None):
+
+        def __init__(
+            self, ap: MEM_AP, hprot: Optional[int] = None, hnonsec: Optional[int] = None
+        ):
             self._ap = ap
             self._hprot = hprot
             self._saved_hprot = None
@@ -917,7 +994,9 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
                 self._ap.hnonsec = self._hnonsec
             return self
 
-        def __exit__(self, exc_type: type, value: Any, traceback: TracebackType) -> None:
+        def __exit__(
+            self, exc_type: type, value: Any, traceback: TracebackType
+        ) -> None:
             if self._saved_hprot is not None:
                 self._ap.hprot = self._saved_hprot
             if self._saved_hnonsec is not None:
@@ -944,25 +1023,25 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         return self.hnonsec_lock(NONSECURE)
 
     @overload
-    def read_reg(self, addr: int) -> int:
-        ...
+    def read_reg(self, addr: int) -> int: ...
 
     @overload
-    def read_reg(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_reg(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_reg(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_reg(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_reg(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_reg(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     @locked
     def read_reg(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
         ap_regaddr = addr & APREG_MASK
-        if ap_regaddr == self._reg_offset + MEM_AP_CSW and self._cached_csw != -1 and now:
+        if (
+            ap_regaddr == self._reg_offset + MEM_AP_CSW
+            and self._cached_csw != -1
+            and now
+        ):
             return self._cached_csw
         return self.dp.read_ap(self.address.address + addr, now)
 
@@ -975,8 +1054,13 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
             if data == self._cached_csw:
                 if TRACE.isEnabledFor(logging.INFO):
                     num = self.dp.next_access_number
-                    TRACE.debug("write_ap:%06d cached (ap=0x%x; addr=0x%08x) = 0x%08x",
-                        num, self.address.nominal_address, addr, data)
+                    TRACE.debug(
+                        "write_ap:%06d cached (ap=0x%x; addr=0x%08x) = 0x%08x",
+                        num,
+                        self.address.nominal_address,
+                        addr,
+                        data,
+                    )
                 return
             self._cached_csw = data
 
@@ -1008,12 +1092,22 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         assert (addr & (transfer_size // 8 - 1)) == 0
         addr &= self._address_mask
         if transfer_size not in self._transfer_sizes:
-            raise exceptions.TransferError("%d-bit transfers are not supported by %s"
-                % (transfer_size, self.short_description))
+            raise exceptions.TransferError(
+                "%d-bit transfers are not supported by %s"
+                % (transfer_size, self.short_description)
+            )
         num = self.dp.next_access_number
-        TRACE.debug("write_mem:%06d (ap=0x%x; addr=0x%08x, size=%d) = 0x%08x {",
-            num, self.address.nominal_address, addr, transfer_size, data)
-        self.write_reg(self._reg_offset + MEM_AP_CSW, self._csw | TRANSFER_SIZE[transfer_size])
+        TRACE.debug(
+            "write_mem:%06d (ap=0x%x; addr=0x%08x, size=%d) = 0x%08x {",
+            num,
+            self.address.nominal_address,
+            addr,
+            transfer_size,
+            data,
+        )
+        self.write_reg(
+            self._reg_offset + MEM_AP_CSW, self._csw | TRANSFER_SIZE[transfer_size]
+        )
 
         try:
             self.write_reg(self._reg_offset + MEM_AP_TAR, addr)
@@ -1027,10 +1121,15 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
                 self.write_reg(self._reg_offset + MEM_AP_DRW, data)
             else:
                 # Split the value into a tuple of 32-bit words, least-significant first.
-                data_words = list(((data >> (32 * i)) & 0xffffffff) for i in range(transfer_size // 32))
+                data_words = list(
+                    ((data >> (32 * i)) & 0xFFFFFFFF)
+                    for i in range(transfer_size // 32)
+                )
 
                 # Multi-word transfer.
-                self.dp.write_ap_multiple(self.address.address + self._reg_offset + MEM_AP_DRW, data_words)
+                self.dp.write_ap_multiple(
+                    self.address.address + self._reg_offset + MEM_AP_DRW, data_words
+                )
         except exceptions.TransferFaultError as error:
             # Annotate error with target address.
             self._handle_error(error, num)
@@ -1043,23 +1142,27 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         TRACE.debug("write_mem:%06d }", num)
 
     @overload
-    def _read_memory(self, addr: int, transfer_size: int = 32) -> int:
-        ...
+    def _read_memory(self, addr: int, transfer_size: int = 32) -> int: ...
 
     @overload
-    def _read_memory(self, addr: int, transfer_size: int = 32, now: Literal[True] = True) -> int:
-        ...
+    def _read_memory(
+        self, addr: int, transfer_size: int = 32, now: Literal[True] = True
+    ) -> int: ...
 
     @overload
-    def _read_memory(self, addr: int, transfer_size: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def _read_memory(
+        self, addr: int, transfer_size: int, now: Literal[False]
+    ) -> Callable[[], int]: ...
 
     @overload
-    def _read_memory(self, addr: int, transfer_size: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def _read_memory(
+        self, addr: int, transfer_size: int, now: bool
+    ) -> Union[int, Callable[[], int]]: ...
 
     @locked
-    def _read_memory(self, addr: int, transfer_size: int = 32, now: bool = True) -> Union[int, Callable[[], int]]:
+    def _read_memory(
+        self, addr: int, transfer_size: int = 32, now: bool = True
+    ) -> Union[int, Callable[[], int]]:
         """@brief Read a memory location.
 
         By default, a word will be read.
@@ -1069,21 +1172,33 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         assert (addr & (transfer_size // 8 - 1)) == 0
         addr &= self._address_mask
         if transfer_size not in self._transfer_sizes:
-            raise exceptions.TransferError("%d-bit transfers are not supported by %s"
-                % (transfer_size, self.short_description))
+            raise exceptions.TransferError(
+                "%d-bit transfers are not supported by %s"
+                % (transfer_size, self.short_description)
+            )
         num = self.dp.next_access_number
-        TRACE.debug("read_mem:%06d (ap=0x%x; addr=0x%08x, size=%d) {",
-            num, self.address.nominal_address, addr, transfer_size)
+        TRACE.debug(
+            "read_mem:%06d (ap=0x%x; addr=0x%08x, size=%d) {",
+            num,
+            self.address.nominal_address,
+            addr,
+            transfer_size,
+        )
         try:
-            self.write_reg(self._reg_offset + MEM_AP_CSW, self._csw | TRANSFER_SIZE[transfer_size])
+            self.write_reg(
+                self._reg_offset + MEM_AP_CSW, self._csw | TRANSFER_SIZE[transfer_size]
+            )
             self.write_reg(self._reg_offset + MEM_AP_TAR, addr)
 
             if transfer_size <= 32:
                 result_cb = self.read_reg(self._reg_offset + MEM_AP_DRW, now=False)
             else:
                 # Multi-word transfer.
-                result_cb_mw = self.dp.read_ap_multiple(self.address.address + self._reg_offset + MEM_AP_DRW,
-                        transfer_size // 32, now=False)
+                result_cb_mw = self.dp.read_ap_multiple(
+                    self.address.address + self._reg_offset + MEM_AP_DRW,
+                    transfer_size // 32,
+                    now=False,
+                )
         except exceptions.TransferFaultError as error:
             # Annotate error with target address.
             self._handle_error(error, num)
@@ -1097,16 +1212,23 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         def read_mem_cb() -> int:
             try:
                 if transfer_size <= 32:
-                    res = result_cb() # type: ignore # ignore possibly unbound result_cb
+                    res = result_cb()  # type: ignore # ignore possibly unbound result_cb
                     if transfer_size == 8:
-                        res = (res >> ((addr & 0x03) << 3) & 0xff)
+                        res = res >> ((addr & 0x03) << 3) & 0xFF
                     elif transfer_size == 16:
-                        res = (res >> ((addr & 0x02) << 3) & 0xffff)
+                        res = res >> ((addr & 0x02) << 3) & 0xFFFF
                 else:
-                    res_mw = result_cb_mw() # type: ignore # ignore possibly unbound result_cb_mw
+                    res_mw = result_cb_mw()  # type: ignore # ignore possibly unbound result_cb_mw
                     res = sum((w << (32 * i)) for i, w in enumerate(res_mw))
-                TRACE.debug("read_mem:%06d %s(ap=0x%x; addr=0x%08x, size=%d) -> 0x%08x }",
-                    num, "" if now else "...", self.address.nominal_address, addr, transfer_size, res)
+                TRACE.debug(
+                    "read_mem:%06d %s(ap=0x%x; addr=0x%08x, size=%d) -> 0x%08x }",
+                    num,
+                    "" if now else "...",
+                    self.address.nominal_address,
+                    addr,
+                    transfer_size,
+                    res,
+                )
                 return res
             except exceptions.TransferFaultError as error:
                 # Annotate error with target address.
@@ -1133,13 +1255,20 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         """
         assert (addr & 0x3) == 0
         num = self.dp.next_access_number
-        TRACE.debug("_write_block32:%06d (ap=0x%x; addr=0x%08x, size=%d) {",
-            num, self.address.nominal_address, addr, len(data))
+        TRACE.debug(
+            "_write_block32:%06d (ap=0x%x; addr=0x%08x, size=%d) {",
+            num,
+            self.address.nominal_address,
+            addr,
+            len(data),
+        )
         # put address in TAR
         self.write_reg(self._reg_offset + MEM_AP_CSW, self._csw | CSW_SIZE32)
         self.write_reg(self._reg_offset + MEM_AP_TAR, addr)
         try:
-            self.dp.write_ap_multiple(self.address.address + self._reg_offset + MEM_AP_DRW, data)
+            self.dp.write_ap_multiple(
+                self.address.address + self._reg_offset + MEM_AP_DRW, data
+            )
         except exceptions.TransferFaultError as error:
             # Annotate error with target address.
             self._handle_error(error, num)
@@ -1160,13 +1289,20 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         """
         assert (addr & 0x3) == 0
         num = self.dp.next_access_number
-        TRACE.debug("_read_block32:%06d (ap=0x%x; addr=0x%08x, size=%d) {",
-            num, self.address.nominal_address, addr, size)
+        TRACE.debug(
+            "_read_block32:%06d (ap=0x%x; addr=0x%08x, size=%d) {",
+            num,
+            self.address.nominal_address,
+            addr,
+            size,
+        )
         # put address in TAR
         self.write_reg(self._reg_offset + MEM_AP_CSW, self._csw | CSW_SIZE32)
         self.write_reg(self._reg_offset + MEM_AP_TAR, addr)
         try:
-            resp = self.dp.read_ap_multiple(self.address.address + self._reg_offset + MEM_AP_DRW, size)
+            resp = self.dp.read_ap_multiple(
+                self.address.address + self._reg_offset + MEM_AP_DRW, size
+            )
         except exceptions.TransferFaultError as error:
             # Annotate error with target address.
             self._handle_error(error, num)
@@ -1186,12 +1322,14 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         addr &= self._address_mask
         size = len(data)
         while size > 0:
-            n = self.auto_increment_page_size - (addr & (self.auto_increment_page_size - 1))
-            if size*4 < n:
-                n = (size*4) & 0xfffffffc
-            self._write_block32_page(addr, data[:n//4])
-            data = data[n//4:]
-            size -= n//4
+            n = self.auto_increment_page_size - (
+                addr & (self.auto_increment_page_size - 1)
+            )
+            if size * 4 < n:
+                n = (size * 4) & 0xFFFFFFFC
+            self._write_block32_page(addr, data[: n // 4])
+            data = data[n // 4 :]
+            size -= n // 4
             addr += n
         return
 
@@ -1205,11 +1343,13 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         addr &= self._address_mask
         resp = []
         while size > 0:
-            n = self.auto_increment_page_size - (addr & (self.auto_increment_page_size - 1))
-            if size*4 < n:
-                n = (size*4) & 0xfffffffc
-            resp += self._read_block32_page(addr, n//4)
-            size -= n//4
+            n = self.auto_increment_page_size - (
+                addr & (self.auto_increment_page_size - 1)
+            )
+            if size * 4 < n:
+                n = (size * 4) & 0xFFFFFFFC
+            resp += self._read_block32_page(addr, n // 4)
+            size -= n // 4
             addr += n
         return resp
 
@@ -1218,25 +1358,30 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
     # too, but that changes a lot of places. So for now just ignore the type error. This will be
     # addressed anyway when the memory API is refactored.
     @locked
-    def _accelerated_write_memory(self, addr: int, data: int, transfer_size: int=32) -> None:
+    def _accelerated_write_memory(
+        self, addr: int, data: int, transfer_size: int = 32
+    ) -> None:
         """@brief Write one memory location using the probe's accelerated memory interface.
 
         The current CSW value is passed to the accelerted interface, primarily for STLink.
         """
         assert self._accelerated_memory_interface is not None
-        self._accelerated_memory_interface.write_memory(addr, data, transfer_size,
-                csw=self._csw) # type: ignore
+        self._accelerated_memory_interface.write_memory(
+            addr, data, transfer_size, csw=self._csw
+        )  # type: ignore
 
     @locked
-    def _accelerated_read_memory(self, addr: int, transfer_size: int=32, now: bool=True) \
-            -> Union[int, Callable[[], int]]:
+    def _accelerated_read_memory(
+        self, addr: int, transfer_size: int = 32, now: bool = True
+    ) -> Union[int, Callable[[], int]]:
         """@brief Read one memory location using the probe's accelerated memory interface.
 
         The current CSW value is passed to the accelerted interface, primarily for STLink.
         """
         assert self._accelerated_memory_interface is not None
-        return self._accelerated_memory_interface.read_memory(addr, transfer_size, now,
-                csw=self._csw) # type: ignore
+        return self._accelerated_memory_interface.read_memory(
+            addr, transfer_size, now, csw=self._csw
+        )  # type: ignore
 
     @locked
     def _accelerated_write_memory_block32(self, addr: int, data: Sequence[int]) -> None:
@@ -1245,8 +1390,9 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         The current CSW value is passed to the accelerted interface, primarily for STLink.
         """
         assert self._accelerated_memory_interface is not None
-        self._accelerated_memory_interface.write_memory_block32(addr, data,
-                csw=self._csw) # type: ignore
+        self._accelerated_memory_interface.write_memory_block32(
+            addr, data, csw=self._csw
+        )  # type: ignore
 
     @locked
     def _accelerated_read_memory_block32(self, addr: int, size: int) -> Sequence[int]:
@@ -1255,8 +1401,9 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         The current CSW value is passed to the accelerted interface, primarily for STLink.
         """
         assert self._accelerated_memory_interface is not None
-        return self._accelerated_memory_interface.read_memory_block32(addr, size,
-                csw=self._csw) # type: ignore
+        return self._accelerated_memory_interface.read_memory_block32(
+            addr, size, csw=self._csw
+        )  # type: ignore
 
     @locked
     def _accelerated_write_memory_block8(self, addr: int, data: Sequence[int]) -> None:
@@ -1265,8 +1412,9 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         The current CSW value is passed to the accelerted interface, primarily for STLink.
         """
         assert self._accelerated_memory_interface is not None
-        self._accelerated_memory_interface.write_memory_block8(addr, data,
-                csw=self._csw) # type: ignore
+        self._accelerated_memory_interface.write_memory_block8(
+            addr, data, csw=self._csw
+        )  # type: ignore
 
     @locked
     def _accelerated_read_memory_block8(self, addr: int, size: int) -> Sequence[int]:
@@ -1275,12 +1423,14 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         The current CSW value is passed to the accelerted interface, primarily for STLink.
         """
         assert self._accelerated_memory_interface is not None
-        return self._accelerated_memory_interface.read_memory_block8(addr, size,
-                csw=self._csw) # type: ignore
+        return self._accelerated_memory_interface.read_memory_block8(
+            addr, size, csw=self._csw
+        )  # type: ignore
 
     def _handle_error(self, error: Exception, num: int) -> None:
         self.dp._handle_error(error, num)
         self._invalidate_cache()
+
 
 class AHB_AP(MEM_AP):
     """@brief AHB-AP access port subclass.
@@ -1324,11 +1474,12 @@ class AHB_AP(MEM_AP):
         # Invoke superclass.
         super().find_components()
 
+
 ## @brief Arm JEP106 code
 #
 # - [6:0] = 0x3B, Arm's JEP106 identification code
 # - [12:7] = 4, the number of JEP106 continuation codes for Arm
-AP_JEP106_ARM = 0x23b
+AP_JEP106_ARM = 0x23B
 
 ## @brief Arm China JEP106 code
 #
@@ -1338,8 +1489,8 @@ AP_JEP106_ARM_CHINA = 0x575
 
 # AP classes
 AP_CLASS_JTAG_AP = 0x0
-AP_CLASS_COM_AP = 0x1 # SDC-600 (Chaucer)
-AP_CLASS_MEM_AP = 0x8 # AHB-AP, APB-AP, AXI-AP
+AP_CLASS_COM_AP = 0x1  # SDC-600 (Chaucer)
+AP_CLASS_MEM_AP = 0x8  # AHB-AP, APB-AP, AXI-AP
 
 # MEM-AP type constants
 AP_TYPE_AHB = 0x1
@@ -1351,10 +1502,10 @@ AP_TYPE_AXI5 = 0x7
 AP_TYPE_AHB5_HPROT = 0x8
 
 # AP flags.
-AP_4K_WRAP = 0x1 # The AP has a 4 kB auto-increment modulus.
-AP_ALL_TX_SZ = 0x2 # The AP is known to support 8-, 16-, and 32-bit transfers, *unless* Large Data is implemented.
-AP_MSTRTYPE = 0x4 # The AP is known to support the MSTRTYPE field.
-AP_DBGSWEN = 0x8 # The AP is known to support the DBGSWEN flag.
+AP_4K_WRAP = 0x1  # The AP has a 4 kB auto-increment modulus.
+AP_ALL_TX_SZ = 0x2  # The AP is known to support 8-, 16-, and 32-bit transfers, *unless* Large Data is implemented.
+AP_MSTRTYPE = 0x4  # The AP is known to support the MSTRTYPE field.
+AP_DBGSWEN = 0x8  # The AP is known to support the DBGSWEN flag.
 
 ## Map from AP IDR fields to AccessPort subclass.
 #
@@ -1376,6 +1527,7 @@ AP_DBGSWEN = 0x8 # The AP is known to support the DBGSWEN flag.
 # 0x04770025 AHB5-AP Used on M23.
 # 0x54770002 APB-AP used on STM32H743, from CSSoC-400
 # 0x34770017 AXI5-AP from Corstone-700
+# fmt: off
 AP_TYPE_MAP: Dict[Tuple[int, int, int, int], Tuple[str, Type[AccessPort], int]] = {
 #   |JEP106        |Class              |Var|Type                    |Name      |Class
     (AP_JEP106_ARM, AP_CLASS_JTAG_AP,   0,  0):                     ("JTAG-AP", AccessPort, 0   ),
@@ -1397,3 +1549,4 @@ AP_TYPE_MAP: Dict[Tuple[int, int, int, int], Tuple[str, Type[AccessPort], int]] 
     (AP_JEP106_ARM_CHINA,
                     AP_CLASS_MEM_AP,    1,  AP_TYPE_AHB5):          ("AHB5-AP", AHB_AP,     AP_ALL_TX_SZ ),
     }
+# fmt: on

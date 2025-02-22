@@ -29,14 +29,16 @@ from test_util import (
     Test,
     TestResult,
     PYOCD_DIR,
-    )
+)
 
 GDB_TEST_ELF = os.path.join(PYOCD_DIR, "src/gdb_test_program/gdb_test.elf")
+
 
 class CommanderTestResult(TestResult):
     def __init__(self):
         super(CommanderTestResult, self).__init__(None, None, None)
         self.name = "commander"
+
 
 class CommanderTest(Test):
     def __init__(self):
@@ -54,6 +56,7 @@ class CommanderTest(Test):
         result.test = self
         return result
 
+
 def commander_test(board_id):
     test_pass_count = 0
     test_count = 0
@@ -61,32 +64,29 @@ def commander_test(board_id):
     result = CommanderTestResult()
 
     COMMANDS_TO_TEST = [
-            # general commands
-            "continue",
-            "status",
-            "halt",
-            "status",
-
-            # semicolon separated
-            "status ; halt ; continue",
-            "halt;continue",
-            "halt; continue",
-
-            # Python and shell
-            "$ 2+2",
-            "!echo 'hi mom'",
-            " $ target.vendor",
-
-            # commander command group - these are not tested by commands_test.py.
-            "list",
-            "exit", # Must be last command!
-            ]
+        # general commands
+        "continue",
+        "status",
+        "halt",
+        "status",
+        # semicolon separated
+        "status ; halt ; continue",
+        "halt;continue",
+        "halt; continue",
+        # Python and shell
+        "$ 2+2",
+        "!echo 'hi mom'",
+        " $ target.vendor",
+        # commander command group - these are not tested by commands_test.py.
+        "list",
+        "exit",  # Must be last command!
+    ]
 
     # Set up commander args.
     args = SimpleNamespace()
     args.no_init = False
     args.frequency = 1000000
-    args.options = {} #get_session_options()
+    args.options = {}  # get_session_options()
     args.halt = True
     args.no_wait = True
     args.project_dir = None
@@ -128,7 +128,7 @@ def commander_test(board_id):
     #
     print("\n------ Testing command files ------\n")
 
-    with tempfile.NamedTemporaryFile('w+') as cmdfile:
+    with tempfile.NamedTemporaryFile("w+") as cmdfile:
         cmdfile.write("""# here is a comment
 halt
 reg
@@ -179,14 +179,16 @@ $target.part_number
     result.passed = test_count == test_pass_count
     return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD commander test')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
-    parser.add_argument('-u', '--uid', help='Debug probe unique ID')
-    parser.add_argument("-da", "--daparg", dest="daparg", nargs='+', help="Send setting to DAPAccess layer.")
+    parser = argparse.ArgumentParser(description="pyOCD commander test")
+    # fmt: off
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("-u", "--uid", help="Debug probe unique ID")
+    parser.add_argument("-da", "--daparg", dest="daparg", nargs="+", help="Send setting to DAPAccess layer.")
+    # fmt: on
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)
     DAPAccess.set_args(args.daparg)
     commander_test(args.uid)
-

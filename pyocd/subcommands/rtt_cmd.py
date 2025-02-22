@@ -51,6 +51,7 @@ class RTTSubcommand(SubcommandBase):
         rtt_parser = argparse.ArgumentParser(cls.HELP, add_help=False)
 
         rtt_options = rtt_parser.add_argument_group("rtt options")
+        # fmt: off
         rtt_options.add_argument("-a", "--address", type=int_base_0, default=None,
                                  help="Start address of RTT control block search range.")
         rtt_options.add_argument("-s", "--size", type=int_base_0, default=None,
@@ -61,11 +62,11 @@ class RTTSubcommand(SubcommandBase):
                                  help="Down channel ID.")
         rtt_options.add_argument("-d", "--log-file", type=str, default=None,
                                  help="Log file name. When specified, logging mode is enabled.")
+        # fmt: on
 
         return [cls.CommonOptions.COMMON, cls.CommonOptions.CONNECT, rtt_parser]
 
     def invoke(self) -> int:
-
         session = None
         kb = None
 
@@ -83,34 +84,39 @@ class RTTSubcommand(SubcommandBase):
                 connect_mode=self._args.connect_mode,
                 options=convert_session_options(self._args.options),
                 option_defaults=self._modified_option_defaults(),
-                )
+            )
 
             if session is None:
                 LOG.error("No target device available")
                 return 1
 
             with session:
-
                 target: SoCTarget = session.board.target
 
-                control_block = RTTControlBlock.from_target(target,
-                            address = self._args.address,
-                            size = self._args.size)
+                control_block = RTTControlBlock.from_target(
+                    target, address=self._args.address, size=self._args.size
+                )
                 control_block.start()
 
                 if len(control_block.up_channels) < 1:
                     LOG.error("No up channels.")
                     return 1
 
-                LOG.info(f"{len(control_block.up_channels)} up channels and "
-                         f"{len(control_block.down_channels)} down channels found")
+                LOG.info(
+                    f"{len(control_block.up_channels)} up channels and "
+                    f"{len(control_block.down_channels)} down channels found"
+                )
 
-                up_chan: RTTUpChannel = control_block.up_channels[self._args.up_channel_id]
+                up_chan: RTTUpChannel = control_block.up_channels[
+                    self._args.up_channel_id
+                ]
                 up_name = up_chan.name if up_chan.name is not None else ""
-                LOG.info(f"Reading from up channel {self._args.up_channel_id} (\"{up_name}\")")
+                LOG.info(
+                    f'Reading from up channel {self._args.up_channel_id} ("{up_name}")'
+                )
 
                 # some targets might need this here
-                #target.reset_and_halt()
+                # target.reset_and_halt()
 
                 target.resume()
 
@@ -119,9 +125,13 @@ class RTTSubcommand(SubcommandBase):
 
                 if self._args.log_file is None:
                     if control_block.down_channels:
-                        down_chan: RTTDownChannel = control_block.down_channels[self._args.down_channel_id]
+                        down_chan: RTTDownChannel = control_block.down_channels[
+                            self._args.down_channel_id
+                        ]
                         down_name = down_chan.name if down_chan.name is not None else ""
-                        LOG.info(f"Writing to down channel {self._args.down_channel_id} (\"{down_name}\")")
+                        LOG.info(
+                            f'Writing to down channel {self._args.down_channel_id} ("{down_name}")'
+                        )
                     else:
                         down_chan = None
                         LOG.info("No down channel, input will be ignored")
@@ -142,14 +152,12 @@ class RTTSubcommand(SubcommandBase):
         return 0
 
     def logger_loop(self, up_chan, kb):
-
         LOG.info("start logging ... Press any key to stop")
         total_size = 0
         block_size = 0
         last_time = time.time()
 
-        with open(self._args.log_file, 'wb') as log_file:
-
+        with open(self._args.log_file, "wb") as log_file:
             while True:
                 # poll at most 1000 times per second to limit CPU use
                 sleep(0.001)
@@ -163,7 +171,10 @@ class RTTSubcommand(SubcommandBase):
                 total_size += s
                 diff = time.time() - last_time
                 if diff > 1.0:
-                    print(f"Transfer rate: {block_size / 1000:.1f} KByte/s; Bytes written: {total_size / 1000:.0f} KByte", end="\r")
+                    print(
+                        f"Transfer rate: {block_size / 1000:.1f} KByte/s; Bytes written: {total_size / 1000:.0f} KByte",
+                        end="\r",
+                    )
                     block_size = 0
                     last_time = time.time()
 
@@ -189,9 +200,9 @@ class RTTSubcommand(SubcommandBase):
             if kb.kbhit():
                 c: str = kb.getch()
 
-                if ord(c) == 27: # process ESC
+                if ord(c) == 27:  # process ESC
                     break
-                elif c.isprintable() or c == '\n':
+                elif c.isprintable() or c == "\n":
                     print(c, end="", flush=True)
 
                 # add char to buffer

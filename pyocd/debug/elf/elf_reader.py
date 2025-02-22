@@ -23,6 +23,7 @@ from ...utility import conversion
 
 LOG = logging.getLogger(__name__)
 
+
 class ElfReaderContext(DebugContext):
     """@brief Reads flash memory regions from an ELF file instead of the target."""
 
@@ -40,9 +41,14 @@ class ElfReaderContext(DebugContext):
             # Skip empty sections.
             if length == 0:
                 continue
-            sect.data # Go ahead and read the data from the file.
+            sect.data  # Go ahead and read the data from the file.
             self._tree.addi(start, start + length, sect)
-            LOG.debug("created flash section [%x:%x] for section %s", start, start + length, sect.name)
+            LOG.debug(
+                "created flash section [%x:%x] for section %s",
+                start,
+                start + length,
+                sect.name,
+            )
 
     def read_memory(self, addr, transfer_size=32, now=True):
         length = transfer_size // 8
@@ -54,8 +60,13 @@ class ElfReaderContext(DebugContext):
         addr -= section.start
 
         def read_memory_cb():
-            LOG.debug("read flash data [%x:%x] from section %s", section.start + addr, section.start + addr  + length, section.name)
-            data = section.data[addr:addr + length]
+            LOG.debug(
+                "read flash data [%x:%x] from section %s",
+                section.start + addr,
+                section.start + addr + length,
+                section.name,
+            )
+            data = section.data[addr : addr + length]
             if transfer_size == 8:
                 return data[0]
             else:
@@ -73,10 +84,13 @@ class ElfReaderContext(DebugContext):
             return self._parent.read_memory_block8(addr, size)
         section = matches.pop().data
         addr -= section.start
-        data = section.data[addr:addr + size]
-        LOG.debug("read flash data [%x:%x]", section.start + addr, section.start + addr  + size)
+        data = section.data[addr : addr + size]
+        LOG.debug(
+            "read flash data [%x:%x]", section.start + addr, section.start + addr + size
+        )
         return list(data)
 
     def read_memory_block32(self, addr, size):
-        return conversion.byte_list_to_u32le_list(self.read_memory_block8(addr, size * 4))
-
+        return conversion.byte_list_to_u32le_list(
+            self.read_memory_block8(addr, size * 4)
+        )

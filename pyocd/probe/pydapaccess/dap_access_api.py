@@ -17,18 +17,20 @@
 
 
 from enum import Enum
-from typing import (Optional, Tuple, Sequence)
+from typing import Optional, Tuple, Sequence
+
 
 class DAPAccessIntf(object):
-
     class PORT(Enum):
         """@brief Physical access ports"""
+
         DEFAULT = 0
         SWD = 1
         JTAG = 2
 
     class REG(Enum):
         """@brief Register for DAP access functions"""
+
         DP_0x0 = 0
         DP_0x4 = 1
         DP_0x8 = 2
@@ -40,6 +42,7 @@ class DAPAccessIntf(object):
 
     class ID(Enum):
         """@brief Information ID used for call to identify"""
+
         VENDOR = 1
         PRODUCT = 2
         SER_NUM = 3
@@ -49,40 +52,47 @@ class DAPAccessIntf(object):
         BOARD_VENDOR = 7
         BOARD_NAME = 8
         PRODUCT_FW_VERSION = 9
-        CAPABILITIES = 0xf0
-        TEST_DOMAIN_TIMER = 0xf1
-        UART_RECEIVE_BUFFER_SIZE = 0xfb
-        UART_TRANSMIT_BUFFER_SIZE = 0xfc
-        SWO_BUFFER_SIZE = 0xfd
-        MAX_PACKET_COUNT = 0xfe
-        MAX_PACKET_SIZE = 0xff
+        CAPABILITIES = 0xF0
+        TEST_DOMAIN_TIMER = 0xF1
+        UART_RECEIVE_BUFFER_SIZE = 0xFB
+        UART_TRANSMIT_BUFFER_SIZE = 0xFC
+        SWO_BUFFER_SIZE = 0xFD
+        MAX_PACKET_COUNT = 0xFE
+        MAX_PACKET_SIZE = 0xFF
 
     class Error(Exception):
         """@brief Parent of all error DAPAccess can raise"""
+
         pass
 
     class DeviceError(Error):
         """@brief Error communicating with device"""
+
         pass
 
     class CommandError(DeviceError):
         """@brief The host debugger reported failure for the given command"""
+
         pass
 
     class TransferError(CommandError):
         """@brief Error occurred with a transfer over SWD or JTAG"""
+
         pass
 
     class TransferTimeoutError(TransferError):
         """@brief A SWD or JTAG timeout occurred"""
+
         pass
 
     class TransferFaultError(TransferError):
         """@brief A SWD Fault occurred"""
+
         pass
 
     class TransferProtocolError(TransferError):
         """@brief A SWD protocol error occurred"""
+
         pass
 
     @staticmethod

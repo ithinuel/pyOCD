@@ -24,7 +24,7 @@ from pyocd.flash.file_programmer import FileProgrammer
 from test_util import (
     get_session_options,
     get_test_binary_path,
-    )
+)
 
 logging.basicConfig(level=logging.WARNING)
 

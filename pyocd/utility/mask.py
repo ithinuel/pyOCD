@@ -17,7 +17,8 @@
 
 import operator
 from functools import reduce
-from typing import (Any, Optional, Sequence, Tuple, Union)
+from typing import Any, Optional, Sequence, Tuple, Union
+
 
 def bitmask(*args: Union[int, Sequence[int], Tuple[int, int]]) -> int:
     """@brief Returns a mask with specified bit ranges set.
@@ -56,6 +57,7 @@ def bitmask(*args: Union[int, Sequence[int], Tuple[int, int]]) -> int:
 
     return mask
 
+
 def bit_invert(value: int, width: int = 32) -> int:
     """@brief Return the bitwise inverted value of the argument given a specified width.
 
@@ -65,18 +67,22 @@ def bit_invert(value: int, width: int = 32) -> int:
     """
     return ((1 << width) - 1) & (~value)
 
+
 invert32 = bit_invert
 """@brief Return the 32-bit inverted value of the argument."""
+
 
 def bfx(value: int, msb: int, lsb: int) -> int:
     """@brief Extract a value from a bitfield."""
     mask = bitmask((msb, lsb))
     return (value & mask) >> lsb
 
+
 def bfxw(value: int, lsb: int, width: int) -> int:
     """@brief Extract a value from a bitfield given the LSb and width."""
     mask = bitmask((lsb + width, lsb))
     return (value & mask) >> lsb
+
 
 def bfi(value: int, msb: int, lsb: int, field: int) -> int:
     """@brief Change a bitfield value."""
@@ -84,6 +90,7 @@ def bfi(value: int, msb: int, lsb: int, field: int) -> int:
     value &= ~mask
     value |= (field << lsb) & mask
     return value
+
 
 class Bitfield:
     """@brief Represents a bitfield of a register."""
@@ -116,15 +123,19 @@ class Bitfield:
         return bfi(register_value, self._msb, self._lsb, field_value)
 
     def __repr__(self) -> str:
-        return "<{}@{:x} name={} {}:{}>".format(self.__class__.__name__, id(self), self._name, self._msb, self._lsb)
+        return "<{}@{:x} name={} {}:{}>".format(
+            self.__class__.__name__, id(self), self._name, self._msb, self._lsb
+        )
+
 
 def msb(n: int) -> int:
     """@brief Return the bit number of the highest set bit."""
     ndx = 0
-    while ( 1 < n ):
-        n = ( n >> 1 )
+    while 1 < n:
+        n = n >> 1
         ndx += 1
     return ndx
+
 
 def same(d1: Sequence[Any], d2: Sequence[Any]) -> bool:
     """@brief Test whether two sequences contain the same values.
@@ -140,17 +151,21 @@ def same(d1: Sequence[Any], d2: Sequence[Any]) -> bool:
             return False
     return True
 
+
 def align_down(value: int, multiple: int) -> int:
     """@brief Return value aligned down to multiple."""
     return value // multiple * multiple
+
 
 def align_up(value: int, multiple: int) -> int:
     """@brief Return value aligned up to multiple."""
     return (value + multiple - 1) // multiple * multiple
 
+
 def round_up_div(value: int, divisor: int) -> int:
     """@brief Return value divided by the divisor, rounding up to the nearest multiple of the divisor."""
     return (value + divisor - 1) // divisor
+
 
 def parity32_high(n: int) -> int:
     """@brief Compute parity over a 32-bit value.
@@ -165,8 +180,9 @@ def parity32_high(n: int) -> int:
     n ^= n >> 16
     n ^= n >> 8
     n ^= n >> 4
-    n &= 0xf
+    n &= 0xF
     return (0xD32C0000 << n) & (1 << 32)
+
 
 def twos_complement(value: int, width: int) -> int:
     """@brief Convert an unsigned int to signed.

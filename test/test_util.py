@@ -36,9 +36,10 @@ PYOCD_DIR = os.path.dirname(TEST_DIR)
 TEST_DATA_DIR = os.path.join(TEST_DIR, "data")
 TEST_OUTPUT_DIR = os.path.join(TEST_DIR, "output")
 
+
 def get_test_binary_path(binary_name):
     if binary_name is None:
-        binary_name = os.environ.get('PYOCD_TEST_BINARY')
+        binary_name = os.environ.get("PYOCD_TEST_BINARY")
         if binary_name is None:
             raise RuntimeError("no test binary available")
     if Path(binary_name).is_absolute():
@@ -46,28 +47,35 @@ def get_test_binary_path(binary_name):
     else:
         return os.path.join(TEST_DATA_DIR, "binaries", binary_name)
 
+
 def get_env_name():
-    return os.environ.get('TOX_ENV_NAME', '')
+    return os.environ.get("TOX_ENV_NAME", "")
+
 
 def get_env_file_name():
     env_name = get_env_name()
-    return ("_" + env_name) if env_name else ''
+    return ("_" + env_name) if env_name else ""
+
 
 def ensure_output_dir():
     if not os.path.isdir(TEST_OUTPUT_DIR):
         if os.path.exists(TEST_OUTPUT_DIR):
-            raise RuntimeError("path '%s' already exists but is not a directory" % TEST_OUTPUT_DIR)
+            raise RuntimeError(
+                "path '%s' already exists but is not a directory" % TEST_OUTPUT_DIR
+            )
         os.mkdir(TEST_OUTPUT_DIR)
+
 
 # Returns common option values passed in when creating test sessions.
 def get_session_options():
     return {
         # These options can be overridden by probe config in pyocd.yaml.
-        'option_defaults': {
-            'frequency': 1000000, # 1 MHz
-            'skip_test': False,
-            },
-        }
+        "option_defaults": {
+            "frequency": 1000000,  # 1 MHz
+            "skip_test": False,
+        },
+    }
+
 
 # Returns a dict containing some test parameters for the target in the passed-in session.
 #
@@ -88,37 +96,70 @@ def get_target_test_params(session):
         # Default of 4 MHz.
         test_clock = 4000000
     return {
-            'test_clock': test_clock,
-            'error_on_invalid_access': error_on_invalid_access,
-            }
+        "test_clock": test_clock,
+        "error_on_invalid_access": error_on_invalid_access,
+    }
+
 
 # Generate an Intel hex file from the binary test file.
 def binary_to_hex_file(binary_file, base_address):
-    temp_test_hex_name = tempfile.mktemp('.hex')
-    objcopyOutput = subprocess.check_output([OBJCOPY,
-        "-v", "-I", "binary", "-O", "ihex", "-B", "arm", "-S",
-        "--set-start", "0x%x" % base_address,
-        "--change-addresses", "0x%x" % base_address,
-        binary_file, temp_test_hex_name], stderr=subprocess.STDOUT)
+    temp_test_hex_name = tempfile.mktemp(".hex")
+    objcopyOutput = subprocess.check_output(
+        [
+            OBJCOPY,
+            "-v",
+            "-I",
+            "binary",
+            "-O",
+            "ihex",
+            "-B",
+            "arm",
+            "-S",
+            "--set-start",
+            "0x%x" % base_address,
+            "--change-addresses",
+            "0x%x" % base_address,
+            binary_file,
+            temp_test_hex_name,
+        ],
+        stderr=subprocess.STDOUT,
+    )
     print(to_str_safe(objcopyOutput))
     # Need to escape backslashes on Windows.
-    if sys.platform.startswith('win'):
-        temp_test_hex_name = temp_test_hex_name.replace('\\', '\\\\')
+    if sys.platform.startswith("win"):
+        temp_test_hex_name = temp_test_hex_name.replace("\\", "\\\\")
     return temp_test_hex_name
+
 
 # Generate an elf from the binary test file.
 def binary_to_elf_file(binary_file, base_address):
-    temp_test_elf_name = tempfile.mktemp('.elf')
-    objcopyOutput = subprocess.check_output([OBJCOPY,
-        "-v", "-I", "binary", "-O", "elf32-littlearm", "-B", "arm", "-S",
-        "--set-start", "0x%x" % base_address,
-        "--change-addresses", "0x%x" % base_address,
-        binary_file, temp_test_elf_name], stderr=subprocess.STDOUT)
+    temp_test_elf_name = tempfile.mktemp(".elf")
+    objcopyOutput = subprocess.check_output(
+        [
+            OBJCOPY,
+            "-v",
+            "-I",
+            "binary",
+            "-O",
+            "elf32-littlearm",
+            "-B",
+            "arm",
+            "-S",
+            "--set-start",
+            "0x%x" % base_address,
+            "--change-addresses",
+            "0x%x" % base_address,
+            binary_file,
+            temp_test_elf_name,
+        ],
+        stderr=subprocess.STDOUT,
+    )
     print(to_str_safe(objcopyOutput))
     # Need to escape backslashes on Windows.
-    if sys.platform.startswith('win'):
-        temp_test_elf_name = temp_test_elf_name.replace('\\', '\\\\')
+    if sys.platform.startswith("win"):
+        temp_test_elf_name = temp_test_elf_name.replace("\\", "\\\\")
     return temp_test_elf_name
+
 
 def run_in_parallel(function, args_list):
     """Create and run a thread in parallel for each element in args_list
@@ -126,6 +167,7 @@ def run_in_parallel(function, args_list):
     Wait until all threads finish executing. Throw an exception if an exception
     occurred on any of the threads.
     """
+
     def _thread_helper(idx, func, args):
         """Run the function and set result to True if there was not error"""
         func(*args)
@@ -134,8 +176,7 @@ def run_in_parallel(function, args_list):
     result_list = [False] * len(args_list)
     thread_list = []
     for idx, args in enumerate(args_list):
-        thread = threading.Thread(target=_thread_helper,
-                                  args=(idx, function, args))
+        thread = threading.Thread(target=_thread_helper, args=(idx, function, args))
         thread.start()
         thread_list.append(thread)
 
@@ -145,13 +186,15 @@ def run_in_parallel(function, args_list):
         if result is not True:
             raise Exception("Running in thread failed")
 
+
 def wait_with_deadline(process, timeout):
     try:
         from subprocess import TimeoutExpired
+
         try:
             process.wait(timeout=timeout)
         except TimeoutExpired as e:
-            print('Timeout while waiting for process %s to exit: %s' % (process, e))
+            print("Timeout while waiting for process %s to exit: %s" % (process, e))
             process.kill()
             return False
     except ImportError:
@@ -159,6 +202,7 @@ def wait_with_deadline(process, timeout):
         # Let's wait without deadline, as Python 2.7 support is close to end anyway.
         process.wait()
     return True
+
 
 class IOTee(object):
     def __init__(self, *args):
@@ -169,13 +213,13 @@ class IOTee(object):
 
     def write(self, message):
         for out in self.outputs:
-            encoding = out.encoding if getattr(out, 'encoding', None) else 'latin-1'
+            encoding = out.encoding if getattr(out, "encoding", None) else "latin-1"
 
             try:
                 # Pre-encode the output with error replacement, then convert back to a string
                 # to write to the file. Very inefficient, but prevents possible errors.
-                b = codecs.encode(message, encoding=encoding, errors='backslashreplace')
-                u = codecs.decode(b, encoding=encoding, errors='backslashreplace')
+                b = codecs.encode(message, encoding=encoding, errors="backslashreplace")
+                u = codecs.decode(b, encoding=encoding, errors="backslashreplace")
                 out.write(u)
             except UnicodeEncodeError as err:
                 out.write(f"<encode error: {err}>")
@@ -186,6 +230,7 @@ class IOTee(object):
 
     def isatty(self):
         return False
+
 
 class RecordingLogHandler(logging.Handler):
     def __init__(self, iostream, level=logging.NOTSET):
@@ -199,11 +244,11 @@ class RecordingLogHandler(logging.Handler):
         except Exception:
             self.handleError(record)
 
-class TestResult(object):
 
+class TestResult(object):
     def __init__(self, test_board, test, result):
         self.passed = result
-        self._board = test_board.target_type if test_board else 'unknown'
+        self._board = test_board.target_type if test_board else "unknown"
         self.board_name = test_board.name if test_board else ""
         self.test = test
         self.name = "test"
@@ -216,29 +261,31 @@ class TestResult(object):
 
     @board.setter
     def board(self, newBoard):
-        self._board = newBoard.target_type if newBoard else 'unknown'
+        self._board = newBoard.target_type if newBoard else "unknown"
         self.board_name = newBoard.name
 
     def get_test_case(self):
-        if 'TOX_ENV_NAME' in os.environ:
-            classname = "{}.{}.{}.{}".format(os.environ['TOX_ENV_NAME'], self.board_name, self.board, self.name)
+        if "TOX_ENV_NAME" in os.environ:
+            classname = "{}.{}.{}.{}".format(
+                os.environ["TOX_ENV_NAME"], self.board_name, self.board, self.name
+            )
         else:
             classname = "{}.{}.{}".format(self.board_name, self.board, self.name)
-        case = ElementTree.Element('testcase',
-                    name=classname,
-                    classname=classname,
-                    status=("passed" if self.passed else "failed"),
-                    time="%.3f" % self.time
-                    )
+        case = ElementTree.Element(
+            "testcase",
+            name=classname,
+            classname=classname,
+            status=("passed" if self.passed else "failed"),
+            time="%.3f" % self.time,
+        )
         case.text = "\n"
         case.tail = "\n"
         if not self.passed:
-            failed = ElementTree.SubElement(case, 'failure',
-                        message="failure",
-                        type="failure"
-                        )
+            failed = ElementTree.SubElement(
+                case, "failure", message="failure", type="failure"
+            )
             failed.text = self.filter_output(self.output)
-        system_out = ElementTree.SubElement(case, 'system-out')
+        system_out = ElementTree.SubElement(case, "system-out")
         system_out.text = self.filter_output(self.output)
         return case
 
@@ -246,14 +293,14 @@ class TestResult(object):
         """@brief Hex-encode null byte and control characters."""
         result = six.text_type()
         for c in output:
-            if (c not in ('\n', '\r', '\t')) and (0 <= ord(c) <= 31):
-                result += u"\\x{:02x}".format(ord(c))
+            if (c not in ("\n", "\r", "\t")) and (0 <= ord(c) <= 31):
+                result += "\\x{:02x}".format(ord(c))
             else:
                 result += c
         return result
 
-class Test(object):
 
+class Test(object):
     def __init__(self, name, function):
         self.name = name
         self.test_function = function
@@ -286,17 +333,20 @@ class Test(object):
     def print_results(result_list, output_file=None, ignored=[]):
         msg_format_str = "{:<15}{:<21}{:<15}{:<15}"
         print("\n\n------ TEST RESULTS ------")
-        print(msg_format_str .format("Target", "Test", "Result", "Time"),
-              file=output_file)
+        print(
+            msg_format_str.format("Target", "Test", "Result", "Time"), file=output_file
+        )
         print("", file=output_file)
         for result in result_list:
             status_str = "Pass" if result.passed else "Fail"
             if not result.passed and result.test.name in ignored:
                 status_str += " [ignored]"
-            print(msg_format_str.format(result.board,
-                                        result.test.name,
-                                        status_str, "%.3f" % result.time),
-                  file=output_file)
+            print(
+                msg_format_str.format(
+                    result.board, result.test.name, status_str, "%.3f" % result.time
+                ),
+                file=output_file,
+            )
 
     @staticmethod
     def all_tests_pass(result_list, ignored=[]):

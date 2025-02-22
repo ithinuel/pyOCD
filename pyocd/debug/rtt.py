@@ -40,6 +40,7 @@ class SEGGER_RTT_BUFFER_UP(Structure):
         ("Flags", c_uint32),
     ]
 
+
 class SEGGER_RTT_BUFFER_DOWN(Structure):
     """@brief `SEGGER RTT Ring Buffer` host to target."""
 
@@ -52,36 +53,36 @@ class SEGGER_RTT_BUFFER_DOWN(Structure):
         ("Flags", c_uint32),
     ]
 
+
 class SEGGER_RTT_CB(Structure):
-    """@brief `SEGGER RTT control block` structure. """
+    """@brief `SEGGER RTT control block` structure."""
 
     _fields_ = [
         ("acID", c_char * 16),
         ("MaxNumUpBuffers", c_int32),
-        ("MaxNumDownBuffers", c_int32)
+        ("MaxNumDownBuffers", c_int32),
     ]
 
 
-
 class RTTUpChannel(ABC):
-    """@brief Wrapper for an RTT up channel for target to host data transfer. """
+    """@brief Wrapper for an RTT up channel for target to host data transfer."""
 
     name: Optional[str]
     size: int
 
     @abstractmethod
     def read(self) -> bytes:
-        """@brief Read all available data from RTT channel. """
+        """@brief Read all available data from RTT channel."""
 
 
 class RTTDownChannel(ABC):
-    """@brief Wrapper for an RTT down channel for host to target data transfer. """
+    """@brief Wrapper for an RTT down channel for host to target data transfer."""
 
     name: Optional[str]
     size: int
 
     @abstractmethod
-    def write(self, data: bytes, blocking = False) -> int:
+    def write(self, data: bytes, blocking=False) -> int:
         """@brief Write data to RTT channel.
 
         Write as much of the provided data as possible to an the RTT down
@@ -117,8 +118,13 @@ class RTTControlBlock(ABC):
         pass
 
     @classmethod
-    def from_target(cls, target: SoCTarget, address: int = None,
-                    size: int = None, control_block_id: bytes = b'SEGGER RTT'):
+    def from_target(
+        cls,
+        target: SoCTarget,
+        address: int = None,
+        size: int = None,
+        control_block_id: bytes = b"SEGGER RTT",
+    ):
         """@brief Create an RTTControlBlock object using a given target.
 
         This function creates an instance of an appropriate RTTControlBlock
@@ -135,15 +141,14 @@ class RTTControlBlock(ABC):
         @return An instance of an appropriate RTTControlBlock subclass.
         """
         # TODO: Handle targets connected with jlink differently
-        return GenericRTTControlBlock(target, address = address, size = size,
-                                      control_block_id = control_block_id)
-
-
+        return GenericRTTControlBlock(
+            target, address=address, size=size, control_block_id=control_block_id
+        )
 
 
 class GenericRTTUpChannel(RTTUpChannel):
     """@brief Software implementation of RTT up channel. Does not require any
-              support from interface.
+    support from interface.
     """
 
     _target: SoCTarget
@@ -172,10 +177,10 @@ class GenericRTTUpChannel(RTTUpChannel):
 
         # Get name if there is one
         if descriptor.sName != 0:
-            data = b''
+            data = b""
             while True:
                 data += bytes(self._target.read_memory_block8(descriptor.sName, 32))
-                name_length = data.find(b'\0')
+                name_length = data.find(b"\0")
                 if name_length != -1:
                     self.name = data[:name_length].decode("utf-8", "backslashreplace")
                     break
@@ -191,7 +196,7 @@ class GenericRTTUpChannel(RTTUpChannel):
 
     @property
     def bytes_available(self) -> int:
-        """@brief Number of bytes available to be read from up channel. """
+        """@brief Number of bytes available to be read from up channel."""
         if (self.size == 0) or (self._buffer_address == 0):
             # descriptor is not yet populated
             self._read_descriptor()
@@ -212,13 +217,13 @@ class GenericRTTUpChannel(RTTUpChannel):
             return (self.size - read_off) + write_off
 
     def read(self) -> bytes:
-        """@brief Read all available data from RTT channel. """
+        """@brief Read all available data from RTT channel."""
         if (self.size == 0) or (self._buffer_address == 0):
             # descriptor is not yet populated
             self._read_descriptor()
             if (self.size == 0) or (self._buffer_address == 0):
                 # descriptor is still not populated
-                return b''
+                return b""
 
         # Get offsets
         write_off, read_off = self._target.read_memory_block32(self._offsets_addr, 2)
@@ -227,21 +232,23 @@ class GenericRTTUpChannel(RTTUpChannel):
             raise exceptions.RTTError("Invalid up buffer")
         elif write_off == read_off:
             # empty
-            return b''
+            return b""
         elif write_off > read_off:
             """
             |oooooo|xxxxxxxxxxxx|oooooo|
             0    rdOff        WrOff    SizeOfBuffer
             """
-            data = self._target.read_memory_block8(self._buffer_address + read_off,
-                                                   write_off - read_off)
+            data = self._target.read_memory_block8(
+                self._buffer_address + read_off, write_off - read_off
+            )
         else:
             """
             |xxxxxx|oooooooooooo|xxxxxx|
             0    WrOff        RdOff    SizeOfBuffer
             """
-            data = self._target.read_memory_block8(self._buffer_address + read_off,
-                                                   self.size - read_off)
+            data = self._target.read_memory_block8(
+                self._buffer_address + read_off, self.size - read_off
+            )
             data += self._target.read_memory_block8(self._buffer_address, write_off)
 
         # Update read offset
@@ -251,7 +258,7 @@ class GenericRTTUpChannel(RTTUpChannel):
 
 class GenericRTTDownChannel(RTTDownChannel):
     """@brief Software implementation of RTT down channel. Does not require any
-              support from interface.
+    support from interface.
     """
 
     _target: SoCTarget
@@ -280,10 +287,10 @@ class GenericRTTDownChannel(RTTDownChannel):
 
         # Get name if there is one
         if descriptor.sName != 0:
-            data = b''
+            data = b""
             while True:
                 data += bytes(self._target.read_memory_block8(descriptor.sName, 64))
-                name_length = data.find(b'\0')
+                name_length = data.find(b"\0")
                 if name_length != -1:
                     self.name = data[:name_length].decode("utf-8", "backslashreplace")
                     break
@@ -319,7 +326,7 @@ class GenericRTTDownChannel(RTTDownChannel):
         else:
             return read_off - write_off - 1
 
-    def write(self, data: bytes, blocking = False) -> int:
+    def write(self, data: bytes, blocking=False) -> int:
         """@brief Write data to RTT channel.
 
         Write as much of the provided data as possible to an the RTT down
@@ -340,7 +347,7 @@ class GenericRTTDownChannel(RTTDownChannel):
         if blocking:
             # Call non-blocking version until all data is written
             while data:
-                bytes_sent: int = self.write(data, blocking = False)
+                bytes_sent: int = self.write(data, blocking=False)
                 data = data[bytes_sent:]
             return
 
@@ -350,7 +357,6 @@ class GenericRTTDownChannel(RTTDownChannel):
         if (write_off >= self.size) or (read_off >= self.size):
             raise exceptions.RTTError("Invalid down buffer")
 
-
         bytes_written: int = 0
         if write_off >= read_off:
             # There is some space to fill at the top of the buffer
@@ -359,8 +365,9 @@ class GenericRTTDownChannel(RTTDownChannel):
                 # Can't use the last element in the buffer
                 free_space -= 1
             data_to_write: bytes = data[:free_space]
-            self._target.write_memory_block8(self._buffer_address + write_off,
-                                             data_to_write)
+            self._target.write_memory_block8(
+                self._buffer_address + write_off, data_to_write
+            )
             bytes_written = len(data_to_write)
             data = data[bytes_written:]
             write_off = (write_off + bytes_written) % self.size
@@ -370,8 +377,9 @@ class GenericRTTDownChannel(RTTDownChannel):
             free_space = 0
 
         bytes_to_write: int = min(free_space, len(data))
-        self._target.write_memory_block8(self._buffer_address + write_off,
-                                         data[:bytes_to_write])
+        self._target.write_memory_block8(
+            self._buffer_address + write_off, data[:bytes_to_write]
+        )
         bytes_written += bytes_to_write
         write_off += bytes_to_write
 
@@ -382,7 +390,7 @@ class GenericRTTDownChannel(RTTDownChannel):
 
 class GenericRTTControlBlock(RTTControlBlock):
     """@brief Software implementation of RTT control block helper. Does not
-              require any support from interface.
+    require any support from interface.
     """
 
     target: SoCTarget
@@ -390,8 +398,13 @@ class GenericRTTControlBlock(RTTControlBlock):
     _cb_search_size_bytes: int
     _control_block_id: Sequence[int]
 
-    def __init__(self, target: SoCTarget, address: int = None,
-                 size: int = None, control_block_id: bytes = b'SEGGER RTT'):
+    def __init__(
+        self,
+        target: SoCTarget,
+        address: int = None,
+        size: int = None,
+        control_block_id: bytes = b"SEGGER RTT",
+    ):
         """
         @param target The target with which RTT communication is desired.
         @param address Base address for control block search range.
@@ -407,7 +420,9 @@ class GenericRTTControlBlock(RTTControlBlock):
 
         if address is None:
             memory_map: MemoryMap = self.target.get_memory_map()
-            ram_region: MemoryRegion = memory_map.get_default_region_of_type(MemoryType.RAM)
+            ram_region: MemoryRegion = memory_map.get_default_region_of_type(
+                MemoryType.RAM
+            )
 
             self._cb_search_address = ram_region.start
             if size is None:
@@ -425,7 +440,7 @@ class GenericRTTControlBlock(RTTControlBlock):
 
     def _find_control_block(self) -> Optional[int]:
         addr: int = self._cb_search_address & ~0x3
-        search_size: int  = self._cb_search_size_bytes
+        search_size: int = self._cb_search_size_bytes
         if search_size < len(self._control_block_id):
             search_size = len(self._control_block_id)
 
@@ -445,8 +460,8 @@ class GenericRTTControlBlock(RTTControlBlock):
                     if offset == id_len:
                         break
                 else:
-                    num_skip_words = (offset + 1)
-                    addr += (num_skip_words * 1)
+                    num_skip_words = offset + 1
+                    addr += num_skip_words * 1
                     search_size -= num_skip_words
                     offset = 0
 
@@ -469,8 +484,12 @@ class GenericRTTControlBlock(RTTControlBlock):
             raise exceptions.RTTError("Control block not found")
 
         # Get control block info
-        num_up_buffs = self.target.read32(cb_addr + SEGGER_RTT_CB.MaxNumUpBuffers.offset)
-        num_down_buffs = self.target.read32(cb_addr + SEGGER_RTT_CB.MaxNumDownBuffers.offset)
+        num_up_buffs = self.target.read32(
+            cb_addr + SEGGER_RTT_CB.MaxNumUpBuffers.offset
+        )
+        num_down_buffs = self.target.read32(
+            cb_addr + SEGGER_RTT_CB.MaxNumDownBuffers.offset
+        )
 
         # Setup up channels
         up_base = cb_addr + sizeof(SEGGER_RTT_CB)

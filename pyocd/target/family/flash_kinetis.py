@@ -23,16 +23,17 @@ LOG = logging.getLogger(__name__)
 SECURITY_START = 0x400
 SECURITY_SIZE = 16
 FPROT_ADDR = 0x408
-FPROT_ADDR_END = 0x40c
+FPROT_ADDR_END = 0x40C
 FPROT_SIZE = 4
-FSEC_ADDR = 0x40c
+FSEC_ADDR = 0x40C
 FSEC_VAL = 0xFE
-FOPT_ADDR = 0x40d
+FOPT_ADDR = 0x40D
 FOPT_VAL = 0xFF
-FEPROT_ADDR = 0x40e
+FEPROT_ADDR = 0x40E
 FEPROT_VAL = 0xFF
-FDPROT_ADDR = 0x40f
+FDPROT_ADDR = 0x40F
 FDPROT_VAL = 0xFF
+
 
 class Flash_Kinetis(Flash):
     """@brief Base flash algorithm class for Freescale Kinetis devices."""
@@ -65,16 +66,23 @@ class Flash_Kinetis(Flash):
         @retval Data with modified security bits
         """
         # Check if the data passed in contains the security bits
-        if (address <= SECURITY_START and address + len(data) >= SECURITY_START + SECURITY_SIZE):
-
+        if (
+            address <= SECURITY_START
+            and address + len(data) >= SECURITY_START + SECURITY_SIZE
+        ):
             # convert data to a list so it can be modified
             data = list(data)
 
             # FPROT must be 0xff (erase protection disabled)
             for i in range(FPROT_ADDR, FPROT_ADDR_END):
-                if (data[i - address] != 0xff):
-                    data[i - address] = 0xff
-                    LOG.debug("FCF[%d] at addr 0x%X changed to 0x%X", i - FPROT_ADDR, i, data[i - address])
+                if data[i - address] != 0xFF:
+                    data[i - address] = 0xFF
+                    LOG.debug(
+                        "FCF[%d] at addr 0x%X changed to 0x%X",
+                        i - FPROT_ADDR,
+                        i,
+                        data[i - address],
+                    )
 
             # FSEC must be 0xff
             if data[FSEC_ADDR - address] != FSEC_VAL:
@@ -88,12 +96,16 @@ class Flash_Kinetis(Flash):
             # FEPROT must be 0xff
             if data[FEPROT_ADDR - address] != FEPROT_VAL:
                 data[FEPROT_ADDR - address] = FEPROT_VAL
-                LOG.debug("FEPROT at addr 0x%X changed to 0x%X", FEPROT_ADDR, FEPROT_VAL)
+                LOG.debug(
+                    "FEPROT at addr 0x%X changed to 0x%X", FEPROT_ADDR, FEPROT_VAL
+                )
 
             # FDPROT must be 0xff
             if data[FDPROT_ADDR - address] != FDPROT_VAL:
                 data[FDPROT_ADDR - address] = FDPROT_VAL
-                LOG.debug("FDPROT at addr 0x%X changed to 0x%X", FDPROT_ADDR, FDPROT_VAL)
+                LOG.debug(
+                    "FDPROT at addr 0x%X changed to 0x%X", FDPROT_ADDR, FDPROT_VAL
+                )
 
             # convert back to tuple
             data = tuple(data)

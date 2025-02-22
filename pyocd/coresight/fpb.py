@@ -16,11 +16,11 @@
 # limitations under the License.
 
 import logging
-from typing import (List, Optional, TYPE_CHECKING)
+from typing import List, Optional, TYPE_CHECKING
 
 from ..core.target import Target
 from .component import CoreSightComponent
-from ..debug.breakpoints.provider import (Breakpoint, BreakpointProvider)
+from ..debug.breakpoints.provider import Breakpoint, BreakpointProvider
 
 if TYPE_CHECKING:
     from ..core.memory_interface import MemoryInterface
@@ -28,11 +28,13 @@ if TYPE_CHECKING:
 
 LOG = logging.getLogger(__name__)
 
+
 class HardwareBreakpoint(Breakpoint):
     def __init__(self, comp_register_addr: int, provider: BreakpointProvider) -> None:
         super(HardwareBreakpoint, self).__init__(provider)
         self.comp_register_addr = comp_register_addr
         self.type = Target.BreakpointType.HW
+
 
 class FPB(BreakpointProvider, CoreSightComponent):
     """@brief Flash Patch and Breakpoint unit"""
@@ -42,15 +44,16 @@ class FPB(BreakpointProvider, CoreSightComponent):
     # The addresses are offsets from the base address.
     FP_CTRL = 0x00000000
     FP_CTRL_KEY = 1 << 1
-    FP_CTRL_REV_MASK = 0xf0000000
+    FP_CTRL_REV_MASK = 0xF0000000
     FP_CTRL_REV_SHIFT = 28
     FP_COMP0 = 0x00000008
 
-    def __init__(self,
-            ap: "MemoryInterface",
-            cmpid: Optional["CoreSightComponentID"] = None,
-            addr: Optional[int] = None
-            ) -> None:
+    def __init__(
+        self,
+        ap: "MemoryInterface",
+        cmpid: Optional["CoreSightComponentID"] = None,
+        addr: Optional[int] = None,
+    ) -> None:
         CoreSightComponent.__init__(self, ap, cmpid, addr)
         BreakpointProvider.__init__(self)
         self.hw_breakpoints: List[HardwareBreakpoint] = []
@@ -76,10 +79,14 @@ class FPB(BreakpointProvider, CoreSightComponent):
         if self.fpb_rev not in (1, 2):
             LOG.warning("Unknown FPB version %d", self.fpb_rev)
         self.nb_code = ((fpcr >> 8) & 0x70) | ((fpcr >> 4) & 0xF)
-        self.nb_lit = (fpcr >> 7) & 0xf
-        LOG.info("%d hardware breakpoints, %d literal comparators", self.nb_code, self.nb_lit)
+        self.nb_lit = (fpcr >> 7) & 0xF
+        LOG.info(
+            "%d hardware breakpoints, %d literal comparators", self.nb_code, self.nb_lit
+        )
         for i in range(self.nb_code):
-            self.hw_breakpoints.append(HardwareBreakpoint(self.address + FPB.FP_COMP0 + 4*i, self))
+            self.hw_breakpoints.append(
+                HardwareBreakpoint(self.address + FPB.FP_COMP0 + 4 * i, self)
+            )
 
         # disable FPB (will be enabled on first bp set)
         self.disable()
@@ -93,12 +100,12 @@ class FPB(BreakpointProvider, CoreSightComponent):
     def enable(self) -> None:
         self.ap.write_memory(self.address + FPB.FP_CTRL, FPB.FP_CTRL_KEY | 1)
         self.enabled = True
-        LOG.debug('fpb has been enabled')
+        LOG.debug("fpb has been enabled")
 
     def disable(self) -> None:
         self.ap.write_memory(self.address + FPB.FP_CTRL, FPB.FP_CTRL_KEY | 0)
         self.enabled = False
-        LOG.debug('fpb has been disabled')
+        LOG.debug("fpb has been disabled")
 
     @property
     def available_breakpoints(self) -> int:
@@ -124,11 +131,14 @@ class FPB(BreakpointProvider, CoreSightComponent):
             self.enable()
 
         if not self.can_support_address(addr):
-            LOG.error('Breakpoint out of range 0x%X', addr)
+            LOG.error("Breakpoint out of range 0x%X", addr)
             return None
 
         if self.available_breakpoints == 0:
-            LOG.error('No more hardware breakpoints are available, dropped breakpoint at 0x%08x', addr)
+            LOG.error(
+                "No more hardware breakpoints are available, dropped breakpoint at 0x%08x",
+                addr,
+            )
             return None
 
         for bp in self.hw_breakpoints:
@@ -136,14 +146,16 @@ class FPB(BreakpointProvider, CoreSightComponent):
                 bp.enabled = True
                 comp = 0
                 if self.fpb_rev == 1:
-                    bp_match = (1 << 30)
+                    bp_match = 1 << 30
                     if addr & 0x2:
-                        bp_match = (2 << 30)
-                    comp = addr & 0x1ffffffc | bp_match | 1
+                        bp_match = 2 << 30
+                    comp = addr & 0x1FFFFFFC | bp_match | 1
                 elif self.fpb_rev == 2:
-                    comp = (addr & 0xfffffffe) | 1
+                    comp = (addr & 0xFFFFFFFE) | 1
                 self.ap.write32(bp.comp_register_addr, comp)
-                LOG.debug("BP: wrote 0x%08x to comp @ 0x%08x", comp, bp.comp_register_addr)
+                LOG.debug(
+                    "BP: wrote 0x%08x to comp @ 0x%08x", comp, bp.comp_register_addr
+                )
                 bp.addr = addr
                 self.num_hw_breakpoint_used += 1
                 return bp
@@ -157,4 +169,3 @@ class FPB(BreakpointProvider, CoreSightComponent):
                 self.ap.write_memory(hwbp.comp_register_addr, 0)
                 self.num_hw_breakpoint_used -= 1
                 return
-

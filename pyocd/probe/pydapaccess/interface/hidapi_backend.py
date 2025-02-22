@@ -28,7 +28,7 @@ from .common import (
     filter_device_by_usage_page,
     generate_device_unique_id,
     is_known_cmsis_dap_vid_pid,
-    )
+)
 from ..dap_access_api import DAPAccessIntf
 from ....utility.compatibility import to_str_safe
 
@@ -44,8 +44,9 @@ else:
     IS_AVAILABLE = True
 
 # OS flags.
-_IS_DARWIN = (platform.system() == 'Darwin')
-_IS_WINDOWS = (platform.system() == 'Windows')
+_IS_DARWIN = platform.system() == "Darwin"
+_IS_WINDOWS = platform.system() == "Windows"
+
 
 class HidApiUSB(Interface):
     """@brief CMSIS-DAP USB interface class using hidapi backend."""
@@ -57,12 +58,13 @@ class HidApiUSB(Interface):
     def __init__(self, dev, info: dict):
         super().__init__()
         # Vendor page and usage_id = 2
-        self.vid = info['vendor_id']
-        self.pid = info['product_id']
-        self.vendor_name = info['manufacturer_string'] or f"{self.vid:#06x}"
-        self.product_name = info['product_string'] or f"{self.pid:#06x}"
-        self.serial_number = info['serial_number'] \
-                or generate_device_unique_id(self.vid, self.pid, six.ensure_str(info['path']))
+        self.vid = info["vendor_id"]
+        self.pid = info["product_id"]
+        self.vendor_name = info["manufacturer_string"] or f"{self.vid:#06x}"
+        self.product_name = info["product_string"] or f"{self.pid:#06x}"
+        self.serial_number = info["serial_number"] or generate_device_unique_id(
+            self.vid, self.pid, six.ensure_str(info["path"])
+        )
         self.device_info = info
         self.device = dev
         self.closed = True
@@ -83,9 +85,11 @@ class HidApiUSB(Interface):
 
     def open(self):
         try:
-            self.device.open_path(self.device_info['path'])
+            self.device.open_path(self.device_info["path"])
         except IOError as exc:
-            raise DAPAccessIntf.DeviceError("Unable to open device: " + str(exc)) from exc
+            raise DAPAccessIntf.DeviceError(
+                "Unable to open device: " + str(exc)
+            ) from exc
 
         # Windows does not use the receive thread because it causes packet corruption for some reason.
         if not _IS_WINDOWS:
@@ -132,25 +136,27 @@ class HidApiUSB(Interface):
         boards = []
 
         for deviceInfo in devices:
-            product_name = to_str_safe(deviceInfo['product_string'])
-            known_cmsis_dap = is_known_cmsis_dap_vid_pid(deviceInfo['vendor_id'], deviceInfo['product_id'])
+            product_name = to_str_safe(deviceInfo["product_string"])
+            known_cmsis_dap = is_known_cmsis_dap_vid_pid(
+                deviceInfo["vendor_id"], deviceInfo["product_id"]
+            )
             if ("CMSIS-DAP" not in product_name) and (not known_cmsis_dap):
                 # Check the device path as a backup. Even though we can't get the interface name from
                 # hidapi, it may appear in the path. At least, it does on macOS.
-                device_path = to_str_safe(deviceInfo['path'])
+                device_path = to_str_safe(deviceInfo["path"])
                 if "CMSIS-DAP" not in device_path:
                     # Skip non cmsis-dap devices
                     continue
 
-            vid = deviceInfo['vendor_id']
-            pid = deviceInfo['product_id']
+            vid = deviceInfo["vendor_id"]
+            pid = deviceInfo["product_id"]
 
             # Perform device-specific filtering.
-            if filter_device_by_usage_page(vid, pid, deviceInfo['usage_page']):
+            if filter_device_by_usage_page(vid, pid, deviceInfo["usage_page"]):
                 continue
 
             try:
-                dev = hid.device(vendor_id=vid, product_id=pid, path=deviceInfo['path'])
+                dev = hid.device(vendor_id=vid, product_id=pid, path=deviceInfo["path"])
             except IOError as exc:
                 LOG.debug("Failed to open USB device: %s", exc)
                 continue
@@ -164,7 +170,9 @@ class HidApiUSB(Interface):
     def write(self, data):
         """@brief Write data on the OUT endpoint associated to the HID interface"""
         if TRACE.isEnabledFor(logging.DEBUG):
-            TRACE.debug("  USB OUT> (%d) %s", len(data), ' '.join([f'{i:02x}' for i in data]))
+            TRACE.debug(
+                "  USB OUT> (%d) %s", len(data), " ".join([f"{i:02x}" for i in data])
+            )
         data.extend([0] * (self.packet_size - len(data)))
         if not _IS_WINDOWS:
             self.read_sem.release()
@@ -178,27 +186,37 @@ class HidApiUSB(Interface):
 
             if TRACE.isEnabledFor(logging.DEBUG):
                 # Strip off trailing zero bytes to reduce clutter.
-                TRACE.debug("  USB IN < (%d) %s", len(read_data),
-                            ' '.join([f'{i:02x}' for i in read_data.rstrip(b'\x00')]))
+                TRACE.debug(
+                    "  USB IN < (%d) %s",
+                    len(read_data),
+                    " ".join([f"{i:02x}" for i in read_data.rstrip(b"\x00")]),
+                )
 
             return read_data
 
         # Check for terminated read thread.
         if self.closed:
-            return b''
+            return b""
         elif self._read_thread_did_exit:
-            raise DAPAccessIntf.DeviceError("Probe %s read thread exited unexpectedly" % self.serial_number) from self._read_thread_exception
+            raise DAPAccessIntf.DeviceError(
+                "Probe %s read thread exited unexpectedly" % self.serial_number
+            ) from self._read_thread_exception
 
         try:
             read_data = self.received_data.get(True, self.DEFAULT_USB_TIMEOUT_S)
         except queue.Empty:
-            raise DAPAccessIntf.DeviceError(f"Timeout reading from probe {self.serial_number}") from None
+            raise DAPAccessIntf.DeviceError(
+                f"Timeout reading from probe {self.serial_number}"
+            ) from None
 
         # Trace when the higher layer actually gets a packet previously read.
         if TRACE.isEnabledFor(logging.DEBUG):
             # Strip off trailing zero bytes to reduce clutter.
-            TRACE.debug("  USB RD < (%d) %s", len(read_data),
-                    ' '.join([f'{i:02x}' for i in read_data.rstrip(b'\x00')]))
+            TRACE.debug(
+                "  USB RD < (%d) %s",
+                len(read_data),
+                " ".join([f"{i:02x}" for i in read_data.rstrip(b"\x00")]),
+            )
 
         return read_data
 

@@ -15,7 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (NamedTuple, Optional)
+from typing import NamedTuple, Optional
+
 
 class BoardInfo(NamedTuple):
     name: str
@@ -23,6 +24,8 @@ class BoardInfo(NamedTuple):
     binary: Optional[str] = None
     vendor: Optional[str] = None
 
+
+# fmt: off
 BOARD_ID_TO_INFO = {
   # Note: please keep board list sorted by ID!
   #
@@ -319,3 +322,4 @@ BOARD_ID_TO_INFO = {
     "C006": BoardInfo(  "VBLUno51",             "nrf51",            "l1_nrf51.bin",         ),
     "D000": BoardInfo(  "NM180410",             "ama3b1kk_kbr",     "l1_ama3b1kk_kbr.bin",  ),
 }
+# fmt: on

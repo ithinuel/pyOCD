@@ -18,12 +18,13 @@
 import sys
 import string
 import io
-from typing import (IO, Optional, Sequence)
+from typing import IO, Optional, Sequence
 
 from . import conversion
 
 ## ASCII printable characters not including whitespace that changes line position.
-_PRINTABLE = string.digits + string.ascii_letters + string.punctuation + ' '
+_PRINTABLE = string.digits + string.ascii_letters + string.punctuation + " "
+
 
 def format_hex_width(value: int, width: int) -> str:
     """@brief Formats the value as hex of the specified bit width.
@@ -43,13 +44,14 @@ def format_hex_width(value: int, width: int) -> str:
     else:
         raise ValueError("unrecognized register width (%d)" % width)
 
+
 def dump_hex_data(
-        data: Sequence[int],
-        start_address: int = 0,
-        width: int = 8,
-        output: Optional[IO[str]] = None,
-        print_ascii: bool = True
-    ) -> None:
+    data: Sequence[int],
+    start_address: int = 0,
+    width: int = 8,
+    output: Optional[IO[str]] = None,
+    print_ascii: bool = True,
+) -> None:
     """@brief Prints a canonical hex dump of the given data.
 
     Each line of the output consists of an address column, the data as hex, and a printable ASCII
@@ -132,10 +134,11 @@ def dump_hex_data(
                 else:
                     d = list(conversion.nbit_le_list_to_byte_list([d], width))
                     d.reverse()
-                s += "".join((chr(b) if (chr(b) in _PRINTABLE) else '.') for b in d)
+                s += "".join((chr(b) if (chr(b) in _PRINTABLE) else ".") for b in d)
             output.write(" " * (max_line_width - actual_line_width) + "   " + s + "|")
 
         output.write("\n")
+
 
 def dump_hex_data_to_str(data, **kwargs):
     """@brief Returns a string with data formatted as hex.

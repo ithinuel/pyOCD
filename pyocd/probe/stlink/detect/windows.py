@@ -33,6 +33,7 @@ except ImportError:
     # Only allow the exception to propagate on Windows. This module should never be imported
     # in the first place on other OSes, allowing imports is simply for easier testing.
     import platform
+
     if platform.system() == "Windows":
         raise
 
@@ -216,22 +217,19 @@ def _vid_pid_path_to_usb_info(vid_pid_path):
 
 
 def _iter_keys_as_str(key):
-    """Iterate over subkeys of a key returning subkey as string
-    """
+    """Iterate over subkeys of a key returning subkey as string"""
     for i in range(winreg.QueryInfoKey(key)[0]):
         yield winreg.EnumKey(key, i)
 
 
 def _iter_keys(key):
-    """Iterate over subkeys of a key
-    """
+    """Iterate over subkeys of a key"""
     for i in range(winreg.QueryInfoKey(key)[0]):
         yield winreg.OpenKey(key, winreg.EnumKey(key, i))
 
 
 def _iter_vals(key):
-    """Iterate over values of a key
-    """
+    """Iterate over values of a key"""
     for i in range(winreg.QueryInfoKey(key)[1]):
         yield winreg.EnumValue(key, i)
 
@@ -241,8 +239,7 @@ class CompatibleIDsNotFoundException(Exception):
 
 
 class StlinkDetectWindows(StlinkDetectBase):
-    """ mbed-enabled platform detection for Windows
-    """
+    """mbed-enabled platform detection for Windows"""
 
     def __init__(self, **kwargs):
         StlinkDetectBase.__init__(self, **kwargs)
@@ -433,11 +430,11 @@ class StlinkDetectWindows(StlinkDetectBase):
                         continue
 
                     if capability == "msd":
-                        candidates[entry_data["target_id_usb_id"]][
-                            "mount_point"
-                        ] = target_id_usb_id_mount_point_map[
-                            entry_data["target_id_usb_id"]
-                        ]
+                        candidates[entry_data["target_id_usb_id"]]["mount_point"] = (
+                            target_id_usb_id_mount_point_map[
+                                entry_data["target_id_usb_id"]
+                            ]
+                        )
                         candidates[entry_data["target_id_usb_id"]].update(
                             _vid_pid_path_to_usb_info(vid_pid_path)
                         )
@@ -453,11 +450,12 @@ class StlinkDetectWindows(StlinkDetectBase):
                             continue
 
                         try:
-                            candidates[entry_data["target_id_usb_id"]][
-                                "serial_port"
-                            ], _ = winreg.QueryValueEx(
-                                device_parameters_key, "PortName"
-                            )
+                            (
+                                candidates[entry_data["target_id_usb_id"]][
+                                    "serial_port"
+                                ],
+                                _,
+                            ) = winreg.QueryValueEx(device_parameters_key, "PortName")
                             candidates[entry_data["target_id_usb_id"]].update(
                                 _vid_pid_path_to_usb_info(vid_pid_path)
                             )

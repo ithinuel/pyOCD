@@ -14,6 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class DAPSettings():
 
-	limit_packets = False
+class DAPSettings:
+    limit_packets = False

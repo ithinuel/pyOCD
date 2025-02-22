@@ -16,6 +16,7 @@
 
 from .component import CoreSightComponent
 
+
 class TPIU(CoreSightComponent):
     """@brief Trace Port Interface Unit"""
 
@@ -23,17 +24,17 @@ class TPIU(CoreSightComponent):
     #
     # The addresses are offsets from the base address.
     ACPR = 0x00000010
-    ACPR_PRESCALER_MASK = 0x0000ffff
+    ACPR_PRESCALER_MASK = 0x0000FFFF
 
-    SPPR = 0x000000f0
+    SPPR = 0x000000F0
     SPPR_TXMODE_MASK = 0x00000003
     SPPR_TXMODE_NRZ = 0x00000002
 
     FFCR = 0x00000304
-    FFCR_ENFCONT_MASK = (1 << 1)
+    FFCR_ENFCONT_MASK = 1 << 1
 
-    DEVID = 0x00000fc8
-    DEVID_NRZ_MASK = (1 << 11)
+    DEVID = 0x00000FC8
+    DEVID_NRZ_MASK = 1 << 11
 
     def __init__(self, ap, cmpid=None, addr=None):
         """@brief Standard CoreSight component constructor."""
@@ -72,8 +73,10 @@ class TPIU(CoreSightComponent):
             return False
 
         # Go ahead and configure for SWO.
-        self.ap.write32(self.address + TPIU.SPPR, TPIU.SPPR_TXMODE_NRZ) # Select SWO UART mode.
-        self.ap.write32(self.address + TPIU.FFCR, 0) # Disable formatter.
+        self.ap.write32(
+            self.address + TPIU.SPPR, TPIU.SPPR_TXMODE_NRZ
+        )  # Select SWO UART mode.
+        self.ap.write32(self.address + TPIU.FFCR, 0)  # Disable formatter.
 
         # Compute the divider.
         div = (system_clock // swo_clock) - 1
@@ -84,5 +87,3 @@ class TPIU(CoreSightComponent):
             return False
         self.ap.write32(self.address + TPIU.ACPR, div & TPIU.ACPR_PRESCALER_MASK)
         return True
-
-

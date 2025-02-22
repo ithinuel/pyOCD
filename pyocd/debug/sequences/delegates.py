@@ -17,15 +17,16 @@
 from __future__ import annotations
 
 import logging
-from typing import (TYPE_CHECKING, Optional, Set)
+from typing import TYPE_CHECKING, Optional, Set
 
 from .scope import Scope
 
 LOG = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .sequences import (DebugSequence, DebugSequenceExecutionContext)
+    from .sequences import DebugSequence, DebugSequenceExecutionContext
     from ...target.pack.cmsis_pack import CmsisPackDevice
+
 
 class DebugSequenceDelegate:
     """@brief Delegate interface for handling sequence operations."""
@@ -58,7 +59,9 @@ class DebugSequenceDelegate:
         """@brief Return whether there is a debug sequence with the specified name."""
         raise NotImplementedError()
 
-    def get_sequence_with_name(self, name: str, pname: Optional[str] = None) -> DebugSequence:
+    def get_sequence_with_name(
+        self, name: str, pname: Optional[str] = None
+    ) -> DebugSequence:
         """@brief Return the named debug sequence object.
 
         Expected to raise if the sequence isn't available.
@@ -101,6 +104,7 @@ class DebugSequenceDelegate:
         """
         raise NotImplementedError()
 
+
 class DebugSequenceFunctionsDelegate:
     """@brief Implements functions provided by the debug sequence environment.
 
@@ -115,4 +119,5 @@ class DebugSequenceFunctionsDelegate:
     @property
     def context(self) -> DebugSequenceExecutionContext:
         from .sequences import DebugSequenceExecutionContext
+
         return DebugSequenceExecutionContext.get_active_context()

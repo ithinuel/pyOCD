@@ -17,7 +17,7 @@
 
 import logging
 import textwrap
-from typing import (Any, Dict, List, Set, Tuple, Type, Union, TYPE_CHECKING)
+from typing import Any, Dict, List, Set, Tuple, Type, Union, TYPE_CHECKING
 
 from ..core import exceptions
 from ..utility import conversion
@@ -32,6 +32,7 @@ LOG = logging.getLogger(__name__)
 ## @brief Dict of command group names to a set of command classes.
 ALL_COMMANDS: Dict[str, Set[Union["CommandBase", "ValueBase"]]] = {}
 
+
 class CommandMeta(type):
     """@brief Metaclass for commands.
 
@@ -39,25 +40,32 @@ class CommandMeta(type):
     "ALL_COMMANDS" table.
     """
 
-    def __new__(mcs: Type, name: str, bases: Tuple[type, ...], objdict: Dict[str, Any]) -> "CommandMeta":
+    def __new__(
+        mcs: Type, name: str, bases: Tuple[type, ...], objdict: Dict[str, Any]
+    ) -> "CommandMeta":
         # Create the new type.
         new_type = type.__new__(mcs, name, bases, objdict)
 
         # The Command base class won't have an INFO.
-        if 'INFO' in objdict:
-            info = objdict['INFO']
+        if "INFO" in objdict:
+            info = objdict["INFO"]
 
             # Validate the INFO dict.
-            assert (('names' in info)
-                    and ('group' in info)
-                    and ('category' in info)
-                    and ('help' in info)
-                    and ((('nargs' in info) and ('usage' in info)) # Required for commands.
-                        or ('access' in info))) # Required for values.
+            assert (
+                ("names" in info)
+                and ("group" in info)
+                and ("category" in info)
+                and ("help" in info)
+                and (
+                    (("nargs" in info) and ("usage" in info))  # Required for commands.
+                    or ("access" in info)
+                )
+            )  # Required for values.
 
             # Add this command to our table of commands by group.
-            ALL_COMMANDS.setdefault(info['group'], set()).add(new_type)
+            ALL_COMMANDS.setdefault(info["group"], set()).add(new_type)
         return new_type
+
 
 class CommandBase(metaclass=CommandMeta):
     """@brief Base class for a command.
@@ -76,13 +84,13 @@ class CommandBase(metaclass=CommandMeta):
 
     ## Default, empty info dict.
     INFO = {
-            'names': [],
-            'group': '',
-            'category': '',
-            'nargs': 0,
-            'usage': "",
-            'help': "",
-            }
+        "names": [],
+        "group": "",
+        "category": "",
+        "nargs": 0,
+        "usage": "",
+        "help": "",
+    }
 
     def __init__(self, context: "CommandExecutionContext") -> None:
         """@brief Constructor."""
@@ -95,14 +103,14 @@ class CommandBase(metaclass=CommandMeta):
 
     def check_arg_count(self, args: List[str]) -> None:
         """@brief Verify the number of command arguments."""
-        nargs = self.INFO['nargs']
-        if nargs == '*':
+        nargs = self.INFO["nargs"]
+        if nargs == "*":
             pass
         elif nargs is None:
             if len(args) != 0:
                 raise exceptions.CommandError("command does not accept arguments")
         elif isinstance(nargs, list):
-            if (len(args) not in nargs):
+            if len(args) not in nargs:
                 raise exceptions.CommandError("incorrect number of arguments")
         elif len(args) < nargs:
             raise exceptions.CommandError("too few arguments")
@@ -118,12 +126,16 @@ class CommandBase(metaclass=CommandMeta):
         raise NotImplementedError()
 
     def _format_core_register(self, info: "CoreRegisterInfo", value: int) -> str:
-        hex_width = round_up_div(info.bitsize, 4) + 2 # add 2 for the "0x" prefix
+        hex_width = round_up_div(info.bitsize, 4) + 2  # add 2 for the "0x" prefix
         if info.is_double_float_register:
-            value_str = "{f:g} ({i:#0{w}x})".format(f=conversion.u64_to_float64(value), i=value, w=hex_width)
+            value_str = "{f:g} ({i:#0{w}x})".format(
+                f=conversion.u64_to_float64(value), i=value, w=hex_width
+            )
         elif info.is_single_float_register:
-            value_str = "{f:g} ({i:#0{w}x})".format(f=conversion.u32_to_float32(value), i=value, w=hex_width)
-        elif info.gdb_type in ('data_ptr', 'code_ptr'):
+            value_str = "{f:g} ({i:#0{w}x})".format(
+                f=conversion.u32_to_float32(value), i=value, w=hex_width
+            )
+        elif info.gdb_type in ("data_ptr", "code_ptr"):
             value_str = "{h:#0{w}x}".format(h=value, w=hex_width)
         else:
             value_str = "{h:#0{w}x} ({d:d})".format(h=value, w=hex_width, d=value)
@@ -140,42 +152,49 @@ class CommandBase(metaclass=CommandMeta):
         """
         try:
             offset = 0
-            deref = (arg[0] == '[')
+            deref = arg[0] == "["
             if deref:
                 if not self.context.selected_core:
-                    raise exceptions.CommandError("cannot dereference when memory is not accessible")
+                    raise exceptions.CommandError(
+                        "cannot dereference when memory is not accessible"
+                    )
                 arg = arg[1:-1]
                 offset = 0
-                if ',' in arg:
-                    arg, offset = arg.split(',')
+                if "," in arg:
+                    arg, offset = arg.split(",")
                     arg = arg.strip()
                     offset = int(offset.strip(), base=0)
 
             value = None
-            if (self.context.selected_core) and (arg.lower() in self.context.selected_core.core_registers.by_name):
+            if (self.context.selected_core) and (
+                arg.lower() in self.context.selected_core.core_registers.by_name
+            ):
                 value = self.context.selected_core.read_core_register(arg.lower())
                 self.context.writei("%s = 0x%08x", arg.lower(), value)
             else:
-                subargs = arg.lower().split('.')
+                subargs = arg.lower().split(".")
                 if subargs[0] in self.context.peripherals and len(subargs) > 1:
                     p = self.context.peripherals[subargs[0]]
                     r = [x for x in p.registers if x.name.lower() == subargs[1]]
                     if len(r):
                         value = p.base_address + r[0].address_offset
                     else:
-                        raise exceptions.CommandError("invalid register '%s' for %s" % (subargs[1], p.name))
+                        raise exceptions.CommandError(
+                            "invalid register '%s' for %s" % (subargs[1], p.name)
+                        )
                 elif self.context.elf is not None:
                     sym = self.context.elf.symbol_decoder.get_symbol_for_name(arg)
                     if sym is not None:
                         value = sym.address
 
             if value is None:
-                arg = arg.lower().replace('_', '')
+                arg = arg.lower().replace("_", "")
                 value = int(arg, base=0)
 
             if deref and (self.context.selected_ap is not None):
                 value = conversion.byte_list_to_u32le_list(
-                        self.context.selected_ap.read_memory_block8(value + offset, 4))[0]
+                    self.context.selected_ap.read_memory_block8(value + offset, 4)
+                )[0]
                 self.context.writei("[%s,%d] = 0x%08x", arg, offset, value)
 
             return value
@@ -185,13 +204,16 @@ class CommandBase(metaclass=CommandMeta):
     @classmethod
     def format_help(cls, context, max_width: int = 72) -> str:
         """@brief Return a string with the help text for this command."""
-        text = "Usage: {cmd} {usage}\n".format(cmd=cls.INFO['names'][0], usage=cls.INFO['usage'])
-        if len(cls.INFO['names']) > 1:
-            text += "Aliases: {0}\n".format(", ".join(cls.INFO['names'][1:]))
-        text += "\n" + textwrap.fill(cls.INFO['help'], width=max_width) + "\n"
-        if 'extra_help' in cls.INFO:
-            text += "\n" + textwrap.fill(cls.INFO['extra_help'], width=max_width) + "\n"
+        text = "Usage: {cmd} {usage}\n".format(
+            cmd=cls.INFO["names"][0], usage=cls.INFO["usage"]
+        )
+        if len(cls.INFO["names"]) > 1:
+            text += "Aliases: {0}\n".format(", ".join(cls.INFO["names"][1:]))
+        text += "\n" + textwrap.fill(cls.INFO["help"], width=max_width) + "\n"
+        if "extra_help" in cls.INFO:
+            text += "\n" + textwrap.fill(cls.INFO["extra_help"], width=max_width) + "\n"
         return text
+
 
 class ValueBase(CommandBase):
     """@brief Base class for value commands.
@@ -223,21 +245,22 @@ class ValueBase(CommandBase):
     @classmethod
     def format_help(cls, context, max_width: int = 72) -> str:
         """@brief Return a string with the help text for this command."""
-        first_name = cls.INFO['names'][0]
+        first_name = cls.INFO["names"][0]
         text = "Usage: "
         did_print_on_usage_line = False
-        if 'r' in cls.INFO['access']:
-            usage = cls.INFO.get('show_usage', "")
+        if "r" in cls.INFO["access"]:
+            usage = cls.INFO.get("show_usage", "")
             text += "show {cmd} {usage}\n".format(cmd=first_name, usage=usage)
             did_print_on_usage_line = True
-        if 'w' in cls.INFO['access']:
+        if "w" in cls.INFO["access"]:
             indent = "       " if did_print_on_usage_line else ""
-            usage = cls.INFO.get('set_usage', "VALUE")
-            text += "{indent}set {cmd} {usage}\n".format(indent=indent, cmd=first_name, usage=usage)
-        if len(cls.INFO['names']) > 1:
-            text += "Aliases: {0}\n".format(", ".join(cls.INFO['names'][1:]))
-        text += "\n" + textwrap.fill(cls.INFO['help'], width=max_width) + "\n"
-        if 'extra_help' in cls.INFO:
-            text += "\n" + textwrap.fill(cls.INFO['extra_help'], width=max_width) + "\n"
+            usage = cls.INFO.get("set_usage", "VALUE")
+            text += "{indent}set {cmd} {usage}\n".format(
+                indent=indent, cmd=first_name, usage=usage
+            )
+        if len(cls.INFO["names"]) > 1:
+            text += "Aliases: {0}\n".format(", ".join(cls.INFO["names"][1:]))
+        text += "\n" + textwrap.fill(cls.INFO["help"], width=max_width) + "\n"
+        if "extra_help" in cls.INFO:
+            text += "\n" + textwrap.fill(cls.INFO["extra_help"], width=max_width) + "\n"
         return text
-

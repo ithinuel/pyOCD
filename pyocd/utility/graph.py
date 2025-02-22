@@ -15,9 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Callable, List, Optional, Sequence, Type, TypeVar, Union, cast)
+from typing import Callable, List, Optional, Sequence, Type, TypeVar, Union, cast
 
 _T = TypeVar("_T", bound="GraphNode")
+
 
 class GraphNode:
     """@brief Simple graph node.
@@ -71,10 +72,9 @@ class GraphNode:
             root = root.parent
         return root
 
-    def find_children(self,
-            predicate: Callable[["GraphNode"], bool],
-            breadth_first: bool = True
-        ) -> Sequence["GraphNode"]:
+    def find_children(
+        self, predicate: Callable[["GraphNode"], bool], breadth_first: bool = True
+    ) -> Sequence["GraphNode"]:
         """@brief Recursively search for children that match a given predicate.
         @param self
         @param predicate A callable accepting a single argument for the node to examine. If the
@@ -84,6 +84,7 @@ class GraphNode:
         @param breadth_first Whether to search breadth first. Pass False to search depth first.
         @returns List of matching child nodes, or an empty list if no matches were found.
         """
+
         def _search(node: GraphNode):
             results: List[GraphNode] = []
             childrenToExamine: List[GraphNode] = []
@@ -116,7 +117,9 @@ class GraphNode:
         else:
             return None
 
-    def __getitem__(self, key: Union[int, str, slice]) -> Union["GraphNode", List["GraphNode"]]:
+    def __getitem__(
+        self, key: Union[int, str, slice]
+    ) -> Union["GraphNode", List["GraphNode"]]:
         """@brief Returns the child with the given index or node name.
 
         Slicing is supported with integer indexes.

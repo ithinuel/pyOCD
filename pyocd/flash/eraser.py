@@ -22,6 +22,7 @@ from ..core.memory_map import MemoryType
 
 LOG = logging.getLogger(__name__)
 
+
 class FlashEraser(object):
     """@brief Class that manages high level flash erasing.
 
@@ -33,6 +34,7 @@ class FlashEraser(object):
         it simply reverts to a chip erase.
     - sector erase: One or more sectors are erased.
     """
+
     class Mode(Enum):
         MASS = 1
         CHIP = 2
@@ -93,7 +95,9 @@ class FlashEraser(object):
         # Erase all flash regions. This may be overkill if either each region's algo erases
         # all regions on the chip. But there's no current way to know whether this will happen,
         # so prefer to be certain.
-        for region in self._session.target.memory_map.iter_matching_regions(type=MemoryType.FLASH):
+        for region in self._session.target.memory_map.iter_matching_regions(
+            type=MemoryType.FLASH
+        ):
             if region.flash is not None:
                 if region.flash.is_erase_all_supported:
                     region.flash.init(region.flash.Operation.ERASE)
@@ -102,7 +106,7 @@ class FlashEraser(object):
                 else:
                     self._sector_erase([(region.start, region.end)])
         if self._log_chip_erase:
-                LOG.info("Chip erase complete")
+            LOG.info("Chip erase complete")
 
     def _sector_erase(self, addresses):
         flash = None
@@ -114,9 +118,13 @@ class FlashEraser(object):
 
             while sector_addr < end_addr:
                 # Look up the flash memory region for the current address.
-                region = self._session.target.memory_map.get_region_for_address(sector_addr)
+                region = self._session.target.memory_map.get_region_for_address(
+                    sector_addr
+                )
                 if region is None:
-                    LOG.warning("address 0x%08x is not within a memory region", sector_addr)
+                    LOG.warning(
+                        "address 0x%08x is not within a memory region", sector_addr
+                    )
                     break
                 if not region.is_flash:
                     LOG.warning("address 0x%08x is not in flash", sector_addr)
@@ -136,8 +144,10 @@ class FlashEraser(object):
 
                 # Get sector info for the current address.
                 sector_info = flash.get_sector_info(sector_addr)
-                assert sector_info, ("sector address 0x%08x within flash region '%s' is invalid"
-                                        % (sector_addr, region.name))
+                assert sector_info, (
+                    "sector address 0x%08x within flash region '%s' is invalid"
+                    % (sector_addr, region.name)
+                )
 
                 # Align first page address.
                 delta = sector_addr % sector_info.size
@@ -146,7 +156,9 @@ class FlashEraser(object):
                     sector_addr -= delta
 
                 # Erase this page.
-                LOG.info("Erasing sector 0x%08x (%d bytes)", sector_addr, sector_info.size)
+                LOG.info(
+                    "Erasing sector 0x%08x (%d bytes)", sector_addr, sector_info.size
+                )
                 flash.erase_sector(sector_addr)
 
                 sector_addr += sector_info.size
@@ -157,12 +169,12 @@ class FlashEraser(object):
     def _convert_spec(self, spec):
         if isinstance(spec, str):
             # Convert spec from string to range.
-            if '-' in spec:
-                a, b = spec.split('-')
+            if "-" in spec:
+                a, b = spec.split("-")
                 page_addr = int(a, base=0)
                 end_addr = int(b, base=0)
-            elif '+' in spec:
-                a, b = spec.split('+')
+            elif "+" in spec:
+                a, b = spec.split("+")
                 page_addr = int(a, base=0)
                 length = int(b, base=0)
                 end_addr = page_addr + length
@@ -176,5 +188,3 @@ class FlashEraser(object):
             page_addr = spec
             end_addr = page_addr + 1
         return page_addr, end_addr
-
-

@@ -24,12 +24,20 @@ import logging
 import time
 import datetime
 import pathlib
-from enum import (Enum, IntEnum)
-from typing import (IO, TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union, cast, overload)
-from typing_extensions import Literal
-
+from enum import Enum, IntEnum
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 from ..coresight.cortex_m import CortexM
-from ..core import (exceptions)
+from ..core import exceptions
 
 if TYPE_CHECKING:
     from .context import DebugContext
@@ -40,8 +48,12 @@ TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.CRITICAL)
 
 ## bkpt #0xab instruction
-BKPT_INSTR = 0xbeab
+BKPT_INSTR = 0xBEAB
 
+_REQUEST_MAP: Dict["SemihostingRequests", Callable[["SemihostAgent", int], int]] = {}
+
+
+# fmt: off
 class SemihostingRequests(IntEnum):
     """@brief Arm semihosting request numbers."""
     SYS_OPEN            = 0x01
@@ -69,6 +81,7 @@ class SemihostingRequests(IntEnum):
     SYS_EXIT_EXTENDED   = 0x20
     SYS_ELAPSED         = 0x30
     SYS_TICKFREQ        = 0x31
+# fmt: on
 
 # Pseudo-file descriptor numbers.
 # Note: According to Arm semihosting spec, the fds must be non-zero.  But to achive POSIX compatibility
@@ -84,10 +97,12 @@ STDERR_FD = 2
 # @see SemihostAgent::get_data()
 MAX_STRING_LENGTH = 2048
 
+
 ## Enumsused for the file ID to indicate a special file was opened.
 class SpecialFile(Enum):
     # ":semihosting-features"
     SEMIHOSTING_FEATURES_FILE = object()
+
 
 class SemihostIOHandler:
     """@brief Interface for semihosting file I/O handlers.
@@ -110,7 +125,9 @@ class SemihostIOHandler:
     def errno(self) -> int:
         return self._errno
 
-    def _std_open(self, fnptr: int, fnlen: int, mode: str) -> Tuple[Optional[Union[int, SpecialFile]], str]:
+    def _std_open(
+        self, fnptr: int, fnlen: int, mode: str
+    ) -> Tuple[Optional[Union[int, SpecialFile]], str]:
         """@brief Helper for standard I/O open requests.
 
         In the Arm semihosting spec, standard I/O files are opened using a filename of ":tt"
@@ -137,23 +154,28 @@ class SemihostIOHandler:
         LOG.debug("Semihost: open '%s' mode %s", filename, mode)
 
         # Handle standard I/O.
-        if filename == ':tt':
-            if mode == 'r':
+        if filename == ":tt":
+            if mode == "r":
                 fd = STDIN_FD
-            elif mode == 'w':
+            elif mode == "w":
                 fd = STDOUT_FD
-            elif mode == 'a':
+            elif mode == "a":
                 fd = STDERR_FD
             else:
-                LOG.warning("Unrecognized semihosting console open file combination: mode=%s", mode)
+                LOG.warning(
+                    "Unrecognized semihosting console open file combination: mode=%s",
+                    mode,
+                )
                 return -1, filename
             return fd, filename
         # Semihosting features file, not currently supported.
-        elif filename == ':semihosting-features':
+        elif filename == ":semihosting-features":
             # All modes other than 'r' and 'rb' must fail.
-            if mode not in ('r', 'rb'):
-                raise IOError("attempt to open :semihosting-features with invalid mode "
-                                "(only r and rb are allowed)")
+            if mode not in ("r", "rb"):
+                raise IOError(
+                    "attempt to open :semihosting-features with invalid mode "
+                    "(only r and rb are allowed)"
+                )
             return SpecialFile.SEMIHOSTING_FEATURES_FILE, filename
         return None, filename
 
@@ -187,6 +209,7 @@ class SemihostIOHandler:
     def rename(self, oldptr: int, oldlength: int, newptr: int, newlength: int) -> int:
         raise NotImplementedError()
 
+
 class InternalSemihostIOHandler(SemihostIOHandler):
     """@brief Implements semihosting requests directly in the Python process.
 
@@ -201,10 +224,10 @@ class InternalSemihostIOHandler(SemihostIOHandler):
 
         # Go ahead and connect standard I/O.
         self.open_files: Dict[int, Union[IO[str], IO[bytes]]] = {
-                STDIN_FD : sys.stdin,
-                STDOUT_FD : sys.stdout,
-                STDERR_FD : sys.stderr
-            }
+            STDIN_FD: sys.stdin,
+            STDOUT_FD: sys.stdout,
+            STDERR_FD: sys.stderr,
+        }
 
     def _is_valid_fd(self, fd):
         return fd in self.open_files and self.open_files[fd] is not None
@@ -217,7 +240,9 @@ class InternalSemihostIOHandler(SemihostIOHandler):
         special_fd, filename = self._std_open(fnptr, fnlen, mode)
         # if special_fd is not None:
         #     return special_fd
-        if (special_fd is not None) and (special_fd is not SpecialFile.SEMIHOSTING_FEATURES_FILE):
+        if (special_fd is not None) and (
+            special_fd is not SpecialFile.SEMIHOSTING_FEATURES_FILE
+        ):
             return special_fd
 
         try:
@@ -232,7 +257,7 @@ class InternalSemihostIOHandler(SemihostIOHandler):
                 filepath = pathlib.Path(filename).expanduser()
 
                 # ensure directories are exists if mode is write/appened
-                if ('w' in mode) or ('a' in mode):
+                if ("w" in mode) or ("a" in mode):
                     filepath.parent.mkdir(parents=True, exist_ok=True)
 
                 f = io.open(filepath, mode)
@@ -245,8 +270,13 @@ class InternalSemihostIOHandler(SemihostIOHandler):
             return fd
         except OSError as e:
             self._errno = e.errno
-            LOG.error("Semihost: failed to open file '%s'", filename,
-                    exc_info=(self.agent.context.session.log_tracebacks if self.agent else True))
+            LOG.error(
+                "Semihost: failed to open file '%s'",
+                filename,
+                exc_info=(
+                    self.agent.context.session.log_tracebacks if self.agent else True
+                ),
+            )
             return -1
 
     def close(self, fd):
@@ -270,10 +300,10 @@ class InternalSemihostIOHandler(SemihostIOHandler):
         data = self.agent.get_data(ptr, length)
         f = self.open_files[fd]
         try:
-            if 'b' in f.mode:
+            if "b" in f.mode:
                 cast(IO[bytes], f).write(data)
             else:
-                cast(IO[str], f).write(data.decode(errors='ignore'))
+                cast(IO[str], f).write(data.decode(errors="ignore"))
             f.flush()
             return 0
         except OSError as e:
@@ -350,6 +380,7 @@ class InternalSemihostIOHandler(SemihostIOHandler):
             self._errno = e.errno
             return -1
 
+
 class ConsoleIOHandler(SemihostIOHandler):
     """@brief Simple IO handler for console."""
 
@@ -385,6 +416,7 @@ class ConsoleIOHandler(SemihostIOHandler):
             return ord(data)
         else:
             return -1
+
 
 class SemihostAgent:
     """@brief Handler for Arm semihosting requests.
@@ -423,17 +455,19 @@ class SemihostAgent:
     - SYS_TICKFREQ
     """
 
+    # fmt: off
     ## Index into this array is the file open mode argument to SYS_OPEN.
     OPEN_MODES = ['r', 'rb', 'r+', 'r+b', 'w', 'wb', 'w+', 'w+b', 'a', 'ab', 'a+', 'a+b']
+    # fmt: on
 
     EPOCH = datetime.datetime(1970, 1, 1)
 
     def __init__(
-            self,
-            context: "DebugContext",
-            io_handler: Optional[SemihostIOHandler] = None,
-            console: Optional[SemihostIOHandler] = None
-        ) -> None:
+        self,
+        context: "DebugContext",
+        io_handler: Optional[SemihostIOHandler] = None,
+        console: Optional[SemihostIOHandler] = None,
+    ) -> None:
         self.context = context
         self.start_time = time.time()
         self.io_handler = io_handler or SemihostIOHandler()
@@ -461,7 +495,7 @@ class SemihostAgent:
         if (self.context.read32(CortexM.DFSR) & CortexM.DFSR_BKPT) == 0:
             return False
 
-        pc = self.context.read_core_register('pc')
+        pc = self.context.read_core_register("pc")
         assert isinstance(pc, int)
 
         # Are we stopped due to one of our own breakpoints?
@@ -478,31 +512,36 @@ class SemihostAgent:
             return False
 
         # Advance PC beyond the bkpt instruction.
-        self.context.write_core_register('pc', pc + 2)
+        self.context.write_core_register("pc", pc + 2)
 
         # Get args
-        op = self.context.read_core_register('r0')
-        args = self.context.read_core_register('r1')
+        op = self.context.read_core_register("r0")
+        args = self.context.read_core_register("r1")
         assert isinstance(op, int)
         assert isinstance(args, int)
 
         # Handle request
-        handler = self._REQUEST_MAP.get(op, None)
+        handler = _REQUEST_MAP.get(SemihostingRequests(op), None)
         if handler:
             try:
                 result = handler(self, args)
             except NotImplementedError:
-                LOG.warning("Semihost: unimplemented request pc=%x r0=%x r1=%x", pc, op, args)
+                LOG.warning(
+                    "Semihost: unimplemented request pc=%x r0=%x r1=%x", pc, op, args
+                )
                 result = -1
             except (exceptions.Error, OSError) as e:
-                LOG.error("Error while handling semihost request: %s", e,
-                    exc_info=self.context.session.log_tracebacks)
+                LOG.error(
+                    "Error while handling semihost request: %s",
+                    e,
+                    exc_info=self.context.session.log_tracebacks,
+                )
                 result = -1
         else:
             result = -1
 
         # Set return value.
-        self.context.write_core_register('r0', result)
+        self.context.write_core_register("r0", result)
 
         return True
 
@@ -515,28 +554,19 @@ class SemihostAgent:
         if self.console is not self.io_handler:
             self.console.cleanup()
 
-    @overload
-    def _get_args(self, args_address: int, count: Literal[1]) -> int:
-        ...
-
-    @overload
     def _get_args(self, args_address: int, count: int) -> List[int]:
-        ...
+        return self.context.read_memory_block32(args_address, count)
 
-    def _get_args(self, args_address: int, count):
-        args = self.context.read_memory_block32(args_address, count)
-        if count == 1:
-            return args[0]
-        else:
-            return args
+    def _get_arg(self, args_address: int) -> int:
+        return self._get_args(args_address, 1)[0]
 
     def get_data(self, ptr: int, length: Optional[int] = None) -> bytes:
         if length is not None:
             data = self.context.read_memory_block8(ptr, length)
             return bytes(data)
 
-        target_data = b''
-        data = b''
+        target_data = b""
+        data = b""
         # TODO - use memory map to make sure we don't try to read off the end of memory
         # Limit string size in case it isn't terminated.
         while len(target_data) < MAX_STRING_LENGTH:
@@ -568,7 +598,7 @@ class SemihostAgent:
         return self.io_handler.open(fnptr, fnlen, mode)
 
     def handle_sys_close(self, args: int) -> int:
-        fd = self._get_args(args, 1)
+        fd = self._get_arg(args)
         TRACE.debug("Semihost: close fd=%d", fd)
         return self.io_handler.close(fd)
 
@@ -605,7 +635,7 @@ class SemihostAgent:
         raise NotImplementedError()
 
     def handle_sys_istty(self, args: int) -> int:
-        fd = self._get_args(args, 1)
+        fd = self._get_arg(args)
         TRACE.debug("Semihost: istty fd=%d", fd)
         return self.io_handler.istty(fd)
 
@@ -615,7 +645,7 @@ class SemihostAgent:
         return self.io_handler.seek(fd, pos)
 
     def handle_sys_flen(self, args: int) -> int:
-        fd = self._get_args(args, 1)
+        fd = self._get_arg(args)
         TRACE.debug("Semihost: flen fd=%d", fd)
         return self.io_handler.flen(fd)
 
@@ -648,15 +678,19 @@ class SemihostAgent:
         return self.io_handler.errno
 
     def handle_sys_get_cmdline(self, args: int) -> int:
-        cmdline = cast(str, self.context.session.options.get('semihost.commandline'))
+        cmdline = cast(str, self.context.session.options.get("semihost.commandline"))
         if not cmdline:
             return -1
 
         ptr, length = self._get_args(args, 2)
-        cmdline_write_length = min(length - 1, len(cmdline)) # Ensure room for null byte.
-        cmdline_bytes = cmdline.encode()[:cmdline_write_length] + b'\x00'
+        cmdline_write_length = min(
+            length - 1, len(cmdline)
+        )  # Ensure room for null byte.
+        cmdline_bytes = cmdline.encode()[:cmdline_write_length] + b"\x00"
         self.context.write_memory_block8(ptr, cmdline_bytes)
-        self.context.write32(args + 4, cmdline_write_length - 1) # TODO resume assumption about pointer size!
+        self.context.write32(
+            args + 4, cmdline_write_length - 1
+        )  # TODO resume assumption about pointer size!
         return 0
 
     def handle_sys_heapinfo(self, args: int) -> int:
@@ -677,7 +711,7 @@ class SemihostAgent:
         This implementation simply fills in the value 0 for each field. Zero is legal, and tells the
         caller that the host was unable to determine the value.
         """
-        info_block = self._get_args(args, 1)
+        info_block = self._get_arg(args)
         self.context.write_memory_block32(info_block, [0, 0, 0, 0])
         return 0
 
@@ -694,30 +728,32 @@ class SemihostAgent:
     def handle_sys_tickfreq(self, args: int) -> int:
         raise NotImplementedError()
 
-    _REQUEST_MAP: Dict[int, Callable[["SemihostAgent", int], int]] = {
-            SemihostingRequests.SYS_OPEN:            handle_sys_open,
-            SemihostingRequests.SYS_CLOSE:           handle_sys_close,
-            SemihostingRequests.SYS_WRITEC:          handle_sys_writec,
-            SemihostingRequests.SYS_WRITE0:          handle_sys_write0,
-            SemihostingRequests.SYS_WRITE:           handle_sys_write,
-            SemihostingRequests.SYS_READ:            handle_sys_read,
-            SemihostingRequests.SYS_READC:           handle_sys_readc,
-            SemihostingRequests.SYS_ISERROR:         handle_sys_iserror,
-            SemihostingRequests.SYS_ISTTY:           handle_sys_istty,
-            SemihostingRequests.SYS_SEEK:            handle_sys_seek,
-            SemihostingRequests.SYS_FLEN:            handle_sys_flen,
-            SemihostingRequests.SYS_TMPNAM:          handle_sys_tmpnam,
-            SemihostingRequests.SYS_REMOVE:          handle_sys_remove,
-            SemihostingRequests.SYS_RENAME:          handle_sys_rename,
-            SemihostingRequests.SYS_CLOCK:           handle_sys_clock,
-            SemihostingRequests.SYS_TIME:            handle_sys_time,
-            SemihostingRequests.SYS_SYSTEM:          handle_sys_system,
-            SemihostingRequests.SYS_ERRNO:           handle_sys_errno,
-            SemihostingRequests.SYS_GET_CMDLINE:     handle_sys_get_cmdline,
-            SemihostingRequests.SYS_HEAPINFO:        handle_sys_heapinfo,
-            SemihostingRequests.SYS_EXIT:            handle_sys_exit,
-            SemihostingRequests.SYS_EXIT_EXTENDED:   handle_sys_exit_extended,
-            SemihostingRequests.SYS_ELAPSED:         handle_sys_elapsed,
-            SemihostingRequests.SYS_TICKFREQ:        handle_sys_tickfreq
-        }
 
+# fmt: off
+_REQUEST_MAP = {
+        SemihostingRequests.SYS_OPEN:            SemihostAgent.handle_sys_open,
+        SemihostingRequests.SYS_CLOSE:           SemihostAgent.handle_sys_close,
+        SemihostingRequests.SYS_WRITEC:          SemihostAgent.handle_sys_writec,
+        SemihostingRequests.SYS_WRITE0:          SemihostAgent.handle_sys_write0,
+        SemihostingRequests.SYS_WRITE:           SemihostAgent.handle_sys_write,
+        SemihostingRequests.SYS_READ:            SemihostAgent.handle_sys_read,
+        SemihostingRequests.SYS_READC:           SemihostAgent.handle_sys_readc,
+        SemihostingRequests.SYS_ISERROR:         SemihostAgent.handle_sys_iserror,
+        SemihostingRequests.SYS_ISTTY:           SemihostAgent.handle_sys_istty,
+        SemihostingRequests.SYS_SEEK:            SemihostAgent.handle_sys_seek,
+        SemihostingRequests.SYS_FLEN:            SemihostAgent.handle_sys_flen,
+        SemihostingRequests.SYS_TMPNAM:          SemihostAgent.handle_sys_tmpnam,
+        SemihostingRequests.SYS_REMOVE:          SemihostAgent.handle_sys_remove,
+        SemihostingRequests.SYS_RENAME:          SemihostAgent.handle_sys_rename,
+        SemihostingRequests.SYS_CLOCK:           SemihostAgent.handle_sys_clock,
+        SemihostingRequests.SYS_TIME:            SemihostAgent.handle_sys_time,
+        SemihostingRequests.SYS_SYSTEM:          SemihostAgent.handle_sys_system,
+        SemihostingRequests.SYS_ERRNO:           SemihostAgent.handle_sys_errno,
+        SemihostingRequests.SYS_GET_CMDLINE:     SemihostAgent.handle_sys_get_cmdline,
+        SemihostingRequests.SYS_HEAPINFO:        SemihostAgent.handle_sys_heapinfo,
+        SemihostingRequests.SYS_EXIT:            SemihostAgent.handle_sys_exit,
+        SemihostingRequests.SYS_EXIT_EXTENDED:   SemihostAgent.handle_sys_exit_extended,
+        SemihostingRequests.SYS_ELAPSED:         SemihostAgent.handle_sys_elapsed,
+        SemihostingRequests.SYS_TICKFREQ:        SemihostAgent.handle_sys_tickfreq
+    }
+# fmt: on

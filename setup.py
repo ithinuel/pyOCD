@@ -34,10 +34,12 @@ svd_dir_path = SCRIPT_DIR / "pyocd" / "debug" / "svd"
 svd_data_dir_path = svd_dir_path / "data"
 svd_zip_path = svd_dir_path / "svd_data.zip"
 if svd_data_dir_path.exists():
-    with zipfile.ZipFile(svd_zip_path, 'w', zipfile.ZIP_DEFLATED) as svd_zip:
+    with zipfile.ZipFile(svd_zip_path, "w", zipfile.ZIP_DEFLATED) as svd_zip:
         for svd_file in sorted(svd_data_dir_path.iterdir()):
             svd_zip.write(svd_file, svd_file.name)
 elif not svd_zip_path.exists():
-    raise RuntimeError("neither the source SVD data directory nor built svd_data.zip exist")
+    raise RuntimeError(
+        "neither the source SVD data directory nor built svd_data.zip exist"
+    )
 
 setup()

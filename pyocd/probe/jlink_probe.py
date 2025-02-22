@@ -21,8 +21,8 @@ import logging
 from time import sleep
 import pylink
 from pylink.enums import JLinkInterfaces
-from pylink.errors import (JLinkException, JLinkWriteException, JLinkReadException)
-from typing import (TYPE_CHECKING, Optional, Tuple, Any, Sequence, Union, Callable)
+from pylink.errors import JLinkException, JLinkWriteException, JLinkReadException
+from typing import TYPE_CHECKING, Optional, Tuple, Any, Sequence, Union, Callable
 
 from .debug_probe import DebugProbe
 from ..core.memory_interface import MemoryInterface
@@ -39,16 +39,16 @@ LOG = logging.getLogger(__name__)
 TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.WARNING)
 
+
 ## @brief Wraps a JLink as a DebugProbe.
 class JLinkProbe(DebugProbe):
-
     # Address of DP's SELECT register.
     DP_SELECT = 0x8
 
     # Bitmasks for AP register address fields.
-    A32 = 0x0000000c
-    APBANKSEL = 0x000000f0
-    APSEL = 0xff000000
+    A32 = 0x0000000C
+    APBANKSEL = 0x000000F0
+    APSEL = 0xFF000000
     APSEL_APBANKSEL = APSEL | APBANKSEL
 
     @classmethod
@@ -56,11 +56,11 @@ class JLinkProbe(DebugProbe):
         # TypeError is raised by pylink if the JLink DLL cannot be found.
         try:
             return pylink.JLink(
-                    log=TRACE.info,
-                    detailed_log=TRACE.debug,
-                    error=TRACE.error,
-                    warn=TRACE.warn,
-                    )
+                log=TRACE.info,
+                detailed_log=TRACE.debug,
+                error=TRACE.error,
+                warn=TRACE.warn,
+            )
         except TypeError:
             return None
 
@@ -74,7 +74,10 @@ class JLinkProbe(DebugProbe):
             jlink = cls._get_jlink()
             if jlink is None:
                 return []
-            return [cls(cls._format_serial_number(info.SerialNumber)) for info in jlink.connected_emulators()]
+            return [
+                cls(cls._format_serial_number(info.SerialNumber))
+                for info in jlink.connected_emulators()
+            ]
         except JLinkException as exc:
             raise cls._convert_exception(exc) from exc
 
@@ -120,7 +123,11 @@ class JLinkProbe(DebugProbe):
 
         info = self._get_probe_info(serial_number, self._link)
         if info is None:
-            raise exceptions.ProbeError("could not find JLink probe with serial number '{}'".format(serial_number))
+            raise exceptions.ProbeError(
+                "could not find JLink probe with serial number '{}'".format(
+                    serial_number
+                )
+            )
 
         self._serial_number = serial_number
         self._serial_number_int = int(serial_number, base=10)
@@ -163,11 +170,11 @@ class JLinkProbe(DebugProbe):
     @property
     def capabilities(self):
         return {
-                self.Capability.SWO,
-                self.Capability.BANKED_DP_REGISTERS,
-                self.Capability.APv2_ADDRESSES,
-                self.Capability.PIN_ACCESS,
-                }
+            self.Capability.SWO,
+            self.Capability.BANKED_DP_REGISTERS,
+            self.Capability.APv2_ADDRESSES,
+            self.Capability.PIN_ACCESS,
+        }
 
     def get_accessible_pins(self, group: DebugProbe.PinGroup) -> Tuple[int, int]:
         """@brief Return masks of pins accessible via the .read_pins()/.write_pins() methods.
@@ -186,7 +193,7 @@ class JLinkProbe(DebugProbe):
         try:
             # Configure UI usage. We must do this here rather than in the ctor because the ctor
             # doesn't have access to the session.
-            if self.session.options.get('jlink.non_interactive'):
+            if self.session.options.get("jlink.non_interactive"):
                 self._link.disable_dialog_boxes()
 
             self._link.open(self._serial_number_int)
@@ -199,9 +206,12 @@ class JLinkProbe(DebugProbe):
                 self._supported_protocols.append(DebugProbe.Protocol.JTAG)
             if ifaces & (1 << JLinkInterfaces.SWD):
                 self._supported_protocols.append(DebugProbe.Protocol.SWD)
-            if not len(self._supported_protocols) >= 2: # default + 1
-                raise exceptions.ProbeError("J-Link probe {} does not support any known wire protocols".format(
-                        self.unique_id))
+            if not len(self._supported_protocols) >= 2:  # default + 1
+                raise exceptions.ProbeError(
+                    "J-Link probe {} does not support any known wire protocols".format(
+                        self.unique_id
+                    )
+                )
 
             # Select default protocol, preferring SWD over JTAG.
             if DebugProbe.Protocol.SWD in self._supported_protocols:
@@ -245,11 +255,11 @@ class JLinkProbe(DebugProbe):
 
         try:
             self._link.set_tif(iface)
-            if self.session.options.get('jlink.power'):
+            if self.session.options.get("jlink.power"):
                 self._link.power_on()
 
             # Connect if a device name was supplied.
-            device_name = self.session.options.get('jlink.device')
+            device_name = self.session.options.get("jlink.device")
             if device_name is not None:
                 self._link.connect(device_name)
 
@@ -260,7 +270,7 @@ class JLinkProbe(DebugProbe):
 
     def swj_sequence(self, length, bits):
         for chunk in range((length + 31) // 32):
-            chunk_word = bits & 0xffffffff
+            chunk_word = bits & 0xFFFFFFFF
             chunk_len = min(length, 32)
 
             if chunk_len == 32:
@@ -277,7 +287,7 @@ class JLinkProbe(DebugProbe):
         """@brief Disconnect from the target."""
         assert self.session
         try:
-            if self.session.options.get('jlink.power'):
+            if self.session.options.get("jlink.power"):
                 self._link.power_off()
         except JLinkException as exc:
             raise self._convert_exception(exc) from exc
@@ -294,9 +304,9 @@ class JLinkProbe(DebugProbe):
         assert self.session
         try:
             self._link.set_reset_pin_low()
-            sleep(self.session.options.get('reset.hold_time'))
+            sleep(self.session.options.get("reset.hold_time"))
             self._link.set_reset_pin_high()
-            sleep(self.session.options.get('reset.post_delay'))
+            sleep(self.session.options.get("reset.post_delay"))
         except JLinkException as exc:
             raise self._convert_exception(exc) from exc
 
@@ -326,7 +336,7 @@ class JLinkProbe(DebugProbe):
         @param mask Bit mask indicating which pins will be read. The return value will contain only
             bits set in this mask.
         @return Bit mask with the current value of selected pins at each pin's relevant bit position.
-       """
+        """
         try:
             if group is DebugProbe.PinGroup.PROTOCOL_PINS:
                 status = self._link.hardware_status
@@ -413,6 +423,7 @@ class JLinkProbe(DebugProbe):
         except JLinkException as exc:
             raise self._convert_exception(exc) from exc
         else:
+
             def read_reg_cb():
                 return value
 
@@ -431,6 +442,7 @@ class JLinkProbe(DebugProbe):
         except JLinkException as exc:
             raise self._convert_exception(exc) from exc
         else:
+
             def read_reg_cb():
                 return value
 
@@ -501,6 +513,7 @@ class JLinkProbe(DebugProbe):
         else:
             return exc
 
+
 class JLinkMemoryInterface(MemoryInterface):
     """@brief Concrete memory interface for a single AP."""
 
@@ -508,13 +521,15 @@ class JLinkMemoryInterface(MemoryInterface):
         self._link = link
         self._apsel = apsel
 
-    def write_memory(self, addr: int, data: int, transfer_size: int=32, **attrs: Any) -> None:
+    def write_memory(
+        self, addr: int, data: int, transfer_size: int = 32, **attrs: Any
+    ) -> None:
         """@brief Write a single memory location.
 
         By default the transfer size is a word.
         """
         assert transfer_size in (8, 16, 32)
-        addr &= 0xffffffff
+        addr &= 0xFFFFFFFF
         if transfer_size == 32:
             self._link.memory_write32(addr, [data])
         elif transfer_size == 16:
@@ -522,14 +537,15 @@ class JLinkMemoryInterface(MemoryInterface):
         elif transfer_size == 8:
             self._link.memory_write8(addr, [data])
 
-    def read_memory(self, addr: int, transfer_size: int=32, now: bool=True, **attrs: Any) \
-            -> Union[int, Callable[[], int]]:
+    def read_memory(
+        self, addr: int, transfer_size: int = 32, now: bool = True, **attrs: Any
+    ) -> Union[int, Callable[[], int]]:
         """@brief Read a memory location.
 
         By default, a word will be read.
         """
         assert transfer_size in (8, 16, 32)
-        addr &= 0xffffffff
+        addr &= 0xFFFFFFFF
         if transfer_size == 32:
             result = self._link.memory_read32(addr, 1)[0]
         elif transfer_size == 16:
@@ -539,18 +555,21 @@ class JLinkMemoryInterface(MemoryInterface):
 
         def read_callback():
             return result
+
         return result if now else read_callback
 
-    def write_memory_block32(self, addr: int, data: Sequence[int], **attrs: Any) -> None:
-        addr &= 0xffffffff
+    def write_memory_block32(
+        self, addr: int, data: Sequence[int], **attrs: Any
+    ) -> None:
+        addr &= 0xFFFFFFFF
         self._link.memory_write32(addr, data)
 
     def read_memory_block32(self, addr: int, size: int, **attrs: Any) -> Sequence[int]:
-        addr &= 0xffffffff
+        addr &= 0xFFFFFFFF
         return self._link.memory_read32(addr, size)
 
     def read_memory_block8(self, addr: int, size: int, **attrs: Any) -> Sequence[int]:
-        addr &= 0xffffffff
+        addr &= 0xFFFFFFFF
         res = []
 
         # Transfers are handled in 3 phases:
@@ -562,48 +581,53 @@ class JLinkMemoryInterface(MemoryInterface):
 
         # 1. read leading unaligned bytes
         unaligned_count = 3 & (4 - addr)
-        if (size > unaligned_count > 0):
+        if size > unaligned_count > 0:
             res += self._link.memory_read8(addr, unaligned_count)
             size -= unaligned_count
             addr += unaligned_count
 
         # 2. read aligned block of 32 bits
-        if (size >= 4):
+        if size >= 4:
             aligned_size = size & ~3
-            res += conversion.u32le_list_to_byte_list(self._link.memory_read32(addr, aligned_size//4))
+            res += conversion.u32le_list_to_byte_list(
+                self._link.memory_read32(addr, aligned_size // 4)
+            )
             size -= aligned_size
             addr += aligned_size
 
         # 3. read trailing unaligned bytes
-        if (size > 0):
+        if size > 0:
             res += self._link.memory_read8(addr, size)
 
         return res
 
     def write_memory_block8(self, addr: int, data: Sequence[int], **attrs: Any) -> None:
-        addr &= 0xffffffff
+        addr &= 0xFFFFFFFF
         size = len(data)
         idx = 0
 
         # write leading unaligned bytes
         unaligned_count = 3 & (4 - addr)
-        if (size > unaligned_count > 0):
+        if size > unaligned_count > 0:
             self._link.memory_write8(addr, data[:unaligned_count])
             size -= unaligned_count
             addr += unaligned_count
             idx += unaligned_count
 
         # write aligned block of 32 bits
-        if (size >= 4):
+        if size >= 4:
             aligned_size = size & ~3
-            self._link.memory_write32(addr, conversion.byte_list_to_u32le_list(data[idx:idx + aligned_size]))
+            self._link.memory_write32(
+                addr, conversion.byte_list_to_u32le_list(data[idx : idx + aligned_size])
+            )
             size -= aligned_size
             addr += aligned_size
             idx += aligned_size
 
         # write trailing unaligned bytes
-        if (size > 0):
+        if size > 0:
             self._link.memory_write8(addr, data[idx:])
+
 
 class JLinkProbePlugin(Plugin):
     """@brief Plugin class for JLinkProbe."""
@@ -627,15 +651,27 @@ class JLinkProbePlugin(Plugin):
     def options(self):
         """@brief Returns J-Link probe options."""
         return [
-            OptionInfo('jlink.device', str, None,
+            OptionInfo(
+                "jlink.device",
+                str,
+                None,
                 "If this option is set to a supported J-Link device name, then the J-Link will be asked connect "
                 "using this name. Otherwise, the J-Link is configured for only the low-level CoreSight operations "
-                "required by pyOCD. Ordinarily, it does not need to be set."),
-            OptionInfo('jlink.power', bool, True,
+                "required by pyOCD. Ordinarily, it does not need to be set.",
+            ),
+            OptionInfo(
+                "jlink.power",
+                bool,
+                True,
                 "Enable target power when connecting via a JLink probe, and disable power when "
-                "disconnecting. Default is True."),
-            OptionInfo('jlink.non_interactive', bool, True,
+                "disconnecting. Default is True.",
+            ),
+            OptionInfo(
+                "jlink.non_interactive",
+                bool,
+                True,
                 "Controls whether the J-Link DLL is allowed to present UI dialog boxes and its control "
                 "panel. Note that dialog boxes will actually still be visible, but the default option "
-                "will be chosen automatically after 5 seconds. Default is True."),
-            ]
+                "will be chosen automatically after 5 seconds. Default is True.",
+            ),
+        ]

@@ -17,7 +17,16 @@
 
 import logging
 from copy import copy
-from typing import (Dict, List, TYPE_CHECKING, Iterable, MutableSequence, Optional, Sequence, Tuple)
+from typing import (
+    Dict,
+    List,
+    TYPE_CHECKING,
+    Iterable,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 from .provider import Breakpoint
 from ...core.target import Target
@@ -29,9 +38,12 @@ if TYPE_CHECKING:
 
 LOG = logging.getLogger(__name__)
 
+
 class UnrealizedBreakpoint(Breakpoint):
     """@brief Breakpoint class used until a breakpoint's type is decided."""
+
     pass
+
 
 class BreakpointManager:
     """@brief Manages all breakpoints for one core.
@@ -62,7 +74,9 @@ class BreakpointManager:
 
         # Subscribe to some notifications.
         self._session.subscribe(self._pre_run_handler, Target.Event.PRE_RUN)
-        self._session.subscribe(self._pre_disconnect_handler, Target.Event.PRE_DISCONNECT)
+        self._session.subscribe(
+            self._pre_disconnect_handler, Target.Event.PRE_DISCONNECT
+        )
 
     def add_provider(self, provider: "BreakpointProvider") -> None:
         self._providers[provider.bp_type] = provider
@@ -172,7 +186,9 @@ class BreakpointManager:
         # Return the list of pages to update.
         return added, removed
 
-    def _select_breakpoint_type(self, bp: Breakpoint, allow_all_hw_bps: bool) -> Optional[Target.BreakpointType]:
+    def _select_breakpoint_type(
+        self, bp: Breakpoint, allow_all_hw_bps: bool
+    ) -> Optional[Target.BreakpointType]:
         type = bp.type
 
         # Look up the memory type for the requested address.
@@ -184,10 +200,13 @@ class BreakpointManager:
             type = Target.BreakpointType.HW
             is_writable = False
 
-        in_hw_bkpt_range = (self._fpb is not None) and (self._fpb.can_support_address(bp.addr))
-        have_hw_bp = (self._fpb is not None) \
-                    and ((self._fpb.available_breakpoints > self.MIN_HW_BREAKPOINTS) \
-                    or (allow_all_hw_bps and self._fpb.available_breakpoints > 0))
+        in_hw_bkpt_range = (self._fpb is not None) and (
+            self._fpb.can_support_address(bp.addr)
+        )
+        have_hw_bp = (self._fpb is not None) and (
+            (self._fpb.available_breakpoints > self.MIN_HW_BREAKPOINTS)
+            or (allow_all_hw_bps and self._fpb.available_breakpoints > 0)
+        )
 
         # Determine best type to use if auto.
         if type == Target.BreakpointType.AUTO:
@@ -282,13 +301,17 @@ class BreakpointManager:
             data = provider.filter_memory(addr, size, data)
         return data
 
-    def filter_memory_unaligned_8(self, addr: int, size: int, data: MutableSequence[int]) -> Sequence[int]:
+    def filter_memory_unaligned_8(
+        self, addr: int, size: int, data: MutableSequence[int]
+    ) -> Sequence[int]:
         for provider in [p for p in self._providers.values() if p.do_filter_memory]:
             for i, d in enumerate(data):
                 data[i] = provider.filter_memory(addr + i, 8, d)
         return data
 
-    def filter_memory_aligned_32(self, addr: int, size: int, data: MutableSequence[int]) -> Sequence[int]:
+    def filter_memory_aligned_32(
+        self, addr: int, size: int, data: MutableSequence[int]
+    ) -> Sequence[int]:
         for provider in [p for p in self._providers.values() if p.do_filter_memory]:
             for i, d in enumerate(data):
                 data[i] = provider.filter_memory(addr + i, 32, d)
@@ -313,5 +336,3 @@ class BreakpointManager:
 
     def _pre_disconnect_handler(self, notification: "Notification") -> None:
         pass
-
-

@@ -60,7 +60,10 @@ import os
 # to Python 3, we need to know about it, so print a warning.
 print("arm-none-eabi-gdb-py is using Python %s" % sys.version)
 if sys.version_info.major != 2:
-    print("*** Unexpected arm-none-eabi-gdb-py Python version %d! ***" % sys.version_info.major)
+    print(
+        "*** Unexpected arm-none-eabi-gdb-py Python version %d! ***"
+        % sys.version_info.major
+    )
 
 DEFAULT_TIMEOUT = 2.0
 STACK_OFFSET = 0x800
@@ -90,7 +93,7 @@ monitor_commands = [
     "status",
     "show fault",
     # Invalid Command
-    "intentional_invalid_command_fawehfawoefhad"
+    "intentional_invalid_command_fawehfawoefhad",
 ]
 
 SIZE_TO_C_TYPE = {
@@ -105,8 +108,9 @@ TO_GDB_ACCESS = {
     "read_write": gdb.WP_ACCESS,
 }
 
-env_name = os.environ.get('TOX_ENV_NAME', '')
-env_file_name = ("_" + env_name) if env_name else ''
+env_name = os.environ.get("TOX_ENV_NAME", "")
+env_file_name = ("_" + env_name) if env_name else ""
+
 
 def gdb_execute(cmd):
     print("Executing command:", cmd)
@@ -163,14 +167,14 @@ def to_gdb_access(access):
     return TO_GDB_ACCESS[access]
 
 
-def should_trigger_break(bkpt_size, bkpt_access,
-                         bkpt_addr, size, access, addr):
+def should_trigger_break(bkpt_size, bkpt_access, bkpt_addr, size, access, addr):
     left_access_addr = addr
     right_access_addr = addr + size - 1
     left_bkpt_addr = bkpt_addr
     right_bkpt_addr = bkpt_addr + bkpt_size
-    overlap = (left_access_addr <= right_bkpt_addr and
-               right_access_addr >= left_bkpt_addr)
+    overlap = (
+        left_access_addr <= right_bkpt_addr and right_access_addr >= left_bkpt_addr
+    )
     read_break = has_read(bkpt_access) and has_read(access)
     write_break = has_write(bkpt_access) and has_write(access)
     should_break = overlap and (read_break or write_break)
@@ -185,18 +189,19 @@ def valid_watchpoint(bkpt_size, bkpt_access, bkpt_addr):
 # Initial setup
 testn = int(gdb.parse_and_eval("$testn"))
 
-test_param_filename = os.path.join("output", "gdb_test_params%s_%d.txt" % (env_file_name, testn))
+test_param_filename = os.path.join(
+    "output", "gdb_test_params%s_%d.txt" % (env_file_name, testn)
+)
 with open(test_param_filename, "rb") as f:
     test_params = json.loads(f.read())
 
 
 def run_test():
-
     test_result = {}
     test_port = test_params["test_port"]
-    rom_start = test_params['rom_start']
-    ram_start = test_params['ram_start']
-    ram_length = test_params['ram_length']
+    rom_start = test_params["rom_start"]
+    ram_start = test_params["ram_start"]
+    ram_length = test_params["ram_length"]
     invalid_addr = test_params["invalid_start"]
     error_on_invalid_access = test_params["expect_error_on_invalid_access"]
     ignore_hw_bkpt_result = test_params["ignore_hw_bkpt_result"]
@@ -216,7 +221,9 @@ def run_test():
         gdb_execute("set mem inaccessible-by-default off")
 
         # Set raw logging
-        gdb_execute("set remotelogfile output/gdb_test_raw%s_%d.txt" % (env_file_name, testn))
+        gdb_execute(
+            "set remotelogfile output/gdb_test_raw%s_%d.txt" % (env_file_name, testn)
+        )
 
         # Connect to server
         gdb_execute("target remote localhost:%d" % test_port)
@@ -247,7 +254,7 @@ def run_test():
         # a chance to disable the watchdog
         gdb_execute("mon reset halt")
         gdb_execute("c&")
-        event = yield(0.1)
+        event = yield (0.1)
         if not is_event_signal(event, "SIGINT"):
             fail_count += 1
             print("Error - target not interrupted as expected")
@@ -267,20 +274,20 @@ def run_test():
         breakpoint = gdb.Breakpoint("main")
         gdb_execute("set $pc = main")
         gdb_execute("c&")
-        event = yield(DEFAULT_TIMEOUT)
+        event = yield (DEFAULT_TIMEOUT)
         if not is_event_breakpoint(event, breakpoint):
             fail_count += 1
             print("Expected: %s\nReceived: %s" % (breakpoint, event))
             print("Error - could not set pc to function")
         breakpoint.delete()
 
-## Stepping removed as a workaround for a GDB bug. Launchpad issue tracking this is here:
-## https://bugs.launchpad.net/gcc-arm-embedded/+bug/1700595
-#
-#        # Test the speed of the different step types
-#        test_result["step_time_si"] = test_step_type("si")
-#        test_result["step_time_s"] = test_step_type("s")
-#        test_result["step_time_n"] = test_step_type("n")
+        ## Stepping removed as a workaround for a GDB bug. Launchpad issue tracking this is here:
+        ## https://bugs.launchpad.net/gcc-arm-embedded/+bug/1700595
+        #
+        #        # Test the speed of the different step types
+        #        test_result["step_time_si"] = test_step_type("si")
+        #        test_result["step_time_s"] = test_step_type("s")
+        #        test_result["step_time_n"] = test_step_type("n")
         test_result["step_time_si"] = -1
         test_result["step_time_s"] = -1
         test_result["step_time_n"] = -1
@@ -290,7 +297,7 @@ def run_test():
 
         # Let target run to initialize variables
         gdb_execute("c&")
-        event = yield(0.1)
+        event = yield (0.1)
         if not is_event_signal(event, "SIGINT"):
             fail_count += 1
             print("Error - target not interrupted as expected")
@@ -306,7 +313,7 @@ def run_test():
         while True:
             try:
                 gdb_execute("c&")
-                yield(0.1)
+                yield (0.1)
                 break
             except gdb.error:
                 bkpt = break_list.pop()
@@ -321,13 +328,14 @@ def run_test():
         watch_list = []
         for i in range(MAX_BKPT):
             addr = rom_start + i * 4
-            breakpoint = gdb.Breakpoint("*0x%x" % addr,
-                                        gdb.BP_WATCHPOINT, gdb.WP_ACCESS)
+            breakpoint = gdb.Breakpoint(
+                "*0x%x" % addr, gdb.BP_WATCHPOINT, gdb.WP_ACCESS
+            )
             watch_list.append(breakpoint)
         while True:
             try:
                 gdb_execute("c&")
-                yield(0.1)
+                yield (0.1)
                 break
             except gdb.error:
                 bkpt = watch_list.pop()
@@ -341,7 +349,7 @@ def run_test():
         gdb_execute("set var run_breakpoint_test = 1")
         breakpoint = gdb.Breakpoint(rmt_func)
         gdb_execute("c&")
-        event = yield(DEFAULT_TIMEOUT)
+        event = yield (DEFAULT_TIMEOUT)
         if not is_event_breakpoint(event, breakpoint):
             fail_count += 1
             print("Error - breakpoint 1 test failed")
@@ -361,7 +369,7 @@ def run_test():
         # Let target run, make sure breakpoint isn't hit
         gdb_execute("set var run_breakpoint_test = 1")
         gdb_execute("c&")
-        event = yield(0.1)
+        event = yield (0.1)
         if not is_event_signal(event, "SIGINT"):
             fail_count += 1
             print("Error - target not interrupted as expected")
@@ -372,11 +380,11 @@ def run_test():
         gdb_execute("set var run_breakpoint_test = 1")
         gdb_execute("hbreak %s" % rmt_func)
         gdb_execute("c&")
-        event = yield(DEFAULT_TIMEOUT)
-# TODO, c1728p9 - determine why there isn't a breakpoint event returned
-#         if not is_event_breakpoint(event):
-#             fail_count += 1
-#             print("Error - breakpoint 2 test failed")
+        event = yield (DEFAULT_TIMEOUT)
+        # TODO, c1728p9 - determine why there isn't a breakpoint event returned
+        #         if not is_event_breakpoint(event):
+        #             fail_count += 1
+        #             print("Error - breakpoint 2 test failed")
         func = gdb.selected_frame().function()
         if func is None:
             fail_count += 1
@@ -391,8 +399,7 @@ def run_test():
         gdb_execute("set var run_breakpoint_test = 0")
 
         # Test valid memory write
-        addr_value_list = [(test_ram_addr + i * 4,
-                           randrange(1, 50)) for i in range(4)]
+        addr_value_list = [(test_ram_addr + i * 4, randrange(1, 50)) for i in range(4)]
         for addr, value in addr_value_list:
             gdb_execute("set *((int *) 0x%x) = 0x%x" % (addr, value))
 
@@ -432,28 +439,31 @@ def run_test():
         sizes = [1, 2, 4]
         accesses = ["read", "write", "read_write"]
         addresses = [access_addr]
-        generator = product(bkpt_sizes, bkpt_accesses, bkpt_addresses,
-                            sizes, accesses, addresses)
+        generator = product(
+            bkpt_sizes, bkpt_accesses, bkpt_addresses, sizes, accesses, addresses
+        )
         for bkpt_size, bkpt_access, bkpt_addr, size, access, addr in generator:
             gdb_size = size_to_type(bkpt_size)
             gdb_access = to_gdb_access(bkpt_access)
-            gdb_execute("set var watchpoint_write = %i" %
-                        (1 if has_write(access) else 0))
-            gdb_execute("set var watchpoint_read = %i" %
-                        (1 if has_read(access) else 0))
+            gdb_execute(
+                "set var watchpoint_write = %i" % (1 if has_write(access) else 0)
+            )
+            gdb_execute("set var watchpoint_read = %i" % (1 if has_read(access) else 0))
             gdb_execute("set var watchpoint_size = %i" % size)
             gdb_execute("set var write_address = %i" % addr)
-            breakpoint = gdb.Breakpoint("*(%s)0x%x" % (gdb_size, bkpt_addr),
-                                        gdb.BP_WATCHPOINT, gdb_access)
+            breakpoint = gdb.Breakpoint(
+                "*(%s)0x%x" % (gdb_size, bkpt_addr), gdb.BP_WATCHPOINT, gdb_access
+            )
 
             # Run until breakpoint is hit
             gdb_execute("c&")
-            event = yield(0.1)
+            event = yield (0.1)
             bkpt_hit = not is_event_signal(event, "SIGINT")
 
             # Compare against expected result
-            should_break = should_trigger_break(bkpt_size, bkpt_access,
-                                                bkpt_addr, size, access, addr)
+            should_break = should_trigger_break(
+                bkpt_size, bkpt_access, bkpt_addr, size, access, addr
+            )
             valid = valid_watchpoint(bkpt_size, bkpt_access, bkpt_addr)
 
             if valid and bkpt_hit != should_break:
@@ -461,9 +471,11 @@ def run_test():
                 print("Error - watchpoint problem:")
                 print("  Watchpoint was hit %s" % bkpt_hit)
                 print("  Watchpoint should be hit %s" % should_break)
-                print("  bkpt_size %s, bkpt_access %s, bkpt_address 0x%x, "
-                      "size %s, access %s, addr 0x%x" %
-                      (bkpt_size, bkpt_access, bkpt_addr, size, access, addr))
+                print(
+                    "  bkpt_size %s, bkpt_access %s, bkpt_address 0x%x, "
+                    "size %s, access %s, addr 0x%x"
+                    % (bkpt_size, bkpt_access, bkpt_addr, size, access, addr)
+                )
                 print()
 
             breakpoint.delete()
@@ -473,8 +485,8 @@ def run_test():
         # TODO,c1728p9 - test stepping into interrupts
 
         # TODO,c1728p9 - test vector catch
-            # -test hard fault handling
-            # -test reset catch
+        # -test hard fault handling
+        # -test reset catch
         # TODO,c1728p9 - test signals/hard fault
 
         if fail_count:
@@ -487,7 +499,9 @@ def run_test():
         fail_count += 1
     finally:
         test_result["fail_count"] = fail_count
-        test_result_filename = os.path.join("output", "gdb_test_results%s_%d.txt" % (env_file_name, testn))
+        test_result_filename = os.path.join(
+            "output", "gdb_test_results%s_%d.txt" % (env_file_name, testn)
+        )
         with open(test_result_filename, "wb") as f:
             f.write(json.dumps(test_result))
         # Ignore errors detaching, in case connecting failed.
@@ -511,6 +525,7 @@ def post_interrupt_task(interrupt_arg):
     def interrupt_task():
         if not interrupt_arg["aborted"]:
             gdb_execute("interrupt")
+
     gdb.post_event(interrupt_task)
 
 
@@ -544,6 +559,8 @@ def stop_handler(event):
         return
     bound_run_generator = partial(run_generator, event)
     gdb.post_event(bound_run_generator)
+
+
 gdb.events.stop.connect(stop_handler)
 
 # Start testing

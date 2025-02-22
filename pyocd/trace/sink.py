@@ -16,19 +16,22 @@
 # limitations under the License.
 
 import collections.abc
-from typing import (TYPE_CHECKING, Iterable, List, Optional, Sequence, Union)
+from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence, Union
 
 if TYPE_CHECKING:
     from .events import TraceEvent
 
+
 class TraceEventSink:
     """@brief Abstract interface for a trace event sink."""
+
     def receive(self, event: "TraceEvent") -> None:
         """@brief Handle a single trace event.
         @param self
         @param event An instance of TraceEvent or one of its subclasses.
         """
         raise NotImplementedError()
+
 
 class TraceEventFilter(TraceEventSink):
     """@brief Abstract interface for a trace event filter."""
@@ -57,7 +60,9 @@ class TraceEventFilter(TraceEventSink):
             else:
                 self._sink.receive(event)
 
-    def filter(self, event: "TraceEvent") -> Union[None, "TraceEvent", Sequence["TraceEvent"]]:
+    def filter(
+        self, event: "TraceEvent"
+    ) -> Union[None, "TraceEvent", Sequence["TraceEvent"]]:
         """@brief Filter a single trace event.
 
         @param self
@@ -65,6 +70,7 @@ class TraceEventFilter(TraceEventSink):
         @return Either None, a single TraceEvent, or a sequence of TraceEvents.
         """
         raise NotImplementedError()
+
 
 class TraceEventTee(TraceEventSink):
     """@brief Trace event sink that replicates events to multiple sinks."""
@@ -93,4 +99,3 @@ class TraceEventTee(TraceEventSink):
         """
         for sink in self._sinks:
             sink.receive(event)
-

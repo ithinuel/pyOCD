@@ -22,7 +22,7 @@ from pyocd.core.exceptions import TransferError
 from pyocd.utility.autoflush import Autoflush
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def mock_obj():
     return mock.Mock()
 

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import argparse
-from typing import (List, Set)
+from typing import List, Set
 import logging
 import re
 import fnmatch
@@ -26,11 +26,13 @@ from ..target.pack import pack_target
 
 try:
     import cmsis_pack_manager
+
     CPM_AVAILABLE = True
 except ImportError:
     CPM_AVAILABLE = False
 
 LOG = logging.getLogger(__name__)
+
 
 class PackSubcommandBase(SubcommandBase):
     """@brief Base class for `pyocd pack` subcommands."""
@@ -40,7 +42,9 @@ class PackSubcommandBase(SubcommandBase):
     def _get_cache(self) -> "cmsis_pack_manager.Cache":
         """@brief Handle 'clean' subcommand."""
         if not CPM_AVAILABLE:
-            raise exceptions.CommandError("'pack' subcommand is not available because cmsis-pack-manager is not installed")
+            raise exceptions.CommandError(
+                "'pack' subcommand is not available because cmsis-pack-manager is not installed"
+            )
 
         verbosity = self._args.verbose - self._args.quiet
         return cmsis_pack_manager.Cache(verbosity < 0, False)
@@ -54,19 +58,22 @@ class PackSubcommandBase(SubcommandBase):
         matches = set()
         for pattern in self._args.patterns:
             # Using fnmatch.fnmatch() was failing to match correctly.
-            pat = re.compile(fnmatch.translate(pattern).rsplit('\\Z')[0], re.IGNORECASE)
+            pat = re.compile(fnmatch.translate(pattern).rsplit("\\Z")[0], re.IGNORECASE)
             results = {name for name in cache.index.keys() if pat.search(name)}
             matches.update(results)
 
         if not matches:
-            LOG.warning("No matching devices. Please make sure the pack index is up to date."),
+            LOG.warning(
+                "No matching devices. Please make sure the pack index is up to date."
+            )
 
         return matches
+
 
 class PackCleanSubcommand(PackSubcommandBase):
     """@brief `pyocd pack clean` subcommand."""
 
-    NAMES = ['clean']
+    NAMES = ["clean"]
     HELP = "Delete the pack index and all installed packs."
 
     @classmethod
@@ -84,10 +91,11 @@ class PackCleanSubcommand(PackSubcommandBase):
         print()
         return 0
 
+
 class PackUpdateSubcommand(PackSubcommandBase):
     """@brief `pyocd pack update` subcommand."""
 
-    NAMES = ['update']
+    NAMES = ["update"]
     HELP = "Update the pack index."
 
     @classmethod
@@ -95,8 +103,12 @@ class PackUpdateSubcommand(PackSubcommandBase):
         """@brief Add this subcommand to the subparsers object."""
         parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
-        parser.add_argument("-c", "--clean", action='store_true',
-            help="Erase existing pack information before updating.")
+        parser.add_argument(
+            "-c",
+            "--clean",
+            action="store_true",
+            help="Erase existing pack information before updating.",
+        )
 
         return [cls.CommonOptions.LOGGING, parser]
 
@@ -113,10 +125,11 @@ class PackUpdateSubcommand(PackSubcommandBase):
         print()
         return 0
 
+
 class PackShowSubcommand(PackSubcommandBase):
     """@brief `pyocd pack show` subcommand."""
 
-    NAMES = ['show']
+    NAMES = ["show"]
     HELP = "Show the list of installed packs."
 
     @classmethod
@@ -124,9 +137,10 @@ class PackShowSubcommand(PackSubcommandBase):
         """@brief Add this subcommand to the subparsers object."""
         parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
-        display_options = parser.add_argument_group('display options')
-        display_options.add_argument('-H', '--no-header', action='store_true',
-            help="Don't print a table header.")
+        display_options = parser.add_argument_group("display options")
+        display_options.add_argument(
+            "-H", "--no-header", action="store_true", help="Don't print a table header."
+        )
 
         return [cls.CommonOptions.LOGGING, parser]
 
@@ -137,17 +151,20 @@ class PackShowSubcommand(PackSubcommandBase):
         packs = pack_target.ManagedPacks.get_installed_packs(cache)
         pt = self._get_pretty_table(["Pack", "Version"])
         for ref in packs:
-            pt.add_row([
-                        f"{ref.vendor}.{ref.pack}",
-                        ref.version,
-                        ])
+            pt.add_row(
+                [
+                    f"{ref.vendor}.{ref.pack}",
+                    ref.version,
+                ]
+            )
         print(pt)
         return 0
+
 
 class PackFindSubcommand(PackSubcommandBase):
     """@brief `pyocd pack find` subcommand."""
 
-    NAMES = ['find']
+    NAMES = ["find"]
     HELP = "Report pack(s) in the index containing matching device part numbers."
 
     @classmethod
@@ -155,18 +172,20 @@ class PackFindSubcommand(PackSubcommandBase):
         """@brief Add this subcommand to the subparsers object."""
         parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
+        # fmt: off
         index_options = parser.add_argument_group("index operations")
-        index_options.add_argument("-c", "--clean", action='store_true',
+        index_options.add_argument("-c", "--clean", action="store_true",
             help="Erase existing pack information before updating. Ignored if --update is not specified.")
-        index_options.add_argument("-u", "--update", action='store_true',
+        index_options.add_argument("-u", "--update", action="store_true",
             help="Update the pack index before searching.")
 
-        display_options = parser.add_argument_group('display options')
-        display_options.add_argument('-H', '--no-header', action='store_true',
+        display_options = parser.add_argument_group("display options")
+        display_options.add_argument("-H", "--no-header", action="store_true",
             help="Don't print a table header.")
 
-        parser.add_argument("patterns", metavar="<pattern>", nargs='+',
+        parser.add_argument("patterns", metavar="<pattern>", nargs="+",
             help="Glob-style pattern for matching a target part number.")
+        # fmt: on
 
         return [cls.CommonOptions.LOGGING, parser]
 
@@ -188,28 +207,43 @@ class PackFindSubcommand(PackSubcommandBase):
 
         if matches:
             # Get the list of installed pack targets.
-            installed_targets = pack_target.ManagedPacks.get_installed_targets(cache=cache)
-            installed_target_names = [target.part_number.lower() for target in installed_targets]
+            installed_targets = pack_target.ManagedPacks.get_installed_targets(
+                cache=cache
+            )
+            installed_target_names = [
+                target.part_number.lower() for target in installed_targets
+            ]
 
-            pt = self._get_pretty_table(["Part", "Vendor", "Pack", "Version", "Installed"])
+            pt = self._get_pretty_table(
+                [
+                    "Part",
+                    "Vendor",
+                    "Pack",
+                    "Version",
+                    "Installed",
+                ]
+            )
             for name in sorted(matches):
                 info = cache.index[name]
-                ref, = cache.packs_for_devices([info])
-                pt.add_row([
-                            info['name'],
-                            info['vendor'].split(':')[0],
-                            f"{ref.vendor}.{ref.pack}",
-                            ref.version,
-                            info['name'].lower() in installed_target_names,
-                            ])
+                (ref,) = cache.packs_for_devices([info])
+                pt.add_row(
+                    [
+                        info["name"],
+                        info["vendor"].split(":")[0],
+                        f"{ref.vendor}.{ref.pack}",
+                        ref.version,
+                        info["name"].lower() in installed_target_names,
+                    ]
+                )
             print(pt)
 
         return 0
 
+
 class PackInstallSubcommand(PackSubcommandBase):
     """@brief `pyocd pack install` subcommand."""
 
-    NAMES = ['install']
+    NAMES = ["install"]
     HELP = "Download and install pack(s) containing matching device part numbers."
 
     @classmethod
@@ -217,18 +251,20 @@ class PackInstallSubcommand(PackSubcommandBase):
         """@brief Add this subcommand to the subparsers object."""
         parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
+        # fmt: off
         index_options = parser.add_argument_group("index operations")
-        index_options.add_argument("-c", "--clean", action='store_true',
+        index_options.add_argument("-c", "--clean", action="store_true",
             help="Erase existing pack information before updating. Ignored if --update is not specified.")
-        index_options.add_argument("-u", "--update", action='store_true',
+        index_options.add_argument("-u", "--update", action="store_true",
             help="Update the pack index before searching.")
 
-        download_options = parser.add_argument_group('download options')
-        download_options.add_argument("-n", "--no-download", action='store_true',
+        download_options = parser.add_argument_group("download options")
+        download_options.add_argument("-n", "--no-download", action="store_true",
             help="Just list the pack(s) that would be downloaded, don't actually download anything.")
 
         parser.add_argument("patterns", metavar="<pattern>", nargs="+",
             help="Glob-style pattern for matching a target part number.")
+        # fmt: on
 
         return [cls.CommonOptions.LOGGING, parser]
 
@@ -263,10 +299,11 @@ class PackInstallSubcommand(PackSubcommandBase):
 
         return 0
 
+
 class PackSubcommand(PackSubcommandBase):
     """@brief `pyocd pack` subcommand."""
 
-    NAMES = ['pack']
+    NAMES = ["pack"]
     HELP = "Manage CMSIS-Packs for target support."
     SUBCOMMANDS = [
         PackCleanSubcommand,
@@ -274,7 +311,7 @@ class PackSubcommand(PackSubcommandBase):
         PackInstallSubcommand,
         PackShowSubcommand,
         PackUpdateSubcommand,
-        ]
+    ]
 
     @classmethod
     def get_args(cls) -> List[argparse.ArgumentParser]:
@@ -282,30 +319,40 @@ class PackSubcommand(PackSubcommandBase):
         pack_parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
         cls.add_subcommands(pack_parser)
 
-        pack_operations = pack_parser.add_argument_group('pack operations')
-        pack_operations.add_argument("-c", "--clean", action='store_true',
+        pack_operations = pack_parser.add_argument_group("pack operations")
+        # fmt: off
+        pack_operations.add_argument("-c", "--clean", action="store_true",
             help="(Deprecated; use clean subcommand.) Erase all stored pack information.")
-        pack_operations.add_argument("-u", "--update", action='store_true',
+        pack_operations.add_argument("-u", "--update", action="store_true",
             help="(Deprecated; use update subcommand.) Update the pack index.")
-        pack_operations.add_argument("-s", "--show", action='store_true',
+        pack_operations.add_argument("-s", "--show", action="store_true",
             help="(Deprecated; use show subcommand.) Show the list of installed packs.")
-        pack_operations.add_argument("-f", "--find", dest="find_devices", metavar="GLOB", action='append',
+        pack_operations.add_argument("-f", "--find", dest="find_devices", metavar="GLOB", action="append",
             help="(Deprecated; use find subcommand.) Report pack(s) in the index containing matching device part numbers.")
-        pack_operations.add_argument("-i", "--install", dest="install_devices", metavar="GLOB", action='append',
+        pack_operations.add_argument("-i", "--install", dest="install_devices", metavar="GLOB", action="append",
             help="(Deprecated; use install subcommand.) Download and install pack(s) containing matching device part numbers.")
 
-        pack_options = pack_parser.add_argument_group('pack options')
-        pack_options.add_argument("-n", "--no-download", action='store_true',
+        pack_options = pack_parser.add_argument_group("pack options")
+        pack_options.add_argument("-n", "--no-download", action="store_true",
             help="Just list the pack(s) that would be downloaded, don't actually download anything.")
-        pack_options.add_argument('-H', '--no-header', action='store_true',
+        pack_options.add_argument("-H", "--no-header", action="store_true",
             help="Don't print a table header.")
+        # fmt: on
 
         return [cls.CommonOptions.LOGGING, pack_parser]
 
     def invoke(self) -> int:
         """@brief Handle 'pack' subcommand."""
 
-        if not any([self._args.clean, self._args.update, self._args.show, bool(self._args.find_devices), bool(self._args.install_devices)]):
+        if not any(
+            [
+                self._args.clean,
+                self._args.update,
+                self._args.show,
+                bool(self._args.find_devices),
+                bool(self._args.install_devices),
+            ]
+        ):
             self.parser.print_help()
             return 0
 
@@ -324,11 +371,13 @@ class PackSubcommand(PackSubcommandBase):
             packs = pack_target.ManagedPacks.get_installed_packs(cache)
             pt = self._get_pretty_table(["Vendor", "Pack", "Version"])
             for ref in packs:
-                pt.add_row([
-                            ref.vendor,
-                            ref.pack,
-                            ref.version,
-                            ])
+                pt.add_row(
+                    [
+                        ref.vendor,
+                        ref.pack,
+                        ref.version,
+                    ]
+                )
             print(pt)
 
         if self._args.find_devices or self._args.install_devices:
@@ -338,20 +387,34 @@ class PackSubcommand(PackSubcommandBase):
 
             if self._args.find_devices:
                 # Get the list of installed pack targets.
-                installed_targets = pack_target.ManagedPacks.get_installed_targets(cache=cache)
-                installed_target_names = [target.part_number.lower() for target in installed_targets]
+                installed_targets = pack_target.ManagedPacks.get_installed_targets(
+                    cache=cache
+                )
+                installed_target_names = [
+                    target.part_number.lower() for target in installed_targets
+                ]
 
-                pt = self._get_pretty_table(["Part", "Vendor", "Pack", "Version", "Installed"])
+                pt = self._get_pretty_table(
+                    [
+                        "Part",
+                        "Vendor",
+                        "Pack",
+                        "Version",
+                        "Installed",
+                    ]
+                )
                 for name in sorted(matches):
                     info = cache.index[name]
-                    ref, = cache.packs_for_devices([info])
-                    pt.add_row([
-                                info['name'],
-                                info['vendor'].split(':')[0],
-                                f"{ref.vendor}.{ref.pack}",
-                                ref.version,
-                                info['name'].lower() in installed_target_names,
-                                ])
+                    (ref,) = cache.packs_for_devices([info])
+                    pt.add_row(
+                        [
+                            info["name"],
+                            info["vendor"].split(":")[0],
+                            f"{ref.vendor}.{ref.pack}",
+                            ref.version,
+                            info["name"].lower() in installed_target_names,
+                        ]
+                    )
                 print(pt)
             elif self._args.install_devices:
                 devices = [cache.index[dev] for dev in matches]
@@ -367,4 +430,3 @@ class PackSubcommand(PackSubcommandBase):
                 print()
 
         return 0
-

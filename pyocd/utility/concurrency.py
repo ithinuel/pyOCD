@@ -15,13 +15,15 @@
 # limitations under the License.
 
 from functools import wraps
-from typing import (Any, Callable)
+from typing import Any, Callable
+
 
 def locked(func: Callable) -> Callable:
     """@brief Decorator to automatically lock a method of a class.
 
     The class is required to have `lock()` and `unlock()` methods.
     """
+
     @wraps(func)
     def _locking(self, *args: Any, **kwargs: Any) -> Any:
         try:
@@ -29,4 +31,5 @@ def locked(func: Callable) -> Callable:
             return func(self, *args, **kwargs)
         finally:
             self.unlock()
+
     return _locking

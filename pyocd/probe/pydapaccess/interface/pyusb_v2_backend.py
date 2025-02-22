@@ -30,7 +30,7 @@ from .common import (
     is_known_cmsis_dap_vid_pid,
     check_ep,
     generate_device_unique_id,
-    )
+)
 from ..dap_access_api import DAPAccessIntf
 from ... import common
 
@@ -41,6 +41,7 @@ TRACE.setLevel(logging.CRITICAL)
 try:
     import usb.core
     import usb.util
+
     try:
         from libusb_package import find as usb_find
     except ImportError:
@@ -62,8 +63,9 @@ class PyUSBv2(Interface):
         self.pid = dev.idProduct
         self.product_name = dev.product or f"{dev.idProduct:#06x}"
         self.vendor_name = dev.manufacturer or f"{dev.idVendor:#06x}"
-        self.serial_number = dev.serial_number \
-                or generate_device_unique_id(dev.idProduct, dev.idVendor, dev.bus, dev.address)
+        self.serial_number = dev.serial_number or generate_device_unique_id(
+            dev.idProduct, dev.idVendor, dev.bus, dev.address
+        )
         self.ep_out = None
         self.ep_in = None
         self.ep_swo = None
@@ -106,24 +108,34 @@ class PyUSBv2(Interface):
         config = dev.get_active_configuration()
 
         # Get CMSIS-DAPv2 interface
-        interface = usb.util.find_descriptor(config, custom_match=_match_cmsis_dap_v2_interface)
+        interface = usb.util.find_descriptor(
+            config, custom_match=_match_cmsis_dap_v2_interface
+        )
         if interface is None:
-            raise DAPAccessIntf.DeviceError(f"Probe {self.serial_number} has no CMSIS-DAPv2 interface")
+            raise DAPAccessIntf.DeviceError(
+                f"Probe {self.serial_number} has no CMSIS-DAPv2 interface"
+            )
         interface_number = interface.bInterfaceNumber
 
         # Find endpoints. CMSIS-DAPv2 endpoints are in a fixed order.
         try:
             ep_out = interface.endpoints()[0]
             ep_in = interface.endpoints()[1]
-            ep_swo = interface.endpoints()[2] if len(interface.endpoints()) > 2 else None
+            ep_swo = (
+                interface.endpoints()[2] if len(interface.endpoints()) > 2 else None
+            )
         except IndexError:
-            raise DAPAccessIntf.DeviceError(f"Probe {self.serial_number} is missing expected endpoints")
+            raise DAPAccessIntf.DeviceError(
+                f"Probe {self.serial_number} is missing expected endpoints"
+            )
 
         # Explicitly claim the interface
         try:
             usb.util.claim_interface(dev, interface_number)
         except usb.core.USBError as exc:
-            raise DAPAccessIntf.DeviceError(f"Unable to claim interface for probe {self.serial_number}") from exc
+            raise DAPAccessIntf.DeviceError(
+                f"Unable to claim interface for probe {self.serial_number}"
+            ) from exc
 
         # Update all class variables if we made it here
         self.ep_out = ep_out
@@ -171,8 +183,9 @@ class PyUSBv2(Interface):
             while not self.rx_stop_event.is_set():
                 self.read_sem.acquire()
                 if not self.rx_stop_event.is_set():
-                    read_data = self.ep_in.read(self.packet_size,
-                                                timeout=self.DEFAULT_USB_TIMEOUT_MS).tobytes()
+                    read_data = self.ep_in.read(
+                        self.packet_size, timeout=self.DEFAULT_USB_TIMEOUT_MS
+                    ).tobytes()
 
                     # This trace log is commented out to reduce clutter, but left in to leave available
                     # when debugging rx_task issues.
@@ -191,8 +204,9 @@ class PyUSBv2(Interface):
         try:
             while not self.swo_stop_event.is_set():
                 try:
-                    data = self.ep_swo.read(self.ep_swo.wMaxPacketSize,
-                            timeout=self.DEFAULT_USB_TIMEOUT_MS).tobytes()
+                    data = self.ep_swo.read(
+                        self.ep_swo.wMaxPacketSize, timeout=self.DEFAULT_USB_TIMEOUT_MS
+                    ).tobytes()
                     self.swo_data.put(data)
                 except usb.core.USBError:
                     pass
@@ -220,11 +234,17 @@ class PyUSBv2(Interface):
         """@brief Write data on the OUT endpoint."""
 
         if self.ep_out:
-            if (len(data) > 0) and (len(data) < self.packet_size) and (len(data) % self.ep_out.wMaxPacketSize == 0):
+            if (
+                (len(data) > 0)
+                and (len(data) < self.packet_size)
+                and (len(data) % self.ep_out.wMaxPacketSize == 0)
+            ):
                 data.append(0)
 
         if TRACE.isEnabledFor(logging.DEBUG):
-            TRACE.debug("  USB OUT> (%d) %s", len(data), ' '.join([f'{i:02x}' for i in data]))
+            TRACE.debug(
+                "  USB OUT> (%d) %s", len(data), " ".join([f"{i:02x}" for i in data])
+            )
 
         self.read_sem.release()
 
@@ -233,18 +253,24 @@ class PyUSBv2(Interface):
     def read(self):
         """@brief Read data on the IN endpoint."""
         if self.closed:
-            return b''
+            return b""
         elif self._read_thread_did_exit:
-            raise DAPAccessIntf.DeviceError("Probe %s read thread exited unexpectedly" % self.serial_number) from self._read_thread_exception
+            raise DAPAccessIntf.DeviceError(
+                "Probe %s read thread exited unexpectedly" % self.serial_number
+            ) from self._read_thread_exception
 
         try:
             data = self.rcv_data.get(True, self.DEFAULT_USB_TIMEOUT_S)
         except queue.Empty:
-            raise DAPAccessIntf.DeviceError(f"Timeout reading from probe {self.serial_number}") from None
+            raise DAPAccessIntf.DeviceError(
+                f"Timeout reading from probe {self.serial_number}"
+            ) from None
 
         # Trace when the higher layer actually gets a packet previously read.
         if TRACE.isEnabledFor(logging.DEBUG):
-            TRACE.debug("  USB RD < (%d) %s", len(data), ' '.join([f'{i:02x}' for i in data]))
+            TRACE.debug(
+                "  USB RD < (%d) %s", len(data), " ".join([f"{i:02x}" for i in data])
+            )
 
         return data
 
@@ -254,8 +280,9 @@ class PyUSBv2(Interface):
         if not self.is_swo_running:
             return data
         elif self._swo_thread_did_exit:
-            raise DAPAccessIntf.DeviceError(f"Probe {self.serial_number} read thread exited unexpectedly") \
-                from self._read_thread_exception
+            raise DAPAccessIntf.DeviceError(
+                f"Probe {self.serial_number} read thread exited unexpectedly"
+            ) from self._read_thread_exception
 
         while True:
             try:
@@ -275,8 +302,8 @@ class PyUSBv2(Interface):
         self.rx_stop_event.set()
         self.read_sem.release()
         self.thread.join()
-        self.rx_stop_event.clear() # Reset the stop event.
-        self.rcv_data = queue.SimpleQueue() # Recreate queue to ensure it's empty.
+        self.rx_stop_event.clear()  # Reset the stop event.
+        self.rcv_data = queue.SimpleQueue()  # Recreate queue to ensure it's empty.
         self.swo_data = queue.SimpleQueue()
         usb.util.release_interface(self.dev, self.intf_number)
         usb.util.dispose_resources(self.dev)
@@ -288,6 +315,7 @@ class PyUSBv2(Interface):
         self.thread = None
         self._read_thread_did_exit = False
         self._read_thread_exception = None
+
 
 def _match_cmsis_dap_v2_interface(interface):
     """@brief Returns true for a CMSIS-DAP v2 interface.
@@ -310,8 +338,9 @@ def _match_cmsis_dap_v2_interface(interface):
             return False
 
         # Now check the interface class to distinguish v1 from v2.
-        if (interface.bInterfaceClass != USB_CLASS_VENDOR_SPECIFIC) \
-            or (interface.bInterfaceSubClass != 0):
+        if (interface.bInterfaceClass != USB_CLASS_VENDOR_SPECIFIC) or (
+            interface.bInterfaceSubClass != 0
+        ):
             return False
 
         # Must have either 2 or 3 endpoints.
@@ -319,16 +348,21 @@ def _match_cmsis_dap_v2_interface(interface):
             return False
 
         # Endpoint 0 must be bulk out.
-        if not check_ep(interface, 0, usb.util.ENDPOINT_OUT, usb.util.ENDPOINT_TYPE_BULK):
+        if not check_ep(
+            interface, 0, usb.util.ENDPOINT_OUT, usb.util.ENDPOINT_TYPE_BULK
+        ):
             return False
 
         # Endpoint 1 must be bulk in.
-        if not check_ep(interface, 1, usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_BULK):
+        if not check_ep(
+            interface, 1, usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_BULK
+        ):
             return False
 
         # Endpoint 2 is optional. If present it must be bulk in.
-        if (interface.bNumEndpoints == 3) \
-            and not check_ep(interface, 2, usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_BULK):
+        if (interface.bNumEndpoints == 3) and not check_ep(
+            interface, 2, usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_BULK
+        ):
             return False
 
         # All checks passed, this is a CMSIS-DAPv2 interface!
@@ -341,6 +375,7 @@ def _match_cmsis_dap_v2_interface(interface):
         #
         # IndexError can be raised if an endpoint is missing.
         return False
+
 
 class HasCmsisDapv2Interface:
     """@brief CMSIS-DAPv2 match class to be used with usb.core.find"""
@@ -357,15 +392,24 @@ class HasCmsisDapv2Interface:
 
         try:
             config = dev.get_active_configuration()
-            cmsis_dap_interface = usb.util.find_descriptor(config, custom_match=_match_cmsis_dap_v2_interface)
+            cmsis_dap_interface = usb.util.find_descriptor(
+                config, custom_match=_match_cmsis_dap_v2_interface
+            )
         except usb.core.USBError as error:
             # Produce a more helpful error message if we get a permissions error on Linux.
-            if error.errno == errno.EACCES and platform.system() == "Linux" \
-                and common.should_show_libusb_device_error((dev.idVendor, dev.idProduct)):
-                msg = ("%s while trying to interrogate a USB device "
-                   "(VID=%04x PID=%04x). This can probably be remedied with a udev rule. "
-                   "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help." %
-                   (error, dev.idVendor, dev.idProduct))
+            if (
+                error.errno == errno.EACCES
+                and platform.system() == "Linux"
+                and common.should_show_libusb_device_error(
+                    (dev.idVendor, dev.idProduct)
+                )
+            ):
+                msg = (
+                    "%s while trying to interrogate a USB device "
+                    "(VID=%04x PID=%04x). This can probably be remedied with a udev rule. "
+                    "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help."
+                    % (error, dev.idVendor, dev.idProduct)
+                )
                 # If we recognize this device as one that should be CMSIS-DAP, we can raise
                 # the level of the log message since it's almost certainly a permissions issue.
                 if is_known_cmsis_dap_vid_pid(dev.idVendor, dev.idProduct):
@@ -383,7 +427,9 @@ class HasCmsisDapv2Interface:
             if dev.serial_number is None:
                 if self._serial == "":
                     return True
-                if self._serial == generate_device_unique_id(dev.idProduct, dev.idVendor, dev.bus, dev.address):
+                if self._serial == generate_device_unique_id(
+                    dev.idProduct, dev.idVendor, dev.bus, dev.address
+                ):
                     return True
             if self._serial != dev.serial_number:
                 return False

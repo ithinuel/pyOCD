@@ -15,13 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Any, TYPE_CHECKING)
+from typing import Any, TYPE_CHECKING
 
 from ..core import exceptions
 
 if TYPE_CHECKING:
     from ..core.target import Target
     from types import TracebackType
+
 
 class Autoflush:
     """@brief Context manager for performing flushes.
@@ -50,4 +51,3 @@ class Autoflush:
         if exc_type is None or not issubclass(exc_type, exceptions.TransferError):
             self._target.flush()
         return False
-    

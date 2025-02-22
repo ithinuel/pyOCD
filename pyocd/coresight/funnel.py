@@ -20,6 +20,7 @@ from .component import CoreSightComponent
 
 LOG = logging.getLogger(__name__)
 
+
 class TraceFunnel(CoreSightComponent):
     """@brief CoreSight Trace Funnel"""
 
@@ -54,9 +55,11 @@ class TraceFunnel(CoreSightComponent):
         @param channels Word describing the desired state for the funnel channels.
             Setting the n-th bit of this word high enables the corresponding n-th channel, setting it low disables it.
         """
-        valid_channels_mask = 2**self.available_channels-1
+        valid_channels_mask = 2**self.available_channels - 1
         if channels & ~valid_channels_mask:
-            LOG.warning(f"Trace Funnel: Trying to enable too many channels. Only {self.available_channels} channels are present")
+            LOG.warning(
+                f"Trace Funnel: Trying to enable too many channels. Only {self.available_channels} channels are present"
+            )
             return False
 
         cstf = self.ap.read32(self.address + TraceFunnel.CSTF)
@@ -68,7 +71,7 @@ class TraceFunnel(CoreSightComponent):
 
     def enable(self) -> None:
         """@brief Enables all channels"""
-        self.set_enabled_channels(2**self.available_channels-1)
+        self.set_enabled_channels(2**self.available_channels - 1)
 
     def disable(self) -> None:
         """@brief Disables all channels"""

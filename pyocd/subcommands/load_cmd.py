@@ -29,28 +29,30 @@ from ..utility.cmdline import (
 
 LOG = logging.getLogger(__name__)
 
+
 class LoadSubcommand(SubcommandBase):
     """@brief `pyocd load` and `flash` subcommand."""
 
-    NAMES = ['load', 'flash']
+    NAMES = ["load", "flash"]
     HELP = "Load one or more images into target device memory."
     EPILOG = "Supported file formats are: binary, Intel hex, and ELF32."
     DEFAULT_LOG_LEVEL = logging.WARNING
 
     ## @brief Valid erase mode options.
     ERASE_OPTIONS = [
-        'auto',
-        'chip',
-        'sector',
-        ]
+        "auto",
+        "chip",
+        "sector",
+    ]
 
     @classmethod
     def get_args(cls) -> List[argparse.ArgumentParser]:
         """@brief Add this subcommand to the subparsers object."""
         parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
+        # fmt: off
         parser_options = parser.add_argument_group("load options")
-        parser_options.add_argument("-e", "--erase", choices=cls.ERASE_OPTIONS, default='sector',
+        parser_options.add_argument("-e", "--erase", choices=cls.ERASE_OPTIONS, default="sector",
             help="Choose flash erase method. Default is sector.")
         parser_options.add_argument("-a", "--base-address", metavar="ADDR", type=int_base_0,
             help="Base address used for the address where to write a binary. Defaults to start of flash. "
@@ -68,6 +70,7 @@ class LoadSubcommand(SubcommandBase):
         parser.add_argument("file", metavar="<file-path>", nargs="+",
             help="File to write to memory. Binary files can have an optional base address appended to the file "
                  "name as '@<address>', for instance 'app.bin@0x20000'.")
+        # fmt: on
 
         return [cls.CommonOptions.COMMON, cls.CommonOptions.CONNECT, parser]
 
@@ -77,31 +80,35 @@ class LoadSubcommand(SubcommandBase):
 
         # Validate arguments.
         if (self._args.base_address is not None) and (len(self._args.file) > 1):
-            raise ValueError("--base-address cannot be set when loading more than one file; "
-                    "use a base address suffix instead")
+            raise ValueError(
+                "--base-address cannot be set when loading more than one file; "
+                "use a base address suffix instead"
+            )
 
         session = ConnectHelper.session_with_chosen_probe(
-                            project_dir=self._args.project_dir,
-                            config_file=self._args.config,
-                            user_script=self._args.script,
-                            no_config=self._args.no_config,
-                            pack=self._args.pack,
-                            unique_id=self._args.unique_id,
-                            target_override=self._args.target_override,
-                            frequency=self._args.frequency,
-                            blocking=(not self._args.no_wait),
-                            connect_mode=self._args.connect_mode,
-                            options=convert_session_options(self._args.options),
-                            option_defaults=self._modified_option_defaults(),
-                            )
+            project_dir=self._args.project_dir,
+            config_file=self._args.config,
+            user_script=self._args.script,
+            no_config=self._args.no_config,
+            pack=self._args.pack,
+            unique_id=self._args.unique_id,
+            target_override=self._args.target_override,
+            frequency=self._args.frequency,
+            blocking=(not self._args.no_wait),
+            connect_mode=self._args.connect_mode,
+            options=convert_session_options(self._args.options),
+            option_defaults=self._modified_option_defaults(),
+        )
         if session is None:
             LOG.error("No target device available")
             return 1
         with session:
-            programmer = FileProgrammer(session,
-                            chip_erase=self._args.erase,
-                            trust_crc=self._args.trust_crc,
-                            no_reset=self._args.no_reset)
+            programmer = FileProgrammer(
+                session,
+                chip_erase=self._args.erase,
+                trust_crc=self._args.trust_crc,
+                no_reset=self._args.no_reset,
+            )
             for filename in self._args.file:
                 # Get an initial path with the argument as-is.
                 file_path = Path(filename).expanduser()
@@ -113,7 +120,9 @@ class LoadSubcommand(SubcommandBase):
                     try:
                         base_address = int_base_0(suffix)
                     except ValueError:
-                        LOG.error(f'Base address suffix "{suffix}" on file "{filename}" is not a valid integer address')
+                        LOG.error(
+                            f'Base address suffix "{suffix}" on file "{filename}" is not a valid integer address'
+                        )
                         return 1
                 else:
                     base_address = self._args.base_address
@@ -127,11 +136,11 @@ class LoadSubcommand(SubcommandBase):
                 else:
                     LOG.info("Loading %s at %#010x", filename, base_address)
 
-                programmer.program(filename,
-                                base_address=base_address,
-                                skip=self._args.skip,
-                                file_format=self._args.format)
+                programmer.program(
+                    filename,
+                    base_address=base_address,
+                    skip=self._args.skip,
+                    file_format=self._args.format,
+                )
 
         return 0
-
-

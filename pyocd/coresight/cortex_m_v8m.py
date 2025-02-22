@@ -18,11 +18,12 @@
 import logging
 
 from .cortex_m import CortexM
-from .core_ids import (CORE_TYPE_NAME, CoreArchitecture, CortexMExtension)
+from .core_ids import CORE_TYPE_NAME, CoreArchitecture, CortexMExtension
 from ..core.target import Target
 from .cortex_m_core_registers import CoreRegisterGroups
 
 LOG = logging.getLogger(__name__)
+
 
 class CortexM_v8M(CortexM):
     """@brief Component class for a v8.x-M architecture Cortex-M core."""
@@ -31,7 +32,7 @@ class CortexM_v8M(CortexM):
     ARMv8M_MAIN = 0xF
 
     ## DFSR.PMU added in v8.1-M.
-    DFSR_PMU = (1 << 5)
+    DFSR_PMU = 1 << 5
 
     DSCSR = 0xE000EE08
     DSCSR_CDSKEY = 0x00020000
@@ -41,51 +42,53 @@ class CortexM_v8M(CortexM):
 
     # Processor Feature Register 0
     PFR0 = 0xE000ED40
-    PFR0_RAS_MASK = 0xf0000000
+    PFR0_RAS_MASK = 0xF0000000
     PFR0_RAS_SHIFT = 28
     PFR0_RAS_VERSION_1 = 2
 
     # Processor Feature Register 1
     PFR1 = 0xE000ED44
-    PFR1_SECURITY_MASK = 0x000000f0
+    PFR1_SECURITY_MASK = 0x000000F0
     PFR1_SECURITY_SHIFT = 4
 
-    PFR1_SECURITY_EXT_V8_0 = 0x1 # Base security extension.
-    PFR1_SECURITY_EXT_V8_1 = 0x3 # v8.1-M adds several instructions.
+    PFR1_SECURITY_EXT_V8_0 = 0x1  # Base security extension.
+    PFR1_SECURITY_EXT_V8_1 = 0x3  # v8.1-M adds several instructions.
 
     # Debug Feature Register 0
     DFR0 = 0xE000ED48
-    DFR0_UDE_MASK = 0xf0000000
+    DFR0_UDE_MASK = 0xF0000000
     DFR0_UDE_SHIFT = 28
     DFR0_UDE_SUPPORTED = 1
 
     # Media and FP Feature Register 1
     MVFR1 = 0xE000EF44
-    MVFR1_MVE_MASK = 0x00000f00
+    MVFR1_MVE_MASK = 0x00000F00
     MVFR1_MVE_SHIFT = 8
     MVFR1_MVE__INTEGER = 0x1
     MVFR1_MVE__FLOAT = 0x2
-    MVFR1_FP16_MASK = 0x00f00000
+    MVFR1_FP16_MASK = 0x00F00000
     MVFR1_FP16_SHIFT = 20
-    MVFR1_FP16__SUPPORTED = 0x1 # FP16 format support is present.
+    MVFR1_FP16__SUPPORTED = 0x1  # FP16 format support is present.
 
     # Instruction Set Attribute Register 0
     ISAR0 = 0xE000ED60
-    ISAR0_CMPBRANCH_MASK = 0x0000f000
+    ISAR0_CMPBRANCH_MASK = 0x0000F000
     ISAR0_CMPBRANCH_SHIFT = 12
-    ISAR0_CMPBRANCH__LOB = 0x3 # LOB instructions from v8.1-M are present.
+    ISAR0_CMPBRANCH__LOB = 0x3  # LOB instructions from v8.1-M are present.
 
     # Instruction Set Attribute Register 5
     ISAR5 = 0xE000ED74
-    ISAR5_PACBTI_MASK = 0x00f00000
+    ISAR5_PACBTI_MASK = 0x00F00000
     ISAR5_PACBTI_SHIFT = 20
-    ISAR5_PACBTI__NONE = 0x0 # PACBTI is not present.
+    ISAR5_PACBTI__NONE = 0x0  # PACBTI is not present.
 
     # PMU Type register
     PMU_TYPE = 0xE0003E00
-    PMU_TYPE_N_MASK  = 0x0000000f
+    PMU_TYPE_N_MASK = 0x0000000F
 
-    def __init__(self, rootTarget, ap, memory_map=None, core_num=0, cmpid=None, address=None):
+    def __init__(
+        self, rootTarget, ap, memory_map=None, core_num=0, cmpid=None, address=None
+    ):
         super().__init__(rootTarget, ap, memory_map, core_num, cmpid, address)
 
     @property
@@ -115,11 +118,19 @@ class CortexM_v8M(CortexM):
 
         # Read CPUID register
         cpuid = cpuid_cb()
-        implementer = (cpuid & CortexM.CPUID_IMPLEMENTER_MASK) >> CortexM.CPUID_IMPLEMENTER_POS
-        arch = (cpuid & CortexM.CPUID_ARCHITECTURE_MASK) >> CortexM.CPUID_ARCHITECTURE_POS
+        implementer = (
+            cpuid & CortexM.CPUID_IMPLEMENTER_MASK
+        ) >> CortexM.CPUID_IMPLEMENTER_POS
+        arch = (
+            cpuid & CortexM.CPUID_ARCHITECTURE_MASK
+        ) >> CortexM.CPUID_ARCHITECTURE_POS
         self.core_type = (cpuid & CortexM.CPUID_PARTNO_MASK) >> CortexM.CPUID_PARTNO_POS
-        self.cpu_revision = (cpuid & CortexM.CPUID_VARIANT_MASK) >> CortexM.CPUID_VARIANT_POS
-        self.cpu_patch = (cpuid & CortexM.CPUID_REVISION_MASK) >> CortexM.CPUID_REVISION_POS
+        self.cpu_revision = (
+            cpuid & CortexM.CPUID_VARIANT_MASK
+        ) >> CortexM.CPUID_VARIANT_POS
+        self.cpu_patch = (
+            cpuid & CortexM.CPUID_REVISION_MASK
+        ) >> CortexM.CPUID_REVISION_POS
 
         # Check for DSP extension
         isar3 = isar3_cb()
@@ -136,7 +147,10 @@ class CortexM_v8M(CortexM):
         # Check for the security extension.
         pfr1 = pfr1_cb()
         pfr1_sec = (pfr1 & self.PFR1_SECURITY_MASK) >> self.PFR1_SECURITY_SHIFT
-        self.has_security_extension = pfr1_sec in (self.PFR1_SECURITY_EXT_V8_0, self.PFR1_SECURITY_EXT_V8_1)
+        self.has_security_extension = pfr1_sec in (
+            self.PFR1_SECURITY_EXT_V8_0,
+            self.PFR1_SECURITY_EXT_V8_1,
+        )
         if self.has_security_extension:
             self._extensions.append(CortexMExtension.SEC)
         if pfr1_sec == self.PFR1_SECURITY_EXT_V8_1:
@@ -162,7 +176,9 @@ class CortexM_v8M(CortexM):
 
         # Check for MPU extension
         mpu_type = mpu_type_cb()
-        mpu_type_dregions = (mpu_type & self.MPU_TYPE_DREGIONS_MASK) >> self.MPU_TYPE_DREGIONS_SHIFT
+        mpu_type_dregions = (
+            mpu_type & self.MPU_TYPE_DREGIONS_MASK
+        ) >> self.MPU_TYPE_DREGIONS_SHIFT
         if mpu_type_dregions > 0:
             self._extensions.append(CortexMExtension.MPU)
 
@@ -175,13 +191,17 @@ class CortexM_v8M(CortexM):
         # Determine the architecture major/minor version.
         # The presence of low-overhead loop and branch instructions is used to distinguish v8.1-M from v8.0-M.
         isar0 = isar0_cb()
-        isar0_cmpbranch = (isar0 & self.ISAR0_CMPBRANCH_MASK) >> self.ISAR0_CMPBRANCH_SHIFT
+        isar0_cmpbranch = (
+            isar0 & self.ISAR0_CMPBRANCH_MASK
+        ) >> self.ISAR0_CMPBRANCH_SHIFT
         if isar0_cmpbranch == self.ISAR0_CMPBRANCH__LOB:
             self._arch_version = (8, 1)
         else:
             self._arch_version = (8, 0)
 
-        self._core_name = CORE_TYPE_NAME.get((implementer, self.core_type), f"Unknown (CPUID={cpuid:#010x})")
+        self._core_name = CORE_TYPE_NAME.get(
+            (implementer, self.core_type), f"Unknown (CPUID={cpuid:#010x})"
+        )
 
     def _check_for_fpu(self):
         """@brief Determine if a core has an FPU.
@@ -237,13 +257,15 @@ class CortexM_v8M(CortexM):
             return Target.SecurityState.NONSECURE
 
     def clear_debug_cause_bits(self):
-        self.write32(CortexM.DFSR,
-                self.DFSR_PMU
-                | CortexM.DFSR_EXTERNAL
-                | CortexM.DFSR_VCATCH
-                | CortexM.DFSR_DWTTRAP
-                | CortexM.DFSR_BKPT
-                | CortexM.DFSR_HALTED)
+        self.write32(
+            CortexM.DFSR,
+            self.DFSR_PMU
+            | CortexM.DFSR_EXTERNAL
+            | CortexM.DFSR_VCATCH
+            | CortexM.DFSR_DWTTRAP
+            | CortexM.DFSR_BKPT
+            | CortexM.DFSR_HALTED,
+        )
 
     def get_halt_reason(self):
         """@brief Returns the reason the core has halted.
@@ -268,4 +290,3 @@ class CortexM_v8M(CortexM):
         else:
             reason = None
         return reason
-

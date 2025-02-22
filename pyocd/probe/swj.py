@@ -21,6 +21,7 @@ from ..probe.debug_probe import DebugProbe
 
 LOG = logging.getLogger(__name__)
 
+
 class SWJSequenceSender(object):
     """@brief Class to send canned SWJ sequences.
 
@@ -71,7 +72,7 @@ class SWJSequenceSender(object):
 
         The line_reset() method can be used instead of this method, but takes a little longer to send.
         """
-        self._probe.swj_sequence(8, 0xff)
+        self._probe.swj_sequence(8, 0xFF)
 
     def line_reset(self):
         """@brief Execute a line reset for both SWD and JTAG.
@@ -79,22 +80,22 @@ class SWJSequenceSender(object):
         For JTAG, >=5 TCK cycles with TMS high enters the Test-Logic-Reset state.<br/>
         For SWD, >=50 cycles with SWDIO high performs a line reset.
         """
-        self._probe.swj_sequence(51, 0xffffffffffffff)
+        self._probe.swj_sequence(51, 0xFFFFFFFFFFFFFF)
 
     def selection_alert(self):
         """@brief Send the dormant selection alert sequence.
 
         The 128-bit selection alert is prefixed with 8 cycles of SWDIOTMS high.
         """
-        self._probe.swj_sequence(136, 0x19bc0ea2e3ddafe986852d956209f392ff)
+        self._probe.swj_sequence(136, 0x19BC0EA2E3DDAFE986852D956209F392FF)
 
     def jtag_activation_code(self):
         """@brief 4-bit SWDIOTMS cycles low + 8-bit JTAG activation code."""
-        self._probe.swj_sequence(12, 0x00a0)
+        self._probe.swj_sequence(12, 0x00A0)
 
     def swd_activation_code(self):
         """@brief 4-bit SWDIOTMS cycles low + 8-bit SWD activation code."""
-        self._probe.swj_sequence(12, 0x01a0)
+        self._probe.swj_sequence(12, 0x01A0)
 
     def idle_cycles(self, cycles):
         """@brief Send SWD idle cycles with SWDIOTMS low."""
@@ -109,7 +110,7 @@ class SWJSequenceSender(object):
         @note This should be prefixed with at least 5 cycles to put the JTAG TAP in Test-Logic-Reset; see
         jtag_enter_test_logic_reset().
         """
-        self._probe.swj_sequence(39, 0x33bbbbba)
+        self._probe.swj_sequence(39, 0x33BBBBBA)
 
     def swd_to_dormant(self):
         """@brief Send the SWD to DS sequence.
@@ -118,7 +119,7 @@ class SWJSequenceSender(object):
 
         @note An SWD line reset should prefix this sequence. See line_reset().
         """
-        self._probe.swj_sequence(16, 0xe3bc)
+        self._probe.swj_sequence(16, 0xE3BC)
 
     def dormant_to_swd(self):
         """@brief Perform the dormant mode to SWD transition sequence."""
@@ -163,11 +164,11 @@ class SWJSequenceSender(object):
 
             # Execute SWJ-DP Switch Sequence JTAG to SWD (0xE79E)
             # Change if SWJ-DP uses deprecated switch code (0xEDB6)
-            self._probe.swj_sequence(16, 0xe79e)
+            self._probe.swj_sequence(16, 0xE79E)
 
             # Enter SWD Line Reset State
-            self.line_reset()                   # > 50 cycles SWDIO/TMS High
-            self._probe.swj_sequence(8,  0x00)  # At least 2 idle cycles (SWDIO/TMS Low)
+            self.line_reset()  # > 50 cycles SWDIO/TMS High
+            self._probe.swj_sequence(8, 0x00)  # At least 2 idle cycles (SWDIO/TMS Low)
 
     def switch_to_jtag(self):
         """@brief Send SWJ sequence to select JTAG."""
@@ -186,8 +187,7 @@ class SWJSequenceSender(object):
 
             # Execute SWJ-DP Switch Sequence SWD to JTAG (0xE73C)
             # Change if SWJ-DP uses deprecated switch code (0xAEAE)
-            self._probe.swj_sequence(16, 0xe73c)
+            self._probe.swj_sequence(16, 0xE73C)
 
             # Ensure JTAG interface is reset
             self.jtag_enter_test_logic_reset()
-

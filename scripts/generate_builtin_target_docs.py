@@ -26,11 +26,12 @@ def gen_one_target(name: str, target: type[SoCTarget]) -> None:
     </tr>
 """)
 
+
 def gen_targets() -> None:
     for target_name in sorted(BUILTIN_TARGETS.keys()):
         target = BUILTIN_TARGETS[target_name]
         gen_one_target(target_name, target)
-        
+
 
 def main() -> None:
     print("""---
@@ -47,7 +48,5 @@ title: Built-in targets
 """)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
-

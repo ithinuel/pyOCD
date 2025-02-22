@@ -19,15 +19,18 @@ import pytest
 
 from .mockcore import MockCore
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def mockcore():
     return MockCore()
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def mockcore_no_fpu():
     return MockCore(has_fpu=False)
+
 
 # Ignore any tests that are currently causing issues.
 collect_ignore = [
     # None right now.
-    ]
+]

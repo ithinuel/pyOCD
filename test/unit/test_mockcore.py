@@ -15,72 +15,87 @@
 # limitations under the License.
 
 
-
 from pyocd.coresight.cortex_m_core_registers import index_for_reg
 
 # @pytest.fixture(scope='function')
 # def mockcore():
 #     return MockCore()
 
+
 # Basic tests of MockCore memory simulation.
 class TestMockCoreMem:
     def test_read8_flash(self, mockcore):
-        assert mockcore.read_memory_block8(0, 4) == [0xff, 0xff, 0xff, 0xff]
+        assert mockcore.read_memory_block8(0, 4) == [0xFF, 0xFF, 0xFF, 0xFF]
 
     def test_read8_ram(self, mockcore):
         assert mockcore.read_memory_block8(0x20000000, 4) == [0, 0, 0, 0]
 
     def test_read32_flash(self, mockcore):
-        assert mockcore.read_memory_block32(0, 1) == [0xffffffff]
+        assert mockcore.read_memory_block32(0, 1) == [0xFFFFFFFF]
 
     def test_read32_ram(self, mockcore):
         assert mockcore.read_memory_block32(0x20000000, 1) == [0x00000000]
 
     def test_write8_flash(self, mockcore):
-        mockcore.write_memory_block8(0x100, [0xaa, 0xbb, 0xcc, 0xdd])
+        mockcore.write_memory_block8(0x100, [0xAA, 0xBB, 0xCC, 0xDD])
+        # fmt: off
         assert mockcore.read_memory_block8(0xfe, 8) == [0xff, 0xff, 0xaa, 0xbb, 0xcc, 0xdd, 0xff, 0xff]
+        # fmt: on
 
     def test_write32_flash(self, mockcore):
-        mockcore.write_memory_block32(0x100, [0xaabbccdd])
-        assert mockcore.read_memory_block32(0xfc, 3) == [0xffffffff, 0xaabbccdd, 0xffffffff]
+        mockcore.write_memory_block32(0x100, [0xAABBCCDD])
+        assert mockcore.read_memory_block32(0xFC, 3) == [
+            0xFFFFFFFF,
+            0xAABBCCDD,
+            0xFFFFFFFF,
+        ]
 
     def test_write8_ram(self, mockcore):
-        mockcore.write_memory_block8(0x20000100, [0xaa, 0xbb, 0xcc, 0xdd])
+        mockcore.write_memory_block8(0x20000100, [0xAA, 0xBB, 0xCC, 0xDD])
+        # fmt: off
         assert mockcore.read_memory_block8(0x200000fe, 8) == [0x00, 0x00, 0xaa, 0xbb, 0xcc, 0xdd, 0x00, 0x00]
+        # fmt: on
 
     def test_write32_ram(self, mockcore):
-        mockcore.write_memory_block32(0x20000100, [0xaabbccdd])
-        assert mockcore.read_memory_block32(0x200000fc, 3) == [0x00000000, 0xaabbccdd, 0x00000000]
+        mockcore.write_memory_block32(0x20000100, [0xAABBCCDD])
+        assert mockcore.read_memory_block32(0x200000FC, 3) == [
+            0x00000000,
+            0xAABBCCDD,
+            0x00000000,
+        ]
+
 
 # Basic tests of MockCore register simulation.
 class TestMockCoreReg:
     def test_rw_r0_r15(self, mockcore):
         for r in range(0, 16):
-            mockcore.write_core_registers_raw([r], [1+r])
+            mockcore.write_core_registers_raw([r], [1 + r])
         for r in range(0, 16):
-            assert mockcore.read_core_registers_raw([r]) == [1+r]
+            assert mockcore.read_core_registers_raw([r]) == [1 + r]
 
     def test_rw_cfbp(self, mockcore):
-        mockcore.write_core_registers_raw([index_for_reg('cfbp')], [0x01020304])
-        assert mockcore.read_core_registers_raw([
-                index_for_reg('control'),
-                index_for_reg('faultmask'),
-                index_for_reg('basepri'),
-                index_for_reg('primask')]) == [0x01, 0x02, 0x03, 0x04]
+        mockcore.write_core_registers_raw([index_for_reg("cfbp")], [0x01020304])
+        assert mockcore.read_core_registers_raw(
+            [
+                index_for_reg("control"),
+                index_for_reg("faultmask"),
+                index_for_reg("basepri"),
+                index_for_reg("primask"),
+            ]
+        ) == [0x01, 0x02, 0x03, 0x04]
 
     def test_w_control(self, mockcore):
-        mockcore.write_core_registers_raw([index_for_reg('control')], [0xaa])
-        assert mockcore.read_core_registers_raw([index_for_reg('cfbp')]) == [0xaa000000]
+        mockcore.write_core_registers_raw([index_for_reg("control")], [0xAA])
+        assert mockcore.read_core_registers_raw([index_for_reg("cfbp")]) == [0xAA000000]
 
     def test_w_faultmask(self, mockcore):
-        mockcore.write_core_registers_raw([index_for_reg('faultmask')], [0xaa])
-        mockcore.read_core_registers_raw([index_for_reg('cfbp')]) == [0x00aa0000]
+        mockcore.write_core_registers_raw([index_for_reg("faultmask")], [0xAA])
+        assert mockcore.read_core_registers_raw([index_for_reg("cfbp")]) == [0x00AA0000]
 
     def test_w_basepri(self, mockcore):
-        mockcore.write_core_registers_raw([index_for_reg('basepri')], [0xaa])
-        mockcore.read_core_registers_raw([index_for_reg('cfbp')]) == [0x0000aa00]
+        mockcore.write_core_registers_raw([index_for_reg("basepri")], [0xAA])
+        assert mockcore.read_core_registers_raw([index_for_reg("cfbp")]) == [0x0000AA00]
 
     def test_w_primask(self, mockcore):
-        mockcore.write_core_registers_raw([index_for_reg('primask')], [0xaa])
-        mockcore.read_core_registers_raw([index_for_reg('cfbp')]) == [0x000000aa]
-
+        mockcore.write_core_registers_raw([index_for_reg("primask")], [0xAA])
+        assert mockcore.read_core_registers_raw([index_for_reg("cfbp")]) == [0x000000AA]

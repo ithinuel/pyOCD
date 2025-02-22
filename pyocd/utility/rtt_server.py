@@ -25,7 +25,7 @@ from ..debug.rtt import RTTControlBlock, RTTUpChannel, RTTDownChannel
 
 
 class RTTChanWorker(ABC):
-    """@brief Source and sink for data to be transferred over RTT. """
+    """@brief Source and sink for data to be transferred over RTT."""
 
     @abstractmethod
     def write_up_data(self, data: bytes) -> int:
@@ -54,7 +54,7 @@ class RTTChanWorker(ABC):
 
 class RTTChanTCPWorker(RTTChanWorker):
     """@brief Implementation of channel worker that forwards RTT data via a TCP
-              socket. """
+    socket."""
 
     port: int
 
@@ -69,13 +69,13 @@ class RTTChanTCPWorker(RTTChanWorker):
         if listen:
             self.server = socket.socket()
             self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server.bind(('localhost', port))
+            self.server.bind(("localhost", port))
             self.server.listen(1)
             self.server.setblocking(False)
             self.client = None
         else:
             self.server = None
-            self.client = socket.create_connection(('localhost', port), timeout = 1.0)
+            self.client = socket.create_connection(("localhost", port), timeout=1.0)
             self.client.setblocking(False)
 
         self.port = port
@@ -86,7 +86,7 @@ class RTTChanTCPWorker(RTTChanWorker):
 
         sel = selectors.DefaultSelector()
         sel.register(self.server, selectors.EVENT_READ, None)
-        events = sel.select(timeout = 0)
+        events = sel.select(timeout=0)
         for key, _ in events:
             if key.fileobj == self.server:
                 self.client, _ = self.server.accept()
@@ -104,11 +104,11 @@ class RTTChanTCPWorker(RTTChanWorker):
         if self.client is None:
             self._check_for_new_client()
             if self.client is None:
-                return b''
+                return b""
 
         sel = selectors.DefaultSelector()
         sel.register(self.client, selectors.EVENT_READ, None)
-        events = sel.select(timeout = 0)
+        events = sel.select(timeout=0)
         for key, _ in events:
             if key.fileobj == self.client:
                 data = self.client.recv(4096)
@@ -126,22 +126,25 @@ class RTTChanTCPWorker(RTTChanWorker):
         if self.client is not None:
             self.client.close()
 
+
 class RTTChanFileWorker(RTTChanWorker):
     """@brief Implementation of channel worker that write data from RTT channel
-              to a file and optionally reads data from a file into an RTT
-              channel. """
+    to a file and optionally reads data from a file into an RTT
+    channel."""
 
 
 class RTTServer:
     """@brief Keeps track of polling for multiple active RTT channels and the
-              sources and sinks of data for each channel. """
+    sources and sinks of data for each channel."""
+
     control_block: RTTControlBlock
     workers: Optional[Sequence[Optional[RTTChanWorker]]]
     up_buffers: Optional[Sequence[bytes]]
     down_buffers: Optional[Sequence[bytes]]
 
-    def __init__(self, target: SoCTarget, address: int, size: int,
-                 control_block_id: bytes):
+    def __init__(
+        self, target: SoCTarget, address: int, size: int, control_block_id: bytes
+    ):
         """
         @param target The target with which RTT communication is desired.
         @param address Base address for control block search range.
@@ -151,15 +154,16 @@ class RTTServer:
                                 be at most 16 bytes long.  Will be padded with
                                 zeroes if less than 16 bytes.
         """
-        self.control_block = RTTControlBlock.from_target(target, address = address,
-                                    size = size, control_block_id = control_block_id)
+        self.control_block = RTTControlBlock.from_target(
+            target, address=address, size=size, control_block_id=control_block_id
+        )
 
         self.workers = None
         self.up_buffers = None
         self.down_buffers = None
 
     def poll(self):
-        """@brief Reads from and writes to active RTT channels. """
+        """@brief Reads from and writes to active RTT channels."""
         if not self.running:
             # not yet started
             return
@@ -193,7 +197,7 @@ class RTTServer:
                 self.down_buffers[i] = self.down_buffers[i][bytes_out:]
 
     def start(self):
-        """@brief Find and parse RTT control block. """
+        """@brief Find and parse RTT control block."""
         self.control_block.start()
 
         num_up_chans: int = len(self.control_block.up_channels)
@@ -205,7 +209,7 @@ class RTTServer:
         self.down_buffers = [bytes()] * num_down_chans
 
     def stop(self):
-        """@brief Close all RTT workers. """
+        """@brief Close all RTT workers."""
         if not self.running:
             return
 
@@ -219,7 +223,7 @@ class RTTServer:
 
     @property
     def running(self):
-        """@brief True if RTT is started. """
+        """@brief True if RTT is started."""
         return self.workers is not None
 
     def add_server(self, port: int, channel: int):
@@ -233,7 +237,7 @@ class RTTServer:
         elif self.workers[channel] is not None:
             raise exceptions.RTTError(f"RTT is already started for channel {channel}")
 
-        self.workers[channel] = RTTChanTCPWorker(port, listen = True)
+        self.workers[channel] = RTTChanTCPWorker(port, listen=True)
 
     def stop_server(self, port: int):
         """@brief Stop a TCP server.

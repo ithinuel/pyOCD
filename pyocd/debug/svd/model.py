@@ -34,11 +34,13 @@ def _check_type(value, expected_type):
     If the value passed the type check it will be returned from the call.
     """
     if not isinstance(value, expected_type):
-        raise TypeError("Value {value!r} has unexpected type {actual_type!r}, expected {expected_type!r}".format(
-            value=value,
-            expected_type=expected_type,
-            actual_type=type(value),
-        ))
+        raise TypeError(
+            "Value {value!r} has unexpected type {actual_type!r}, expected {expected_type!r}".format(
+                value=value,
+                expected_type=expected_type,
+                actual_type=type(value),
+            )
+        )
     return value
 
 
@@ -127,7 +129,18 @@ class SVDEnumeratedValue(SVDElement):
 
 
 class SVDField(SVDElement):
-    def __init__(self, name, derived_from, description, bit_offset, bit_width, access, enumerated_values, modified_write_values, read_action):
+    def __init__(
+        self,
+        name,
+        derived_from,
+        description,
+        bit_offset,
+        bit_width,
+        access,
+        enumerated_values,
+        modified_write_values,
+        read_action,
+    ):
         SVDElement.__init__(self)
         self.name = name
         self.derived_from = derived_from
@@ -166,10 +179,26 @@ class SVDField(SVDElement):
 class SVDRegisterArray(SVDElement):
     """@brief Represent a register array in the tree"""
 
-    def __init__(self, name, derived_from, description, address_offset, size,
-                 access, protection, reset_value, reset_mask, fields,
-                 display_name, alternate_group, modified_write_values,
-                 read_action, dim, dim_indices, dim_increment):
+    def __init__(
+        self,
+        name,
+        derived_from,
+        description,
+        address_offset,
+        size,
+        access,
+        protection,
+        reset_value,
+        reset_mask,
+        fields,
+        display_name,
+        alternate_group,
+        modified_write_values,
+        read_action,
+        dim,
+        dim_indices,
+        dim_increment,
+    ):
         SVDElement.__init__(self)
 
         # When deriving a register, it is mandatory to specify at least the name, the description,
@@ -234,12 +263,27 @@ class SVDRegisterArray(SVDElement):
         raise KeyError("Unable to find derived_from: %r" % self.derived_from)
 
     def is_reserved(self):
-        return 'reserved' in self.name.lower()
+        return "reserved" in self.name.lower()
 
 
 class SVDRegister(SVDElement):
-    def __init__(self, name, derived_from, description, address_offset, size, access, protection, reset_value, reset_mask,
-                 fields, display_name, alternate_group, modified_write_values, read_action):
+    def __init__(
+        self,
+        name,
+        derived_from,
+        description,
+        address_offset,
+        size,
+        access,
+        protection,
+        reset_value,
+        reset_mask,
+        fields,
+        display_name,
+        alternate_group,
+        modified_write_values,
+        read_action,
+    ):
         SVDElement.__init__(self)
 
         # When deriving a register, it is mandatory to specify at least the name, the description,
@@ -279,16 +323,28 @@ class SVDRegister(SVDElement):
         raise KeyError("Unable to find derived_from: %r" % self.derived_from)
 
     def is_reserved(self):
-        return 'reserved' in self.name.lower()
+        return "reserved" in self.name.lower()
 
 
 class SVDRegisterCluster(SVDElement):
     """@brief Represent a register cluster in the tree"""
 
-    def __init__(self, name, derived_from, description, address_offset, size,
-                 alternate_cluster, header_struct_name,
-                 access, protection, reset_value, reset_mask, register,
-                 cluster):
+    def __init__(
+        self,
+        name,
+        derived_from,
+        description,
+        address_offset,
+        size,
+        alternate_cluster,
+        header_struct_name,
+        access,
+        protection,
+        reset_value,
+        reset_mask,
+        register,
+        cluster,
+    ):
         SVDElement.__init__(self)
 
         # When deriving a register, it is mandatory to specify at least the name, the description,
@@ -355,17 +411,31 @@ class SVDRegisterCluster(SVDElement):
         raise KeyError("Unable to find derived_from: %r" % self.derived_from)
 
     def is_reserved(self):
-        return 'reserved' in self.name.lower()
+        return "reserved" in self.name.lower()
 
 
 class SVDRegisterClusterArray(SVDElement):
     """@brief Represent a register cluster in the tree"""
 
-    def __init__(self, name, derived_from, description, address_offset, size,
-                 alternate_cluster, header_struct_name,
-                 dim, dim_indices, dim_increment,
-                 access, protection, reset_value, reset_mask, register,
-                 cluster):
+    def __init__(
+        self,
+        name,
+        derived_from,
+        description,
+        address_offset,
+        size,
+        alternate_cluster,
+        header_struct_name,
+        dim,
+        dim_indices,
+        dim_increment,
+        access,
+        protection,
+        reset_value,
+        reset_mask,
+        register,
+        cluster,
+    ):
         SVDElement.__init__(self)
 
         # When deriving a register, it is mandatory to specify at least the name, the description,
@@ -403,7 +473,9 @@ class SVDRegisterClusterArray(SVDElement):
             fields=reg.fields,
             derived_from=reg.derived_from,
             description=reg.description,
-            address_offset=clu.address_offset + reg.address_offset + i*clu.dim_increment,
+            address_offset=clu.address_offset
+            + reg.address_offset
+            + i * clu.dim_increment,
             size=reg.size,
             access=reg.access,
             protection=reg.protection,
@@ -438,7 +510,7 @@ class SVDRegisterClusterArray(SVDElement):
         raise KeyError("Unable to find derived_from: %r" % self.derived_from)
 
     def is_reserved(self):
-        return 'reserved' in self.name.lower()
+        return "reserved" in self.name.lower()
 
 
 class SVDAddressBlock(SVDElement):
@@ -458,12 +530,28 @@ class SVDInterrupt(SVDElement):
 
 
 class SVDPeripheral(SVDElement):
-    def __init__(self, name, version, derived_from, description,
-                 prepend_to_name, base_address, address_block,
-                 interrupts, registers, register_arrays, size, access,
-                 protection, reset_value, reset_mask,
-                 group_name, append_to_name, disable_condition,
-                 clusters):
+    def __init__(
+        self,
+        name,
+        version,
+        derived_from,
+        description,
+        prepend_to_name,
+        base_address,
+        address_block,
+        interrupts,
+        registers,
+        register_arrays,
+        size,
+        access,
+        protection,
+        reset_value,
+        reset_mask,
+        group_name,
+        append_to_name,
+        disable_condition,
+        clusters,
+    ):
         SVDElement.__init__(self)
 
         # items with underscore are potentially derived
@@ -479,9 +567,15 @@ class SVDPeripheral(SVDElement):
         self._register_arrays = register_arrays
         self._size = size  # Defines the default bit-width of any register contained in the device (implicit inheritance).
         self._access = access  # Defines the default access rights for all registers.
-        self._protection = protection  # Defines extended access protection for all registers.
-        self._reset_value = reset_value  # Defines the default value for all registers at RESET.
-        self._reset_mask = reset_mask  # Identifies which register bits have a defined reset value.
+        self._protection = (
+            protection  # Defines extended access protection for all registers.
+        )
+        self._reset_value = (
+            reset_value  # Defines the default value for all registers at RESET.
+        )
+        self._reset_mask = (
+            reset_mask  # Identifies which register bits have a defined reset value.
+        )
         self._group_name = group_name
         self._append_to_name = append_to_name
         self._disable_condition = disable_condition
@@ -499,11 +593,11 @@ class SVDPeripheral(SVDElement):
     @property
     def registers(self):
         regs = []
-        for reg in self._lookup_possibly_derived_attribute('registers'):
+        for reg in self._lookup_possibly_derived_attribute("registers"):
             regs.append(reg)
-        for arr in self._lookup_possibly_derived_attribute('register_arrays'):
+        for arr in self._lookup_possibly_derived_attribute("register_arrays"):
             regs.extend(arr.registers)
-        for cluster in self._lookup_possibly_derived_attribute('clusters'):
+        for cluster in self._lookup_possibly_derived_attribute("clusters"):
             regs.extend(cluster.registers)
         return regs
 
@@ -513,15 +607,33 @@ class SVDPeripheral(SVDElement):
 
         # find the peripheral with this name in the tree
         try:
-            return [p for p in self.parent.peripherals if p.name == self._derived_from][0]
+            return [p for p in self.parent.peripherals if p.name == self._derived_from][
+                0
+            ]
         except IndexError:
             return None
 
 
 class SVDCpu(SVDElement):
-    def __init__(self, name, revision, endian, mpu_present, fpu_present, fpu_dp, icache_present,
-                 dcache_present, itcm_present, dtcm_present, vtor_present, nvic_prio_bits,
-                 vendor_systick_config, device_num_interrupts, sau_num_regions, sau_regions_config):
+    def __init__(
+        self,
+        name,
+        revision,
+        endian,
+        mpu_present,
+        fpu_present,
+        fpu_dp,
+        icache_present,
+        dcache_present,
+        itcm_present,
+        dtcm_present,
+        vtor_present,
+        nvic_prio_bits,
+        vendor_systick_config,
+        device_num_interrupts,
+        sau_num_regions,
+        sau_regions_config,
+    ):
         SVDElement.__init__(self)
 
         self.name = name
@@ -530,10 +642,10 @@ class SVDCpu(SVDElement):
         self.mpu_present = mpu_present
         self.fpu_present = fpu_present
         self.fpu_dp = fpu_dp
-        self.icache_present = icache_present,
-        self.dcache_present = dcache_present,
-        self.itcm_present = itcm_present,
-        self.dtcm_present = dtcm_present,
+        self.icache_present = (icache_present,)
+        self.dcache_present = (dcache_present,)
+        self.itcm_present = (itcm_present,)
+        self.dtcm_present = (dtcm_present,)
         self.vtor_present = vtor_present
         self.nvic_prio_bits = nvic_prio_bits
         self.vendor_systick_config = vendor_systick_config
@@ -543,8 +655,23 @@ class SVDCpu(SVDElement):
 
 
 class SVDDevice(SVDElement):
-    def __init__(self, vendor, vendor_id, name, version, description, cpu, address_unit_bits, width,
-                 peripherals, size, access, protection, reset_value, reset_mask):
+    def __init__(
+        self,
+        vendor,
+        vendor_id,
+        name,
+        version,
+        description,
+        cpu,
+        address_unit_bits,
+        width,
+        peripherals,
+        size,
+        access,
+        protection,
+        reset_value,
+        reset_mask,
+    ):
         SVDElement.__init__(self)
 
         self.vendor = vendor
@@ -558,9 +685,15 @@ class SVDDevice(SVDElement):
         self.peripherals = peripherals
         self.size = size  # Defines the default bit-width of any register contained in the device (implicit inheritance).
         self.access = access  # Defines the default access rights for all registers.
-        self.protection = protection  # Defines extended access protection for all registers.
-        self.reset_value = reset_value  # Defines the default value for all registers at RESET.
-        self.reset_mask = reset_mask  # Identifies which register bits have a defined reset value.
+        self.protection = (
+            protection  # Defines extended access protection for all registers.
+        )
+        self.reset_value = (
+            reset_value  # Defines the default value for all registers at RESET.
+        )
+        self.reset_mask = (
+            reset_mask  # Identifies which register bits have a defined reset value.
+        )
 
         # set up parent relationship
         if self.cpu:

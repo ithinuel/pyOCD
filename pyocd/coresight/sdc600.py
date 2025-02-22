@@ -24,20 +24,28 @@ from ..utility.timeout import Timeout
 
 LOG = logging.getLogger(__name__)
 
+
 class ComPortError(exceptions.Error):
     """@brief Base class for SDC-600 exceptions."""
+
     pass
+
 
 class UnexpectedFlagError(ComPortError):
     """@brief Received an unexpected or out of order flag byte."""
+
     pass
+
 
 class LinkError(ComPortError):
     """@brief Received a link error flag (LERR)."""
+
     pass
+
 
 class LinkClosedException(ComPortError):
     """@brief Received an unexpected or out of order flag byte."""
+
     def __init__(self, phase):
         self._phase = phase
 
@@ -46,15 +54,16 @@ class LinkClosedException(ComPortError):
         """@brief The link phase that was closed from the other side."""
         return self._phase
 
+
 class SDC600(CoreSightComponent):
-    """@brief SDC-600 component.
-    """
+    """@brief SDC-600 component."""
 
     ## Default timeout for an operation or packet transfer.
     TRANSFER_TIMEOUT = 30.0
 
     class LinkPhase(Enum):
         """@brief COM Port link phases."""
+
         ## Hardware-defined link phase.
         PHASE1 = 1
         ## Software-defined link phase.
@@ -62,64 +71,66 @@ class SDC600(CoreSightComponent):
 
     class Register:
         """@brief Namespace for SDC-600 register offset constants."""
+
         # Register offsets.
-        VIDR        = 0xD00
-        FIDTXR      = 0xD08
-        FIDRXR      = 0xD0C
-        ICSR        = 0xD10
-        DR          = 0xD20
-        SR          = 0xD2C
-        DBR         = 0xD30
-        SR_ALIAS    = 0xD3C
+        VIDR = 0xD00
+        FIDTXR = 0xD08
+        FIDRXR = 0xD0C
+        ICSR = 0xD10
+        DR = 0xD20
+        SR = 0xD2C
+        DBR = 0xD30
+        SR_ALIAS = 0xD3C
 
         # FIDTXR and FIDRXR bit definitions.
-        FIDxXR_xXI_MASK     = (0x00000001)
-        FIDxXR_xXI_SHIFT    = (0)
-        FIDxXR_xXINT_MASK   = (0x00000002)
-        FIDxXR_xXINT_SHIFT  = (1)
-        FIDxXR_xXW_MASK     = (0x000000f0)
-        FIDxXR_xXW_SHIFT    = (4)
-        FIDxXR_xXSZ8_MASK   = (0x00000100)
-        FIDxXR_xXSZ8_SHIFT  = (8)
-        FIDxXR_xXSZ16_MASK  = (0x00000200)
-        FIDxXR_xXSZ16_SHIFT = (9)
-        FIDxXR_xXSZ32_MASK  = (0x00000400)
-        FIDxXR_xXSZ32_SHIFT = (10)
-        FIDxXR_xXFD_MASK    = (0x000f0000)
-        FIDxXR_xXFD_SHIFT   = (16)
+        FIDxXR_xXI_MASK = 0x00000001
+        FIDxXR_xXI_SHIFT = 0
+        FIDxXR_xXINT_MASK = 0x00000002
+        FIDxXR_xXINT_SHIFT = 1
+        FIDxXR_xXW_MASK = 0x000000F0
+        FIDxXR_xXW_SHIFT = 4
+        FIDxXR_xXSZ8_MASK = 0x00000100
+        FIDxXR_xXSZ8_SHIFT = 8
+        FIDxXR_xXSZ16_MASK = 0x00000200
+        FIDxXR_xXSZ16_SHIFT = 9
+        FIDxXR_xXSZ32_MASK = 0x00000400
+        FIDxXR_xXSZ32_SHIFT = 10
+        FIDxXR_xXFD_MASK = 0x000F0000
+        FIDxXR_xXFD_SHIFT = 16
 
         # SR bit definitions.
-        SR_TXS_MASK         = (0x000000ff)
-        SR_TXS_SHIFT        = (0)
-        SR_RRDIS_MASK       = (0x00001000)
-        SR_RRDIS_SHIFT      = (12)
-        SR_TXOE_MASK        = (0x00002000)
-        SR_TXOE_SHIFT       = (13)
-        SR_TXLE_MASK        = (0x00004000)
-        SR_TXLE_SHIFT       = (14)
-        SR_TRINPROG_MASK    = (0x00008000)
-        SR_TRINPROG_SHIFT   = (18)
-        SR_RXF_MASK         = (0x00ff0000)
-        SR_RXF_SHIFT        = (16)
-        SR_RXLE_MASK        = (0x40000000)
-        SR_RXLE_SHIFT       = (30)
-        SR_PEN_MASK         = (0x80000000)
-        SR_PEN_SHIFT        = (31)
+        SR_TXS_MASK = 0x000000FF
+        SR_TXS_SHIFT = 0
+        SR_RRDIS_MASK = 0x00001000
+        SR_RRDIS_SHIFT = 12
+        SR_TXOE_MASK = 0x00002000
+        SR_TXOE_SHIFT = 13
+        SR_TXLE_MASK = 0x00004000
+        SR_TXLE_SHIFT = 14
+        SR_TRINPROG_MASK = 0x00008000
+        SR_TRINPROG_SHIFT = 18
+        SR_RXF_MASK = 0x00FF0000
+        SR_RXF_SHIFT = 16
+        SR_RXLE_MASK = 0x40000000
+        SR_RXLE_SHIFT = 30
+        SR_PEN_MASK = 0x80000000
+        SR_PEN_SHIFT = 31
 
     class Flag:
         """@brief Namespace with SDC-600 flag byte constants."""
-        IDR     = 0xA0
-        IDA     = 0xA1
-        LPH1RA  = 0xA6
-        LPH1RL  = 0xA7
-        LPH2RA  = 0xA8
-        LPH2RL  = 0xA9
-        LPH2RR  = 0xAA
-        LERR    = 0xAB
-        START   = 0xAC
-        END     = 0xAD
-        ESC     = 0xAE
-        NULL    = 0xAF
+
+        IDR = 0xA0
+        IDA = 0xA1
+        LPH1RA = 0xA6
+        LPH1RL = 0xA7
+        LPH2RA = 0xA8
+        LPH2RL = 0xA9
+        LPH2RR = 0xAA
+        LERR = 0xAB
+        START = 0xAC
+        END = 0xAD
+        ESC = 0xAE
+        NULL = 0xAF
 
         # All bytes with 0b101 in bits [7:5] are flag bytes.
         MASK = 0xE0
@@ -127,19 +138,19 @@ class SDC600(CoreSightComponent):
 
         ## Map from flag value to name.
         NAME = {
-            IDR     : "IDR",
-            IDA     : "IDA",
-            LPH1RA  : "LPH1RA",
-            LPH1RL  : "LPH1RL",
-            LPH2RA  : "LPH2RA",
-            LPH2RL  : "LPH2RL",
-            LPH2RR  : "LPH2RR",
-            LERR    : "LERR",
-            START   : "START",
-            END     : "END",
-            ESC     : "ESC",
-            NULL    : "NULL",
-            }
+            IDR: "IDR",
+            IDA: "IDA",
+            LPH1RA: "LPH1RA",
+            LPH1RL: "LPH1RL",
+            LPH2RA: "LPH2RA",
+            LPH2RL: "LPH2RL",
+            LPH2RR: "LPH2RR",
+            LERR: "LERR",
+            START: "START",
+            END: "END",
+            ESC: "ESC",
+            NULL: "NULL",
+        }
 
     ## NULL bytes must be written to the upper bytes, and will be present in the upper bytes
     # when read.
@@ -161,9 +172,13 @@ class SDC600(CoreSightComponent):
         fidrx = self.ap.read32(self.Register.FIDRXR)
         LOG.debug("fidrx=0x%08x", fidrx)
 
-        self._tx_width = (fidtx & self.Register.FIDxXR_xXW_MASK) >> self.Register.FIDxXR_xXW_SHIFT
+        self._tx_width = (
+            fidtx & self.Register.FIDxXR_xXW_MASK
+        ) >> self.Register.FIDxXR_xXW_SHIFT
 
-        self._rx_width = (fidrx & self.Register.FIDxXR_xXW_MASK) >> self.Register.FIDxXR_xXW_SHIFT
+        self._rx_width = (
+            fidrx & self.Register.FIDxXR_xXW_MASK
+        ) >> self.Register.FIDxXR_xXW_SHIFT
 
         status = self.ap.read32(self.Register.SR)
         LOG.debug("status=0x%08x", status)
@@ -256,7 +271,9 @@ class SDC600(CoreSightComponent):
             raise LinkError()
         # Catch reserved flags.
         elif (0xA2 <= value <= 0xA5) or (0xB0 <= value <= 0xBF):
-            raise UnexpectedFlagError("received reserved flag value ({:#04x})".format(value))
+            raise UnexpectedFlagError(
+                "received reserved flag value ({:#04x})".format(value)
+            )
 
     def _expect_flag(self, flag, to_):
         """@brief Read a byte and compare to expected value.
@@ -272,8 +289,11 @@ class SDC600(CoreSightComponent):
             # Check certain flags we have to handle. This will raise if a flag is handled.
             self._check_flags(value, to_)
             # _check_flags() did not raise, so we should .
-            raise UnexpectedFlagError("got {:#04x} instead of expected {} ({:#04x})".format(
-                        value, self.Flag.NAME[flag], flag))
+            raise UnexpectedFlagError(
+                "got {:#04x} instead of expected {} ({:#04x})".format(
+                    value, self.Flag.NAME[flag], flag
+                )
+            )
         else:
             LOG.debug("got expected %s", self.Flag.NAME[value])
 
@@ -471,8 +491,10 @@ class SDC600(CoreSightComponent):
             self._write1(self.Flag.LPH2RR, to_)
 
     def __repr__(self):
-        return "<SDC-600@{:x}: en={} txw={} rxw={} phase={}>".format(id(self),
-            self._is_enabled, self._tx_width, self._rx_width, self._current_link_phase)
-
-
-
+        return "<SDC-600@{:x}: en={} txw={} rxw={} phase={}>".format(
+            id(self),
+            self._is_enabled,
+            self._tx_width,
+            self._rx_width,
+            self._current_link_phase,
+        )

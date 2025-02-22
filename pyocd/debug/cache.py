@@ -19,10 +19,13 @@ from .context import DebugContext
 from ..cache.memory import MemoryCache
 from ..cache.register import RegisterCache
 
+
 class CachingDebugContext(DebugContext):
     """@brief Debug context combining register and memory caches."""
 
-    def __init__(self, parent, enable_memory: bool = True, enable_register: bool = True) -> None:
+    def __init__(
+        self, parent, enable_memory: bool = True, enable_register: bool = True
+    ) -> None:
         super().__init__(parent)
         self._enable_memory = enable_memory
         self._enable_register = enable_register
@@ -58,6 +61,3 @@ class CachingDebugContext(DebugContext):
             self._regcache.invalidate()
         if self._enable_memory:
             self._memcache.invalidate()
-
-
-

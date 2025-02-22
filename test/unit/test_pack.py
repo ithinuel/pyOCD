@@ -22,7 +22,7 @@ from xml.etree import ElementTree
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from pyocd.target.pack import (cmsis_pack, flash_algo, pack_target)
+from pyocd.target.pack import cmsis_pack, flash_algo, pack_target
 from pyocd.target.pack.flm_region_builder import FlmFlashRegionBuilder
 from pyocd.target import TARGET
 from pyocd.core import memory_map
@@ -45,109 +45,133 @@ TEST1_PDSC_PATH = TEST_DATA_DIR / "Test1.pdsc"
 TEST2_PDSC_PATH = TEST_DATA_DIR / "Test2_algo_overlaps_alias.pdsc"
 LPC55S36_PDSC_PATH = TEST_DATA_DIR / "NXP.LPC55S36_DFP.13.0.0.pdsc"
 
-@pytest.fixture(scope='module')
+
+@pytest.fixture(scope="module")
 def pack_ref():
     return cmsis_pack_manager.CmsisPackRef(
-                "NXP",
-                "MK64F12_DFP",
-                "11.0.1",
-            )
+        "NXP",
+        "MK64F12_DFP",
+        "11.0.1",
+    )
 
-@pytest.fixture(scope='module')#, autouse=True)
+
+@pytest.fixture(scope="module")  # , autouse=True)
 def cache(tmpdir_factory, pack_ref):
     tmp_path = str(tmpdir_factory.mktemp("cpm"))
     c = cmsis_pack_manager.Cache(False, False, json_path=tmp_path, data_path=tmp_path)
     c.download_pack_list([pack_ref])
     return c
 
-@pytest.fixture(scope='module')
+
+@pytest.fixture(scope="module")
 def k64dev(cache):
     devs = pack_target.ManagedPacks.get_installed_targets()
     return [d for d in devs if d.part_number == K64F].pop()
 
-@pytest.fixture()#autouse=True)
+
+@pytest.fixture()  # autouse=True)
 def fixed_installed_packs(monkeypatch, pack_ref):
     def my_get_installed_packs(cache=None):
         return [pack_ref]
-    monkeypatch.setattr(pack_target.ManagedPacks,  'get_installed_packs', my_get_installed_packs)
 
-@pytest.fixture(scope='function')
+    monkeypatch.setattr(
+        pack_target.ManagedPacks, "get_installed_packs", my_get_installed_packs
+    )
+
+
+@pytest.fixture(scope="function")
 def k64pack():
     return cmsis_pack.CmsisPack(K64F_PACK_PATH)
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def k64f1m0(k64pack):
     return [d for d in k64pack.devices if d.part_number == "MK64FN1M0VLL12"].pop()
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def k64algo(k64pack):
     flm = k64pack.get_file(K64F_1M0_FLM)
     return flash_algo.PackFlashAlgo(flm)
 
-@pytest.fixture(scope='function')
-def nrf5340appflm():
-    return flash_algo.PackFlashAlgo(open(NRF5340_APP_FLM, 'rb'))
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
+def nrf5340appflm():
+    return flash_algo.PackFlashAlgo(open(NRF5340_APP_FLM, "rb"))
+
+
+@pytest.fixture(scope="function")
 def stm32f42mflm():
-    return flash_algo.PackFlashAlgo(open(STM32F4_2M0_FLM, 'rb'))
+    return flash_algo.PackFlashAlgo(open(STM32F4_2M0_FLM, "rb"))
+
 
 # Replacement for CmsisPackDevice._load_flash_algo() that loads the FLM from the test data dir
 # instead of the (unset) CmsisPack object.
 def load_test_flm(filename):
     p = TEST_DATA_DIR / Path(filename).name
-    return p.open('rb')
+    return p.open("rb")
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def nrfpdsc():
-    return cmsis_pack.CmsisPackDescription(None, open(NRF_PDSC_PATH, 'rb')) # type:ignore
+    return cmsis_pack.CmsisPackDescription(None, open(NRF_PDSC_PATH, "rb"))  # type:ignore
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def test2pdsc():
-    return cmsis_pack.CmsisPackDescription(None, open(TEST2_PDSC_PATH, 'rb')) # type:ignore
+    return cmsis_pack.CmsisPackDescription(None, open(TEST2_PDSC_PATH, "rb"))  # type:ignore
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def test2dev(test2pdsc):
     dev = test2pdsc.devices[0]
     dev._get_pack_file_cb = load_test_flm
     return dev
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def test1pdsc():
     return cmsis_pack.CmsisPackDescription(None, TEST1_PDSC_PATH)
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def test1dev(test1pdsc):
     return test1pdsc.devices[0]
 
+
 # Fixture to provide nRF5340 CmsisPackDevice modified to load FLM from test data dir.
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def nrf5340(nrfpdsc):
     dev = [d for d in nrfpdsc.devices if d.part_number == NRF5340].pop()
     dev._get_pack_file_cb = load_test_flm
     return dev
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def stm32l4pdsc():
-    return cmsis_pack.CmsisPackDescription(None, open(STM32L4_PDSC_PATH, 'rb')) # type:ignore
+    return cmsis_pack.CmsisPackDescription(None, open(STM32L4_PDSC_PATH, "rb"))  # type:ignore
+
 
 # Fixture to provide STM32L4R5 CmsisPackDevice modified to load FLM from test data dir.
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def stm32l4r5(stm32l4pdsc):
     dev = [d for d in stm32l4pdsc.devices if d.part_number == STM32L4R5].pop()
     dev._get_pack_file_cb = load_test_flm
     return dev
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def lpc55s36pdsc():
-    return cmsis_pack.CmsisPackDescription(None, open(LPC55S36_PDSC_PATH, 'rb')) # type:ignore
+    return cmsis_pack.CmsisPackDescription(None, open(LPC55S36_PDSC_PATH, "rb"))  # type:ignore
+
 
 # Fixture to provide STM32L4R5 CmsisPackDevice modified to load FLM from test data dir.
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def lpc55s36(lpc55s36pdsc):
     dev = [d for d in lpc55s36pdsc.devices if d.part_number == LPC55S36].pop()
     dev._get_pack_file_cb = load_test_flm
     return dev
+
 
 # Tests for managed packs. Currently disabled as they fail on most systems.
 class Disabled_TestPack:
@@ -164,13 +188,14 @@ class Disabled_TestPack:
 
     def test_k64_mem_map(self, k64dev):
         map = k64dev.memory_map
-        raml = map.get_region_for_address(0x1fff0000)
+        raml = map.get_region_for_address(0x1FFF0000)
         ramu = map.get_region_for_address(0x20000000)
         flash = map.get_default_region_of_type(memory_map.MemoryType.FLASH)
-        assert raml.start == 0x1fff0000 and raml.length == 0x10000
+        assert raml.start == 0x1FFF0000 and raml.length == 0x10000
         assert ramu.start == 0x20000000 and ramu.length == 0x30000
         assert flash.start == 0 and flash.length == 0x100000
         assert flash.sector_size == 0x1000
+
 
 class TestPack:
     def test_devices(self, k64pack):
@@ -181,7 +206,7 @@ class TestPack:
 
     # Make sure CmsisPack can open a zip file too.
     def test_zipfile(self):
-        z = zipfile.ZipFile(K64F_PACK_PATH, 'r')
+        z = zipfile.ZipFile(K64F_PACK_PATH, "r")
         p = cmsis_pack.CmsisPack(z)
         pns = [x.part_number for x in p.devices]
         assert "MK64FN1M0xxx12" in pns
@@ -193,7 +218,7 @@ class TestPack:
     def test_get_svd(self, k64f1m0):
         svd = k64f1m0.svd
         x = ElementTree.parse(svd)
-        assert x.getroot().tag == 'device'
+        assert x.getroot().tag == "device"
 
     def test_mem_map(self, k64f1m0):
         map = k64f1m0.memory_map
@@ -212,10 +237,11 @@ class TestPack:
         assert flash.start == 0 and flash.length == 1 * 1024 * 1024
         # assert flash.sector_size == 4096
 
+
 class TestFLM:
     def test_algo(self, k64algo):
         i = k64algo.flash_info
-#         print(i)
+        #         print(i)
         assert i.type == 1
         assert i.start == 0
         assert i.size == 1 * 1024 * 1024
@@ -226,24 +252,24 @@ class TestFLM:
         # Create the RAM region where we want the algo to be placed.
         ram = memory_map.RamRegion(0x20000000, length=0x10000)
         d = k64algo.get_pyocd_flash_algo(4096, ram)
-        instr_len = len(d['instructions']) * 4
+        instr_len = len(d["instructions"]) * 4
         load_addr = ram.end + 1 - instr_len
-        assert d['load_address'] == load_addr
-        assert d['pc_init'] == load_addr + 0x5
-        assert d['pc_unInit'] == load_addr + 0x55
-        assert d['pc_eraseAll'] == load_addr + 0x79
-        assert d['pc_erase_sector'] == load_addr + 0xaf
-        assert d['pc_program_page'] == load_addr + 0xc3
+        assert d["load_address"] == load_addr
+        assert d["pc_init"] == load_addr + 0x5
+        assert d["pc_unInit"] == load_addr + 0x55
+        assert d["pc_eraseAll"] == load_addr + 0x79
+        assert d["pc_erase_sector"] == load_addr + 0xAF
+        assert d["pc_program_page"] == load_addr + 0xC3
 
     def test_algo_dict_two_page_bufs(self, k64algo):
         # Create the RAM region where we want the algo to be placed.
         ram = memory_map.RamRegion(0x20000000, length=0x10000)
         d = k64algo.get_pyocd_flash_algo(k64algo.page_size, ram)
-        instr_base = d['load_address']
+        instr_base = d["load_address"]
         buf_top = align_down(instr_base, flash_algo.PackFlashAlgo._PAGE_BUFFER_ALIGN)
         buf1 = buf_top - k64algo.page_size
         buf2 = buf1 - k64algo.page_size
-        assert d['page_buffers'] == [buf1, buf2]
+        assert d["page_buffers"] == [buf1, buf2]
 
     def test_algo_dict_one_page_buf(self, k64algo):
         # First get a full-sized algo allocation.
@@ -251,15 +277,17 @@ class TestFLM:
         d = k64algo.get_pyocd_flash_algo(k64algo.page_size, ram)
 
         # Create a memory region with only enough memory for one page buf + stack.
-        min_ram_size = len(d['instructions']) * 4 + k64algo.page_size + k64algo.page_size // 2
+        min_ram_size = (
+            len(d["instructions"]) * 4 + k64algo.page_size + k64algo.page_size // 2
+        )
         min_ram = memory_map.RamRegion(0x20000000, length=min_ram_size)
         d = k64algo.get_pyocd_flash_algo(k64algo.page_size, min_ram)
 
-        instr_base = d['load_address']
-        assert instr_base == min_ram.end + 1 - len(d['instructions']) * 4
+        instr_base = d["load_address"]
+        assert instr_base == min_ram.end + 1 - len(d["instructions"]) * 4
         buf_top = align_down(instr_base, flash_algo.PackFlashAlgo._PAGE_BUFFER_ALIGN)
         buf1 = buf_top - k64algo.page_size
-        assert d['page_buffers'] == [buf1]
+        assert d["page_buffers"] == [buf1]
 
     # Flash Device:
     #   name=b'nRF53xxx_app'
@@ -307,8 +335,9 @@ class TestFLM:
             (memory_map.MemoryRange(0x8120000, length=(0x100000 - 0x20000)), 0x20000),
         ]
 
+
 class TestFlmRegionBuilder:
-    @pytest.fixture(scope='module')
+    @pytest.fixture(scope="module")
     def builder(self):
         mock_target = MagicMock()
         mock_target.part_number = "TestPartNumber"
@@ -341,50 +370,62 @@ class TestFlmRegionBuilder:
         flash = memory_map.FlashRegion(0, length=0x200000, flm=nrf5340appflm)
         builder.finalise_region(flash)
         assert flash.algo
-        instr_len = len(flash.algo['instructions']) * 4
-        assert flash.algo['load_address'] == (0x20010000 - instr_len)
+        instr_len = len(flash.algo["instructions"]) * 4
+        assert flash.algo["load_address"] == (0x20010000 - instr_len)
         assert not flash.has_subregions
         assert flash.algo
 
     def test_ram_select_explicit(self, builder: FlmFlashRegionBuilder, nrf5340appflm):
-        flash = memory_map.FlashRegion(0, length=0x200000, flm=nrf5340appflm,
-                                        _RAMstart=0x30010000, _RAMsize=0x4000)
+        flash = memory_map.FlashRegion(
+            0, length=0x200000, flm=nrf5340appflm, _RAMstart=0x30010000, _RAMsize=0x4000
+        )
         assert builder.finalise_region(flash)
         assert flash.algo
-        instr_len = len(flash.algo['instructions']) * 4
-        assert flash.algo['load_address'] == (0x30014000 - instr_len)
+        instr_len = len(flash.algo["instructions"]) * 4
+        assert flash.algo["load_address"] == (0x30014000 - instr_len)
         assert not flash.has_subregions
         assert flash.algo
 
+
 def has_overlapping_regions(memmap):
-    return any((len(memmap.get_intersecting_regions(r.start, r.end)) > 1) for r in memmap.regions)
+    return any(
+        (len(memmap.get_intersecting_regions(r.start, r.end)) > 1)
+        for r in memmap.regions
+    )
+
 
 class TestNRF:
     def test_regions(self, nrf5340):
         memmap = nrf5340.memory_map
         assert not has_overlapping_regions(memmap)
 
+
 class TestSTM32L4:
     def test_regions(self, stm32l4r5):
         memmap = stm32l4r5.memory_map
         assert not has_overlapping_regions(memmap)
 
+
 class TestLPC55S36:
     def test_regions(self, lpc55s36):
         import pprint
+
         memmap = lpc55s36.memory_map
         print("memory map:")
         pprint.pprint(memmap.regions)
         assert not has_overlapping_regions(memmap)
 
+
 class TestAlgoOverlappingAliasRegion:
     def test_regions(self, test2dev):
         import pprint
+
         memmap = test2dev.memory_map
         print("memory map:")
         pprint.pprint(memmap.regions)
         assert not has_overlapping_regions(memmap)
         # assert False
+
 
 class TestAPID:
     def test1_dp(self, test1dev):
@@ -392,12 +433,11 @@ class TestAPID:
 
     def test1_procs(self, test1dev):
         procs = test1dev.processors_map
-        m4 = procs['CM4']
-        assert m4.name == 'CM4'
+        m4 = procs["CM4"]
+        assert m4.name == "CM4"
         assert m4.ap_address == APv1Address(0)
         assert m4.svd_path == "cm4.svd"
-        m0p = procs['CM0p']
-        assert m0p.name == 'CM0p'
+        m0p = procs["CM0p"]
+        assert m0p.name == "CM0p"
         assert m0p.ap_address == APv1Address(2)
         assert m0p.svd_path == "cm0p.svd"
-

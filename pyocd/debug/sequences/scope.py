@@ -18,11 +18,12 @@
 from __future__ import annotations
 
 import logging
-from typing import (Dict, Iterable, Optional, Set)
+from typing import Dict, Iterable, Optional, Set
 
 LOG = logging.getLogger(__name__)
 TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.CRITICAL)
+
 
 class Scope:
     """@brief Debug sequence execution scope.
@@ -32,11 +33,7 @@ class Scope:
     variable hasn't been set before in which case it is set in the scope that was called.
     """
 
-    def __init__(
-                self,
-                parent: Optional["Scope"] = None,
-                name: str = ""
-            ) -> None:
+    def __init__(self, parent: Optional["Scope"] = None, name: str = "") -> None:
         """@brief Constructor.
         @param self The Scope object.
         @param parent Optional parent scope reference. If not provided or set to None, the new scope
@@ -47,7 +44,7 @@ class Scope:
         """
         self._name = name
         self._parent = parent
-        self._variables: Dict[str, int] = {} # Map from name: value.
+        self._variables: Dict[str, int] = {}  # Map from name: value.
         # A variable is read-only if its name is in this set. Start off with
         self._ro_variables: Set[str] = set()
 
@@ -166,7 +163,7 @@ class Scope:
         """@brief Construct a scope dump with a given ident level."""
         s = f"<{type(self).__name__}@{id(self):x} {self.name}\n"
         if self.parent:
-            parent_str = self.parent._build_dump(indent + '  ')
+            parent_str = self.parent._build_dump(indent + "  ")
         else:
             parent_str = "None"
         s += f"{indent}parent={parent_str}\n"
@@ -186,5 +183,7 @@ class Scope:
 
     def __repr__(self) -> str:
         """@brief Shortened representation of the scope without variable values."""
-        return f"<{type(self).__name__}@{id(self):x} {self.name} "\
-               f"parent={self._parent!r} [{', '.join(self._variables.keys())}]>"
+        return (
+            f"<{type(self).__name__}@{id(self):x} {self.name} "
+            f"parent={self._parent!r} [{', '.join(self._variables.keys())}]>"
+        )

@@ -51,24 +51,26 @@ CTRL_IDR_EXPECTED = 0x32880000
 
 MASS_ERASE_TIMEOUT = 30.0
 
-CSW_DEVICEEN =  0x00000040
+CSW_DEVICEEN = 0x00000040
 
 LOG = logging.getLogger(__name__)
+
 
 def bytes_to_word(bts):
     result = 0
     for i, b in enumerate(bts):
-        result |= b << (8*i)
+        result |= b << (8 * i)
     return result
+
 
 def word_to_bytes(wrd):
     result = []
     for i in range(4):
-        result.append((wrd >> (8*i)) & 0xFF)
+        result.append((wrd >> (8 * i)) & 0xFF)
     return bytes(result)
 
-class NRF54L(CoreSightTarget):
 
+class NRF54L(CoreSightTarget):
     VENDOR = "Nordic Semiconductor"
 
     def __init__(self, session, memory_map=None):
@@ -81,17 +83,23 @@ class NRF54L(CoreSightTarget):
 
         # Must check whether security is enabled, and potentially auto-unlock, before
         # any init tasks that require system bus access.
-        seq.wrap_task('discovery',
-            lambda seq: seq.insert_before('find_components',
-                              ('check_ctrl_ap_idr', self.check_ctrl_ap_idr),
-                              ('check_flash_security', self.check_flash_security),
-                          )
-            )
-        seq.wrap_task('discovery',
-            lambda seq: seq.insert_after('create_aps', ('fixup_rom_base', self.fixup_rom_base))
-            )
-        seq.insert_before('post_connect_hook',
-                          ('check_part_info', self.check_part_info))
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.insert_before(
+                "find_components",
+                ("check_ctrl_ap_idr", self.check_ctrl_ap_idr),
+                ("check_flash_security", self.check_flash_security),
+            ),
+        )
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.insert_after(
+                "create_aps", ("fixup_rom_base", self.fixup_rom_base)
+            ),
+        )
+        seq.insert_before(
+            "post_connect_hook", ("check_part_info", self.check_part_info)
+        )
 
         return seq
 
@@ -105,7 +113,9 @@ class NRF54L(CoreSightTarget):
 
         # Check CTRL-AP ID.
         if self.ctrl_ap.idr != CTRL_IDR_EXPECTED:
-            LOG.error("%s: bad CTRL-AP IDR (is 0x%08x)", self.part_number, self.ctrl_ap.idr)
+            LOG.error(
+                "%s: bad CTRL-AP IDR (is 0x%08x)", self.part_number, self.ctrl_ap.idr
+            )
 
     def ap_is_enabled(self):
         csw = self.dp.read_ap(AHB_AP_NUM << 24)
@@ -127,24 +137,30 @@ class NRF54L(CoreSightTarget):
             LOG.error("This doesn't look like an nRF54L device!")
 
         if not self.ap_is_enabled():
-            if self.session.options.get('auto_unlock'):
-                LOG.warning("%s APPROTECT enabled: will try to unlock via mass erase", self.part_number)
+            if self.session.options.get("auto_unlock"):
+                LOG.warning(
+                    "%s APPROTECT enabled: will try to unlock via mass erase",
+                    self.part_number,
+                )
 
                 self.mass_erase()
         else:
             LOG.warning("%s is not in a secure state", self.part_number)
 
-
     def check_part_info(self):
         partno = self.read32(0x00FFC31C)
         variant = self.read32(0x00FFC320)
 
-        LOG.info(f"This appears to be an nRF{partno:X} " +
-                 f"{word_to_bytes(variant).decode('ASCII', errors='ignore')}")
+        LOG.info(
+            f"This appears to be an nRF{partno:X} "
+            + f"{word_to_bytes(variant).decode('ASCII', errors='ignore')}"
+        )
 
-        deviceaddr = (self.read32(0x00FFC3A4),self.read32(0x00FFC3A8))
-        mac_bytes = list(word_to_bytes(deviceaddr[0]) + word_to_bytes(deviceaddr[1])[:2])
-        mac_bytes[5] |= 0xc0 # Set a Bluetooth LE random address as a static address
+        deviceaddr = (self.read32(0x00FFC3A4), self.read32(0x00FFC3A8))
+        mac_bytes = list(
+            word_to_bytes(deviceaddr[0]) + word_to_bytes(deviceaddr[1])[:2]
+        )
+        mac_bytes[5] |= 0xC0  # Set a Bluetooth LE random address as a static address
         mac = ":".join(f"{x:02X}" for x in mac_bytes[::-1])
         LOG.info(f"BLE MAC: {mac}")
 

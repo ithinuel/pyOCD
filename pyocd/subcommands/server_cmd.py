@@ -27,30 +27,34 @@ from ..probe.tcp_probe_server import DebugProbeServer
 
 LOG = logging.getLogger(__name__)
 
+
 class ServerSubcommand(SubcommandBase):
     """@brief `pyocd server` subcommand."""
 
-    NAMES = ['server']
+    NAMES = ["server"]
     HELP = "Run debug probe server."
 
     @classmethod
     def get_args(cls) -> List[argparse.ArgumentParser]:
         """@brief Add this subcommand to the subparsers object."""
-        server_parser = argparse.ArgumentParser(description='server', add_help=False)
+        server_parser = argparse.ArgumentParser(description="server", add_help=False)
 
-        server_config_options = server_parser.add_argument_group('configuration')
-        server_config_options.add_argument('-j', '--project', '--dir', metavar="PATH", dest="project_dir",
+        server_config_options = server_parser.add_argument_group("configuration")
+        # fmt: off
+        server_config_options.add_argument("-j", "--project", "--dir", metavar="PATH", dest="project_dir",
             help="Set the project directory. Defaults to the directory where pyocd was run.")
-        server_config_options.add_argument('--config', metavar="PATH",
+        server_config_options.add_argument("--config", metavar="PATH",
             help="Specify YAML configuration file. Default is pyocd.yaml or pyocd.yml.")
         server_config_options.add_argument("--no-config", action="store_true", default=None,
             help="Do not use a configuration file.")
-        server_config_options.add_argument('-O', action='append', dest='options', metavar="OPTION=VALUE",
+        server_config_options.add_argument("-O", action="append", dest="options", metavar="OPTION=VALUE",
             help="Set named option.")
-        server_config_options.add_argument("-da", "--daparg", dest="daparg", nargs='+',
+        server_config_options.add_argument("-da", "--daparg", dest="daparg", nargs="+",
             help="Send setting to DAPAccess layer.")
+        # fmt: on
 
-        server_options = server_parser.add_argument_group('probe server')
+        server_options = server_parser.add_argument_group("probe server")
+        # fmt: off
         server_options.add_argument("-p", "--port", dest="port_number", type=int, default=None,
             help="Set the server's port number (default 5555).")
         server_options.add_argument("--allow-remote", dest="serve_local_only", default=None, action="store_false",
@@ -63,6 +67,7 @@ class ServerSubcommand(SubcommandBase):
             "'<probe-type>:' where <probe-type> is the name of a probe plugin.")
         server_options.add_argument("-W", "--no-wait", action="store_true",
             help="Do not wait for a probe to be connected if none are available.")
+        # fmt: on
 
         return [cls.CommonOptions.LOGGING, server_parser]
 
@@ -72,9 +77,11 @@ class ServerSubcommand(SubcommandBase):
         # probe, we don't set it in the session because we don't want the board, target, etc objects
         # to be created.
         session_options = convert_session_options(self._args.options)
-        session = Session(probe=None,
-                serve_local_only=self._args.serve_local_only,
-                options=session_options)
+        session = Session(
+            probe=None,
+            serve_local_only=self._args.serve_local_only,
+            options=session_options,
+        )
 
         # The ultimate intent is to serve all available probes by default. For now we just serve
         # a single probe.
@@ -86,7 +93,9 @@ class ServerSubcommand(SubcommandBase):
         probe.session = session
 
         # Create the server instance.
-        server = DebugProbeServer(session, probe, self._args.port_number, self._args.serve_local_only)
+        server = DebugProbeServer(
+            session, probe, self._args.port_number, self._args.serve_local_only
+        )
         session.probeserver = server
         LOG.debug("Starting debug probe server")
         server.start()
@@ -99,4 +108,3 @@ class ServerSubcommand(SubcommandBase):
         except (KeyboardInterrupt, Exception):
             server.stop()
             raise
-

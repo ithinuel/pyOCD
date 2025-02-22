@@ -19,16 +19,17 @@ from pyocd.debug.svd.loader import (
     SVDLoader,
 )
 
+
 class TestIntervalSvdAccess:
     def builtin_svd(self, name: str) -> SVDLoader:
         def completion(dev):
             pass
+
         loader = SVDLoader(SVDFile.from_builtin(name), completion)
         loader.run()
         return loader
 
     def test_load(self):
-        loader = self.builtin_svd('Musca_B1.svd')
+        loader = self.builtin_svd("Musca_B1.svd")
         assert loader.device
-        assert [p for p in loader.device.peripherals if p.name == 'UART0']
-
+        assert [p for p in loader.device.peripherals if p.name == "UART0"]

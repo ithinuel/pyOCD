@@ -16,9 +16,9 @@
 # limitations under the License.
 
 import logging
-from typing import (Dict, Optional, TYPE_CHECKING)
+from typing import Dict, Optional, TYPE_CHECKING
 
-from .provider import (Breakpoint, BreakpointProvider)
+from .provider import Breakpoint, BreakpointProvider
 from ...core import exceptions
 from ...core.target import Target
 
@@ -27,14 +27,16 @@ if TYPE_CHECKING:
 
 LOG = logging.getLogger(__name__)
 
+
 class SoftwareBreakpoint(Breakpoint):
     def __init__(self, provider: BreakpointProvider) -> None:
         super(SoftwareBreakpoint, self).__init__(provider)
         self.type = Target.BreakpointType.SW
 
+
 class SoftwareBreakpointProvider(BreakpointProvider):
     ## BKPT #0 instruction.
-    BKPT_INSTR = 0xbe00
+    BKPT_INSTR = 0xBE00
 
     def __init__(self, core: "CoreTarget") -> None:
         super(SoftwareBreakpointProvider, self).__init__()
@@ -103,7 +105,7 @@ class SoftwareBreakpointProvider(BreakpointProvider):
         for bp in self._breakpoints.values():
             if size == 8:
                 if bp.addr == addr:
-                    data = bp.original_instr & 0xff
+                    data = bp.original_instr & 0xFF
                 elif bp.addr + 1 == addr:
                     data = bp.original_instr >> 8
             elif size == 16:
@@ -111,11 +113,8 @@ class SoftwareBreakpointProvider(BreakpointProvider):
                     data = bp.original_instr
             elif size == 32:
                 if bp.addr == addr:
-                    data = (data & 0xffff0000) | bp.original_instr
+                    data = (data & 0xFFFF0000) | bp.original_instr
                 elif bp.addr == addr + 2:
-                    data = (data & 0xffff) | (bp.original_instr << 16)
+                    data = (data & 0xFFFF) | (bp.original_instr << 16)
 
         return data
-
-
-

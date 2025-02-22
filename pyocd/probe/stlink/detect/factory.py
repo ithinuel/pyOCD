@@ -1,4 +1,3 @@
-
 # Copyright (c) 2018, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -18,6 +17,7 @@ import platform
 
 # Make sure that any global generic setup is run
 from . import base  # noqa: F401 # lgtm[py/unused-import]
+
 
 def create_mbed_detector(**kwargs):
     """Factory used to create host OS specific mbed-lstools object
@@ -41,7 +41,3 @@ def create_mbed_detector(**kwargs):
         return StlinkDetectDarwin(**kwargs)
     else:
         return None
-
-
-
-

@@ -18,9 +18,9 @@ from ...core.target import Target
 
 ## Map from DFP reset sequence names to our reset types.
 RESET_SEQUENCE_TO_TYPE_MAP = {
-    'ResetHardware':    Target.ResetType.HW,
-    'ResetSystem':      Target.ResetType.SW_SYSTEM,
-    'ResetProcessor':   Target.ResetType.SW_CORE,
+    "ResetHardware": Target.ResetType.HW,
+    "ResetSystem": Target.ResetType.SW_SYSTEM,
+    "ResetProcessor": Target.ResetType.SW_CORE,
 }
 
 ## Map from DFP reset sequence names to our reset types.
@@ -29,7 +29,7 @@ RESET_SEQUENCE_TO_TYPE_MAP = {
 # ResetType.SW_EMULATED doesn't have a corresponding reset sequence, so it must be handled
 # in another way.
 RESET_TYPE_TO_SEQUENCE_MAP = {
-    Target.ResetType.HW:        'ResetHardware',
-    Target.ResetType.SW_SYSTEM: 'ResetSystem',
-    Target.ResetType.SW_CORE:   'ResetProcessor',
+    Target.ResetType.HW: "ResetHardware",
+    Target.ResetType.SW_SYSTEM: "ResetSystem",
+    Target.ResetType.SW_CORE: "ResetProcessor",
 }

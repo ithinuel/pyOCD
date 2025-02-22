@@ -16,15 +16,16 @@
 # limitations under the License.
 
 import logging
-from typing import (Optional, TYPE_CHECKING)
+from typing import Optional, TYPE_CHECKING
 
 from .board import Board
-from .board_ids import (BoardInfo, BOARD_ID_TO_INFO)
+from .board_ids import BoardInfo, BOARD_ID_TO_INFO
 
 if TYPE_CHECKING:
     from ..core.session import Session
 
 LOG = logging.getLogger(__name__)
+
 
 class MbedBoard(Board):
     """@brief Mbed board class.
@@ -37,12 +38,14 @@ class MbedBoard(Board):
     If the board ID is all "0" characters, it indicates the firmware is generic and doesn't have an
     associated board.
     """
-    def __init__(self,
-            session: "Session",
-            target: Optional[str] = None,
-            board_info: Optional["BoardInfo"] = None,
-            board_id: Optional[str] = None,
-            ) -> None:
+
+    def __init__(
+        self,
+        session: "Session",
+        target: Optional[str] = None,
+        board_info: Optional["BoardInfo"] = None,
+        board_id: Optional[str] = None,
+    ) -> None:
         """@brief Constructor.
 
         Validates the given board_id, if any.

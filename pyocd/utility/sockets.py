@@ -18,13 +18,14 @@
 import socket
 import select
 
+
 class ListenerSocket(object):
     def __init__(self, port, packet_size):
         self.packet_size = packet_size
         self.listener = None
         self.conn = None
         self.port = port
-        self.host = 'localhost'
+        self.host = "localhost"
 
     def init(self):
         if self.listener is None:
@@ -77,6 +78,7 @@ class ListenerSocket(object):
     def set_timeout(self, timeout):
         self.conn.settimeout(timeout)
 
+
 class ClientSocket(object):
     """@brief Simple client-side TCP socket.
 
@@ -113,11 +115,11 @@ class ClientSocket(object):
         if packet_size is None:
             packet_size = self._packet_size
         # Pull from the buffer first.
-#         if len(self._buffer):
-#             length = min(len(self._buffer), packet_size)
-#             data =  self._buffer[:length]
-#             self._buffer = self._buffer[length:]
-#             return data
+        #         if len(self._buffer):
+        #             length = min(len(self._buffer), packet_size)
+        #             data =  self._buffer[:length]
+        #             self._buffer = self._buffer[length:]
+        #             return data
         return self._socket.recv(packet_size)
 
     def write(self, data):
@@ -126,10 +128,10 @@ class ClientSocket(object):
     def readline(self):
         while True:
             # Try to extract a line from the buffer.
-            offset = self._buffer.find(b'\n')
+            offset = self._buffer.find(b"\n")
             if offset != -1:
-                offset += 1 # include lf
-                data =  self._buffer[:offset]
+                offset += 1  # include lf
+                data = self._buffer[:offset]
                 del self._buffer[:offset]
                 return data
             # Read a chunk and put in the buffer, then try again.

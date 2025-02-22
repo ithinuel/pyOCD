@@ -15,11 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from time import (time, sleep)
-from typing import (Any, Optional, TYPE_CHECKING)
+from time import time, sleep
+from typing import Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from types import TracebackType
+
 
 class Timeout:
     """@brief Timeout helper context manager.
@@ -127,7 +128,11 @@ class Timeout:
         @retval False Timeout is passed and the loop should be exited.
         """
         # Check for a timeout.
-        if self._is_running and (self._timeout is not None) and ((time() - self._start) > self._timeout):
+        if (
+            self._is_running
+            and (self._timeout is not None)
+            and ((time() - self._start) > self._timeout)
+        ):
             self._timed_out = True
         # Sleep if appropriate.
         elif (not self._is_first_check) and autosleep and self._sleeptime:
@@ -145,4 +150,3 @@ class Timeout:
         """@brief Whether the timeout has occurred as of the time when this property is accessed."""
         self.check(autosleep=False)
         return self._timed_out
-

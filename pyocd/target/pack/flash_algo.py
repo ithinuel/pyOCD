@@ -19,7 +19,17 @@ import os
 import struct
 import logging
 import itertools
-from typing import (TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Sequence, Set, Tuple)
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+)
 
 from ...debug.elf.elf import ELFBinaryFile
 from ...utility.compatibility import to_str_safe
@@ -34,11 +44,17 @@ if TYPE_CHECKING:
 
 LOG = logging.getLogger(__name__)
 
+
 class FlashAlgoException(exceptions.TargetSupportError):
     """@brief Exception class for errors parsing an FLM file."""
+
     pass
 
-RoRwZiType = Tuple[Optional["ELFSection"], Optional["ELFSection"], Optional[MemoryRange]]
+
+RoRwZiType = Tuple[
+    Optional["ELFSection"], Optional["ELFSection"], Optional[MemoryRange]
+]
+
 
 class PackFlashAlgo:
     """@brief Class to wrap a flash algo
@@ -55,19 +71,19 @@ class PackFlashAlgo:
         "UnInit",
         "EraseSector",
         "ProgramPage",
-        }
+    }
 
     EXTRA_SYMBOLS = {
         "BlankCheck",
         "EraseChip",
         "Verify",
-        }
+    }
 
     SECTIONS_TO_FIND = (
         ("PrgCode", "SHT_PROGBITS"),
         ("PrgData", "SHT_PROGBITS"),
         ("PrgData", "SHT_NOBITS"),
-        )
+    )
 
     ## @brief Standard flash blob header with a breakpoint instruction.
     #
@@ -80,7 +96,7 @@ class PackFlashAlgo:
     #
     # Before running a flash algo operation, LR is set to the address of the `bkpt` instruction,
     # so when the operation function returns it will halt the CPU.
-    _FLASH_BLOB_HEADER = [ 0xE7FDBE00 ]
+    _FLASH_BLOB_HEADER = [0xE7FDBE00]
     ## @brief Size of the flash blob header in bytes.
     _FLASH_BLOB_HEADER_SIZE = len(_FLASH_BLOB_HEADER) * 4
 
@@ -103,8 +119,7 @@ class PackFlashAlgo:
         symbols: Dict[str, int] = {}
         x = self._extract_symbols(self.REQUIRED_SYMBOLS)
         symbols.update(x)
-        symbols.update(self._extract_symbols(self.EXTRA_SYMBOLS,
-                                        default=0xFFFFFFFF))
+        symbols.update(self._extract_symbols(self.EXTRA_SYMBOLS, default=0xFFFFFFFF))
         self.symbols = symbols
 
         ro_rw_zi = self._find_sections(self.SECTIONS_TO_FIND)
@@ -126,7 +141,7 @@ class PackFlashAlgo:
 
     def iter_sector_size_ranges(self) -> Iterator[Tuple[MemoryRange, int]]:
         """@brief Iterator yielding tuples with a memory ranges and sector size for each of the algo's
-            sector sizes.
+        sector sizes.
         """
         # The sector_sizes attribute is a list of bi-tuples of (start-address, sector-size), sorted by start address.
         for j, (offset, sector_size) in enumerate(self.sector_sizes):
@@ -146,7 +161,9 @@ class PackFlashAlgo:
 
             yield MemoryRange(start, end), sector_size
 
-    def get_pyocd_flash_algo(self, blocksize: int, ram_region: "RamRegion") -> Dict[str, Any]:
+    def get_pyocd_flash_algo(
+        self, blocksize: int, ram_region: "RamRegion"
+    ) -> Dict[str, Any]:
         """@brief Return a dictionary representing a pyOCD flash algorithm, or None.
 
         The most interesting operation this method performs is dynamically allocating memory
@@ -205,23 +222,36 @@ class PackFlashAlgo:
             addr_stack = addr_data
             page_buffers = [addr_data]
 
-            LOG.debug("flash algo: [stack=%#x; %#x b] [b1=%#x,+%#x] [code=%#x,+%#x,%#x b] (ram=%#010x, %#x b)",
-                addr_stack, stack_size,
-                addr_data, addr_data - ram_region.start,
-                addr_load, addr_load - ram_region.start, len(instructions) * 4,
-                ram_region.start, ram_region.length
+            LOG.debug(
+                "flash algo: [stack=%#x; %#x b] [b1=%#x,+%#x] [code=%#x,+%#x,%#x b] (ram=%#010x, %#x b)",
+                addr_stack,
+                stack_size,
+                addr_data,
+                addr_data - ram_region.start,
+                addr_load,
+                addr_load - ram_region.start,
+                len(instructions) * 4,
+                ram_region.start,
+                ram_region.length,
             )
         else:
             stack_size = stack_size_two_bufs
             addr_stack = addr_data2
             page_buffers = [addr_data, addr_data2]
 
-            LOG.debug("flash algo: [stack=%#x; %#x b] [b2=%#x,+%#x] [b1=%#x,+%#x] [code=%#x,+%#x,%#x b] (ram=%#010x, %#x b)",
-                addr_stack, stack_size,
-                addr_data, addr_data - ram_region.start,
-                addr_data2, addr_data2 - ram_region.start,
-                addr_load, addr_load - ram_region.start, len(instructions) * 4,
-                ram_region.start, ram_region.length
+            LOG.debug(
+                "flash algo: [stack=%#x; %#x b] [b2=%#x,+%#x] [b1=%#x,+%#x] [code=%#x,+%#x,%#x b] (ram=%#010x, %#x b)",
+                addr_stack,
+                stack_size,
+                addr_data,
+                addr_data - ram_region.start,
+                addr_data2,
+                addr_data2 - ram_region.start,
+                addr_load,
+                addr_load - ram_region.start,
+                len(instructions) * 4,
+                ram_region.start,
+                ram_region.length,
             )
         # TODO - analyzer support
 
@@ -240,11 +270,13 @@ class PackFlashAlgo:
             "end_stack": addr_stack - stack_size,
             "static_base": code_start + self.rw_start,
             "min_program_length": self.page_size,
-            "analyzer_supported": False
+            "analyzer_supported": False,
         }
         return flash_algo
 
-    def _extract_symbols(self, symbols: Set[str], default: Optional[int] = None) -> Dict[str, int]:
+    def _extract_symbols(
+        self, symbols: Set[str], default: Optional[int] = None
+    ) -> Dict[str, int]:
         """@brief Fill 'symbols' field with required flash algo symbols"""
         to_ret: Dict[str, int] = {}
         for symbol in symbols:
@@ -257,7 +289,9 @@ class PackFlashAlgo:
             to_ret[symbol] = symbolInfo.address
         return to_ret
 
-    def _find_sections(self, name_type_pairs: Sequence[Tuple[str, str]]) -> Tuple[Optional["ELFSection"], ...]:
+    def _find_sections(
+        self, name_type_pairs: Sequence[Tuple[str, str]]
+    ) -> Tuple[Optional["ELFSection"], ...]:
         """@brief Return a list of sections the same length and order of the input list"""
         sections: List[Optional["ELFSection"]] = [None] * len(name_type_pairs)
         for section in self.elf.sections:
@@ -267,8 +301,10 @@ class PackFlashAlgo:
                 if name_and_type != (section_name, section_type):
                     continue
                 if sections[i] is not None:
-                    raise FlashAlgoException("Elf contains duplicate section %s attr %s" %
-                                    (section_name, section_type))
+                    raise FlashAlgoException(
+                        "Elf contains duplicate section %s attr %s"
+                        % (section_name, section_type)
+                    )
                 sections[i] = section
         return tuple(sections)
 
@@ -310,7 +346,7 @@ class PackFlashAlgo:
             size = section.length
             data = section.data
             assert len(data) == size
-            algo_data[start:start + size] = data
+            algo_data[start : start + size] = data
         return algo_data
 
 
@@ -352,7 +388,7 @@ class PackFlashInfo(object):
             self.sector_info_list = list(sector_gen)
 
     def __str__(self):
-        desc =  "Flash Device:" + os.linesep
+        desc = "Flash Device:" + os.linesep
         desc += "  name=%s" % self.name + os.linesep
         desc += "  version=0x%x" % self.version + os.linesep
         desc += "  type=%i" % self.type + os.linesep
@@ -364,8 +400,9 @@ class PackFlashInfo(object):
         desc += "  erase_timeout_ms=%i" % self.erase_timeout_ms + os.linesep
         desc += "  sectors:" + os.linesep
         for sector_start, sector_size in self.sector_info_list:
-            desc += ("    start=0x%x, size=0x%x" %
-                     (sector_start, sector_size) + os.linesep)
+            desc += (
+                "    start=0x%x, size=0x%x" % (sector_start, sector_size) + os.linesep
+            )
         return desc
 
     def _sector_and_sz_itr(self, elf, data_start):
@@ -377,5 +414,3 @@ class PackFlashInfo(object):
             if start_and_size == (self.SECTOR_END, self.SECTOR_END):
                 return
             yield start_and_size
-
-

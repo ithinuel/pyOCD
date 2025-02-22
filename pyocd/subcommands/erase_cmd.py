@@ -28,20 +28,23 @@ from ..utility.cmdline import (
 
 LOG = logging.getLogger(__name__)
 
+
 class EraseSubcommand(SubcommandBase):
     """@brief `pyocd erase` subcommand."""
 
-    NAMES = ['erase']
+    NAMES = ["erase"]
     HELP = "Erase entire device flash or specified sectors."
-    EPILOG = ("If no position arguments are listed, then no action will be taken unless the --chip or "
-            "--mass-erase options are provided. Otherwise, the positional arguments should be the addresses of flash "
-            "sectors or address ranges. The end address of a range is exclusive, meaning that it will not be "
-            "erased. Thus, you should specify the address of the sector after the last one "
-            "to be erased. If a '+' is used instead of '-' in a range, this indicates that the "
-            "second value is a length rather than end address. "
-            "Examples: 0x1000 (erase single sector starting at 0x1000) "
-            "0x800-0x2000 (erase sectors starting at 0x800 up to but not including 0x2000) "
-            "0+8192 (erase 8 kB starting at address 0)")
+    EPILOG = (
+        "If no position arguments are listed, then no action will be taken unless the --chip or "
+        "--mass-erase options are provided. Otherwise, the positional arguments should be the addresses of flash "
+        "sectors or address ranges. The end address of a range is exclusive, meaning that it will not be "
+        "erased. Thus, you should specify the address of the sector after the last one "
+        "to be erased. If a '+' is used instead of '-' in a range, this indicates that the "
+        "second value is a length rather than end address. "
+        "Examples: 0x1000 (erase single sector starting at 0x1000) "
+        "0x800-0x2000 (erase sectors starting at 0x800 up to but not including 0x2000) "
+        "0+8192 (erase 8 kB starting at address 0)"
+    )
     DEFAULT_LOG_LEVEL = logging.WARNING
 
     @classmethod
@@ -50,15 +53,37 @@ class EraseSubcommand(SubcommandBase):
         erase_parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
         erase_options = erase_parser.add_argument_group("erase options")
-        erase_options.add_argument("-c", "--chip", dest="erase_mode", action="store_const", const=FlashEraser.Mode.CHIP,
-            help="Perform a chip erase.")
-        erase_options.add_argument("-s", "--sector", dest="erase_mode", action="store_const", const=FlashEraser.Mode.SECTOR,
-            help="Erase the sectors listed as positional arguments. This is the default.")
-        erase_options.add_argument("--mass", dest="erase_mode", action="store_const", const=FlashEraser.Mode.MASS,
-            help="Perform a mass erase. On some devices this is different than a chip erase.")
+        erase_options.add_argument(
+            "-c",
+            "--chip",
+            dest="erase_mode",
+            action="store_const",
+            const=FlashEraser.Mode.CHIP,
+            help="Perform a chip erase.",
+        )
+        erase_options.add_argument(
+            "-s",
+            "--sector",
+            dest="erase_mode",
+            action="store_const",
+            const=FlashEraser.Mode.SECTOR,
+            help="Erase the sectors listed as positional arguments. This is the default.",
+        )
+        erase_options.add_argument(
+            "--mass",
+            dest="erase_mode",
+            action="store_const",
+            const=FlashEraser.Mode.MASS,
+            help="Perform a mass erase. On some devices this is different than a chip erase.",
+        )
 
-        erase_parser.add_argument("addresses", metavar="<sector-address>", action='append', nargs='*',
-            help="List of sector addresses or ranges to erase.")
+        erase_parser.add_argument(
+            "addresses",
+            metavar="<sector-address>",
+            action="append",
+            nargs="*",
+            help="List of sector addresses or ranges to erase.",
+        )
 
         return [cls.CommonOptions.COMMON, cls.CommonOptions.CONNECT, erase_parser]
 
@@ -68,26 +93,28 @@ class EraseSubcommand(SubcommandBase):
 
         # Display a nice, helpful error describing why nothing was done and how to correct it.
         if (self._args.erase_mode is None) or not self._args.addresses:
-            LOG.error("No erase operation specified. Please specify one of '--chip', '--sector', "
-                        "or '--mass' to indicate the desired erase mode. For sector erases, a list "
-                        "of sector addresses to erase must be provided. "
-                        "See 'pyocd erase --help' for more.")
+            LOG.error(
+                "No erase operation specified. Please specify one of '--chip', '--sector', "
+                "or '--mass' to indicate the desired erase mode. For sector erases, a list "
+                "of sector addresses to erase must be provided. "
+                "See 'pyocd erase --help' for more."
+            )
             return 1
 
         session = ConnectHelper.session_with_chosen_probe(
-                            project_dir=self._args.project_dir,
-                            config_file=self._args.config,
-                            user_script=self._args.script,
-                            no_config=self._args.no_config,
-                            pack=self._args.pack,
-                            unique_id=self._args.unique_id,
-                            target_override=self._args.target_override,
-                            frequency=self._args.frequency,
-                            blocking=(not self._args.no_wait),
-                            connect_mode=self._args.connect_mode,
-                            options=convert_session_options(self._args.options),
-                            option_defaults=self._modified_option_defaults(),
-                            )
+            project_dir=self._args.project_dir,
+            config_file=self._args.config,
+            user_script=self._args.script,
+            no_config=self._args.no_config,
+            pack=self._args.pack,
+            unique_id=self._args.unique_id,
+            target_override=self._args.target_override,
+            frequency=self._args.frequency,
+            blocking=(not self._args.no_wait),
+            connect_mode=self._args.connect_mode,
+            options=convert_session_options(self._args.options),
+            option_defaults=self._modified_option_defaults(),
+        )
         if session is None:
             LOG.error("No device available to erase")
             return 1
@@ -99,5 +126,3 @@ class EraseSubcommand(SubcommandBase):
             eraser.erase(addresses)
 
         return 0
-
-

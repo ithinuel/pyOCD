@@ -16,7 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Any, Dict, List, NamedTuple, Tuple, Union)
+from typing import Any, Dict, List, NamedTuple, Tuple, Union
+
 
 class OptionInfo(NamedTuple):
     # TODO Change 'type' field's type Any, and use Union for multi-typed options instead of a tuple of types.
@@ -25,6 +26,8 @@ class OptionInfo(NamedTuple):
     default: Any
     help: str
 
+
+# fmt: off
 ## @brief Definitions of the builtin options.
 BUILTIN_OPTIONS = [
     # Common options
@@ -199,13 +202,16 @@ BUILTIN_OPTIONS = [
     OptionInfo('soft_bkpt_as_hard', bool, False,
         "Replace software breakpoints with hardware breakpoints."),
     ]
+# fmt: on
 
 ## @brief The runtime dictionary of options.
 OPTIONS_INFO: Dict[str, OptionInfo] = {}
 
+
 def add_option_set(options: List[OptionInfo]) -> None:
     """@brief Merge a list of OptionInfo objects into OPTIONS_INFO."""
     OPTIONS_INFO.update({oi.name: oi for oi in options})
+
 
 # Start with only builtin options.
 add_option_set(BUILTIN_OPTIONS)

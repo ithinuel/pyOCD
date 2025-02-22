@@ -18,8 +18,8 @@
 
 import logging
 
-from .provider import (TargetThread, ThreadProvider)
-from .common import (read_c_string, HandlerModeThread)
+from .provider import TargetThread, ThreadProvider
+from .common import read_c_string, HandlerModeThread
 from ..core import exceptions
 from ..core.target import Target
 from ..core.plugin import Plugin
@@ -30,6 +30,7 @@ from ..utility.mask import twos_complement
 # Create a logger for this module.
 LOG = logging.getLogger(__name__)
 
+
 class TargetList(object):
     def __init__(self, context, ptr, next_offset):
         self._context = context
@@ -39,41 +40,46 @@ class TargetList(object):
     def __iter__(self):
         node = self._context.read32(self._list)
 
-        while (node != 0):
+        while node != 0:
             try:
                 yield node
 
                 # Read next list node pointer.
                 node = self._context.read32(node + self._list_node_next_offset)
             except exceptions.TransferError:
-                LOG.warning("TransferError while reading list elements (list=0x%08x, node=0x%08x), terminating list", self._list, node)
+                LOG.warning(
+                    "TransferError while reading list elements (list=0x%08x, node=0x%08x), terminating list",
+                    self._list,
+                    node,
+                )
                 node = 0
+
 
 class ZephyrThreadContext(DebugContext):
     """@brief Thread context for Zephyr."""
 
     STACK_FRAME_OFFSETS = {
-                 0: 0, # r0
-                 1: 4, # r1
-                 2: 8, # r2
-                 3: 12, # r3
-                 12: 16, # r12
-                 14: 20, # lr
-                 15: 24, # pc
-                 16: 28, # xpsr
-            }
+        0: 0,  # r0
+        1: 4,  # r1
+        2: 8,  # r2
+        3: 12,  # r3
+        12: 16,  # r12
+        14: 20,  # lr
+        15: 24,  # pc
+        16: 28,  # xpsr
+    }
 
     CALLEE_SAVED_OFFSETS = {
-                 4: -32, # r4
-                 5: -28, # r5
-                 6: -24, # r6
-                 7: -20, # r7
-                 8: -16, # r8
-                 9: -12, # r9
-                 10: -8, # r10
-                 11: -4, # r11
-                 13: 0, # r13/sp
-            }
+        4: -32,  # r4
+        5: -28,  # r5
+        6: -24,  # r6
+        7: -20,  # r7
+        8: -16,  # r8
+        9: -12,  # r9
+        10: -8,  # r10
+        11: -4,  # r11
+        13: 0,  # r13/sp
+    }
 
     def __init__(self, parent, thread):
         super(ZephyrThreadContext, self).__init__(parent)
@@ -85,7 +91,7 @@ class ZephyrThreadContext(DebugContext):
         reg_vals = []
 
         isCurrent = self._thread.is_current
-        inException = isCurrent and self._parent.read_core_register('ipsr') > 0
+        inException = isCurrent and self._parent.read_core_register("ipsr") > 0
 
         # If this is the current thread and we're not in an exception, just read the live registers.
         if isCurrent and not inException:
@@ -98,13 +104,12 @@ class ZephyrThreadContext(DebugContext):
         # by HandlerModeThread
         if inException:
             # Reasonable to assume PSP is still valid
-            sp = self._parent.read_core_register('psp')
+            sp = self._parent.read_core_register("psp")
         else:
             sp = self._thread.get_stack_pointer()
         exceptionFrame = 0x20
 
         for reg in reg_list:
-
             # If this is a stack pointer register, add an offset to account for the exception stack frame
             if reg == 13:
                 val = sp + exceptionFrame
@@ -116,10 +121,19 @@ class ZephyrThreadContext(DebugContext):
             calleeOffset = self.CALLEE_SAVED_OFFSETS.get(reg, None)
             if calleeOffset is not None:
                 try:
-                    addr = self._thread._base + self._thread._offsets["t_stack_ptr"] + calleeOffset
+                    addr = (
+                        self._thread._base
+                        + self._thread._offsets["t_stack_ptr"]
+                        + calleeOffset
+                    )
                     val = self._parent.read32(addr)
                     reg_vals.append(val)
-                    LOG.debug("Reading callee-saved register %d at 0x%08x = 0x%x", reg, addr, val)
+                    LOG.debug(
+                        "Reading callee-saved register %d at 0x%08x = 0x%x",
+                        reg,
+                        addr,
+                        val,
+                    )
                 except exceptions.TransferError:
                     reg_vals.append(0)
                 continue
@@ -131,7 +145,12 @@ class ZephyrThreadContext(DebugContext):
                     addr = sp + stackFrameOffset
                     val = self._parent.read32(addr)
                     reg_vals.append(val)
-                    LOG.debug("Reading stack frame register %d at 0x%08x = 0x%x", reg, addr, val)
+                    LOG.debug(
+                        "Reading stack frame register %d at 0x%08x = 0x%x",
+                        reg,
+                        addr,
+                        val,
+                    )
                 except exceptions.TransferError:
                     reg_vals.append(0)
                 continue
@@ -143,6 +162,7 @@ class ZephyrThreadContext(DebugContext):
             continue
 
         return reg_vals
+
 
 class ZephyrThread(TargetThread):
     """@brief A Zephyr task."""
@@ -156,14 +176,14 @@ class ZephyrThread(TargetThread):
     RUNNING = 1 << 6
 
     STATE_NAMES = {
-            READY : "Ready",
-            PENDING : "Pending",
-            PRESTART : "Prestart",
-            DEAD : "Dead",
-            SUSPENDED : "Suspended",
-            POLLING : "Polling",
-            RUNNING : "Running",
-        }
+        READY: "Ready",
+        PENDING: "Pending",
+        PRESTART: "Prestart",
+        DEAD: "Dead",
+        SUSPENDED: "Suspended",
+        POLLING: "Polling",
+        RUNNING: "Running",
+    }
 
     def __init__(self, targetContext, provider, base, offsets):
         super(ZephyrThread, self).__init__()
@@ -187,13 +207,20 @@ class ZephyrThread(TargetThread):
         try:
             return self._target_context.read32(addr)
         except exceptions.TransferError:
-            LOG.debug("Transfer error while reading thread's stack pointer @ 0x%08x", addr)
+            LOG.debug(
+                "Transfer error while reading thread's stack pointer @ 0x%08x", addr
+            )
             return 0
 
     def update_info(self):
         try:
-            self._priority = twos_complement(self._target_context.read8(self._base + self._offsets["t_prio"]), width=8)
-            self._state = self._target_context.read8(self._base + self._offsets["t_state"])
+            self._priority = twos_complement(
+                self._target_context.read8(self._base + self._offsets["t_prio"]),
+                width=8,
+            )
+            self._state = self._target_context.read8(
+                self._base + self._offsets["t_state"]
+            )
 
             if self._provider.version > 0:
                 addr = self._base + self._offsets["t_name"]
@@ -224,7 +251,10 @@ class ZephyrThread(TargetThread):
 
     @property
     def description(self):
-        return "%s; Priority %d" % (self.STATE_NAMES.get(self.state, "UNKNOWN"), self.priority)
+        return "%s; Priority %d" % (
+            self.STATE_NAMES.get(self.state, "UNKNOWN"),
+            self.priority,
+        )
 
     @property
     def is_current(self):
@@ -235,10 +265,15 @@ class ZephyrThread(TargetThread):
         return self._thread_context
 
     def __str__(self):
-        return "<ZephyrThread@0x%08x id=%x name=%s>" % (id(self), self.unique_id, self.name)
+        return "<ZephyrThread@0x%08x id=%x name=%s>" % (
+            id(self),
+            self.unique_id,
+            self.name,
+        )
 
     def __repr__(self):
         return str(self)
+
 
 class ZephyrThreadProvider(ThreadProvider):
     """@brief Thread provider for Zephyr."""
@@ -248,19 +283,19 @@ class ZephyrThreadProvider(ThreadProvider):
         "_kernel",
         "_kernel_thread_info_offsets",
         "_kernel_thread_info_size_t_size",
-        ]
+    ]
 
     ZEPHYR_OFFSETS = [
-        'version',
-        'k_curr_thread',
-        'k_threads',
-        't_entry',
-        't_next_thread',
-        't_state',
-        't_user_options',
-        't_prio',
-        't_stack_ptr',
-        't_name',
+        "version",
+        "k_curr_thread",
+        "k_threads",
+        "t_entry",
+        "t_next_thread",
+        "t_state",
+        "t_user_options",
+        "t_prio",
+        "t_stack_ptr",
+        "t_name",
     ]
 
     def __init__(self, target):
@@ -278,19 +313,25 @@ class ZephyrThreadProvider(ThreadProvider):
         if self._symbols is None:
             return False
         if len(self._symbols) != len(self.ZEPHYR_SYMBOLS):
-            LOG.warning("Zephyr kernel detected. Build your Zephyr application with `CONFIG_DEBUG_THREAD_INFO=y` to " +
-                        "enable thread awareness.")
+            LOG.warning(
+                "Zephyr kernel detected. Build your Zephyr application with `CONFIG_DEBUG_THREAD_INFO=y` to "
+                + "enable thread awareness."
+            )
             return False
 
         self._update()
-        self._target.session.subscribe(self.event_handler, Target.Event.POST_FLASH_PROGRAM)
+        self._target.session.subscribe(
+            self.event_handler, Target.Event.POST_FLASH_PROGRAM
+        )
         self._target.session.subscribe(self.event_handler, Target.Event.POST_RESET)
 
         return True
 
     def _get_offsets(self):
         # Read the kernel and thread structure member offsets
-        size = self._target_context.read8(self._symbols["_kernel_thread_info_size_t_size"])
+        size = self._target_context.read8(
+            self._symbols["_kernel_thread_info_size_t_size"]
+        )
         LOG.debug("_kernel_thread_info_size_t_size = %d", size)
         if size != 4:
             LOG.error("Unsupported _kernel_thread_info_size_t_size")
@@ -315,8 +356,15 @@ class ZephyrThreadProvider(ThreadProvider):
         else:
             self._version = self._offsets["version"]
             self._all_threads = self._symbols["_kernel"] + self._offsets["k_threads"]
-            self._curr_thread = self._symbols["_kernel"] + self._offsets["k_curr_thread"]
-            LOG.debug("version = %d, _all_threads = 0x%08x, _curr_thread = 0x%08x", self._version, self._all_threads, self._curr_thread)
+            self._curr_thread = (
+                self._symbols["_kernel"] + self._offsets["k_curr_thread"]
+            )
+            LOG.debug(
+                "version = %d, _all_threads = 0x%08x, _curr_thread = 0x%08x",
+                self._version,
+                self._all_threads,
+                self._curr_thread,
+            )
 
     def invalidate(self):
         self._threads = {}
@@ -330,7 +378,9 @@ class ZephyrThreadProvider(ThreadProvider):
             self._update()
 
     def _build_thread_list(self):
-        allThreads = TargetList(self._target_context, self._all_threads, self._offsets["t_next_thread"])
+        allThreads = TargetList(
+            self._target_context, self._all_threads, self._offsets["t_next_thread"]
+        )
         newThreads = {}
 
         currentThread = self._target_context.read32(self._curr_thread)
@@ -345,7 +395,9 @@ class ZephyrThreadProvider(ThreadProvider):
                     # Ask the thread object to update its state and priority.
                     t.update_info()
                 else:
-                    t = ZephyrThread(self._target_context, self, threadBase, self._offsets)
+                    t = ZephyrThread(
+                        self._target_context, self, threadBase, self._offsets
+                    )
 
                 # Set thread state.
                 if threadBase == currentThread:
@@ -357,7 +409,7 @@ class ZephyrThreadProvider(ThreadProvider):
                 LOG.debug("TransferError while examining thread 0x%08x", threadBase)
 
         # Create fake handler mode thread.
-        if self._target_context.read_core_register('ipsr') > 0:
+        if self._target_context.read_core_register("ipsr") > 0:
             LOG.debug("creating handler mode thread")
             t = HandlerModeThread(self._target_context, self)
             newThreads[t.unique_id] = t
@@ -400,7 +452,7 @@ class ZephyrThreadProvider(ThreadProvider):
     def get_current_thread_id(self):
         if not self.is_enabled:
             return None
-        if self._target_context.read_core_register('ipsr') > 0:
+        if self._target_context.read_core_register("ipsr") > 0:
             return HandlerModeThread.UNIQUE_ID
         return self.get_actual_current_thread_id()
 
@@ -418,6 +470,7 @@ class ZephyrThreadProvider(ThreadProvider):
     @property
     def version(self):
         return self._version
+
 
 class ZephyrPlugin(Plugin):
     """@brief Plugin class for the Zephyr RTOS."""

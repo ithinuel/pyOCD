@@ -19,8 +19,20 @@ from __future__ import annotations
 
 from time import sleep
 import logging
-from typing import (Callable, Collection, Dict, List, Optional, overload, Sequence, Set, TYPE_CHECKING, Tuple, Union)
-from typing_extensions import (Literal, Protocol)
+from typing import (
+    Callable,
+    Collection,
+    Dict,
+    List,
+    Optional,
+    overload,
+    Sequence,
+    Set,
+    TYPE_CHECKING,
+    Tuple,
+    Union,
+)
+from typing_extensions import Literal, Protocol
 
 from .debug_probe import DebugProbe
 from ..core import exceptions
@@ -28,7 +40,7 @@ from ..core.plugin import Plugin
 from ..core.options import OptionInfo
 from .pydapaccess import DAPAccess
 from ..board.mbed_board import MbedBoard
-from ..board.board_ids import (BoardInfo, BOARD_ID_TO_INFO)
+from ..board.board_ids import BoardInfo, BOARD_ID_TO_INFO
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -38,21 +50,22 @@ LOG = logging.getLogger(__name__)
 TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.CRITICAL)
 
+
 class _OpenableProtocol(Protocol):
     @property
-    def is_open(self) -> bool:
-        ...
+    def is_open(self) -> bool: ...
 
-    def open(self) -> None:
-        ...
+    def open(self) -> None: ...
 
-    def close(self) -> None:
-        ...
+    def close(self) -> None: ...
+
 
 class _TemporaryOpen:
     """@brief Context manager to ensure the device is open for a short time."""
 
-    def __init__(self, device: _OpenableProtocol, suppress_exceptions: bool = True) -> None:
+    def __init__(
+        self, device: _OpenableProtocol, suppress_exceptions: bool = True
+    ) -> None:
         self._device = device
         self._suppress_exceptions = suppress_exceptions
         self._did_open_link: bool = False
@@ -67,11 +80,20 @@ class _TemporaryOpen:
             if not self._suppress_exceptions:
                 raise
             else:
-                LOG.debug("suppressing error from attempting to open device %s: %s", self._device, err)
+                LOG.debug(
+                    "suppressing error from attempting to open device %s: %s",
+                    self._device,
+                    err,
+                )
 
         return self
 
-    def __exit__(self, exc_type: Optional[type], exc_value: Optional[Exception], traceback: Optional[TracebackType]) -> bool:
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_value: Optional[Exception],
+        traceback: Optional[TracebackType],
+    ) -> bool:
         # Close the device if we had to open it.
         if self._did_open_link:
             self._device.close()
@@ -82,6 +104,7 @@ class _TemporaryOpen:
                 return True
 
         return False
+
 
 class CMSISDAPProbe(DebugProbe):
     """@brief Wraps a pydapaccess link as a DebugProbe.
@@ -101,49 +124,49 @@ class CMSISDAPProbe(DebugProbe):
         DebugProbe.Protocol.DEFAULT: DAPAccess.PORT.SWD,
         DebugProbe.Protocol.SWD: DAPAccess.PORT.SWD,
         DebugProbe.Protocol.JTAG: DAPAccess.PORT.JTAG,
-        }
+    }
     _PORT_TO_PROTOCOL: Dict[DAPAccess.PORT, DebugProbe.Protocol] = {
         DAPAccess.PORT.DEFAULT: DebugProbe.Protocol.DEFAULT,
         DAPAccess.PORT.SWD: DebugProbe.Protocol.SWD,
         DAPAccess.PORT.JTAG: DebugProbe.Protocol.JTAG,
-        }
+    }
 
     # APnDP constants.
     DP = 0
     AP = 1
 
     # Bitmasks for AP register address fields.
-    A32 = 0x0000000c
+    A32 = 0x0000000C
 
     # Map from AP/DP and 2-bit register address to the enums used by pydapaccess.
     REG_ADDR_TO_ID_MAP: Dict[Tuple[int, int], DAPAccess.REG] = {
         # APnDP A32
-        ( 0,    0x0 ) : DAPAccess.REG.DP_0x0,
-        ( 0,    0x4 ) : DAPAccess.REG.DP_0x4,
-        ( 0,    0x8 ) : DAPAccess.REG.DP_0x8,
-        ( 0,    0xC ) : DAPAccess.REG.DP_0xC,
-        ( 1,    0x0 ) : DAPAccess.REG.AP_0x0,
-        ( 1,    0x4 ) : DAPAccess.REG.AP_0x4,
-        ( 1,    0x8 ) : DAPAccess.REG.AP_0x8,
-        ( 1,    0xC ) : DAPAccess.REG.AP_0xC,
-        }
+        (0, 0x0): DAPAccess.REG.DP_0x0,
+        (0, 0x4): DAPAccess.REG.DP_0x4,
+        (0, 0x8): DAPAccess.REG.DP_0x8,
+        (0, 0xC): DAPAccess.REG.DP_0xC,
+        (1, 0x0): DAPAccess.REG.AP_0x0,
+        (1, 0x4): DAPAccess.REG.AP_0x4,
+        (1, 0x8): DAPAccess.REG.AP_0x8,
+        (1, 0xC): DAPAccess.REG.AP_0xC,
+    }
 
     ## USB VID and PID pair for DAPLink firmware.
-    DAPLINK_VIDPID = (0x0d28, 0x0204)
+    DAPLINK_VIDPID = (0x0D28, 0x0204)
 
     @classmethod
     def get_all_connected_probes(
-                cls,
-                unique_id: Optional[str] = None,
-                is_explicit: bool = False
-            ) -> Sequence[DebugProbe]:
+        cls, unique_id: Optional[str] = None, is_explicit: bool = False
+    ) -> Sequence[DebugProbe]:
         try:
             return [cls(dev) for dev in DAPAccess.get_connected_devices()]
         except DAPAccess.Error as exc:
             raise cls._convert_exception(exc) from exc
 
     @classmethod
-    def get_probe_with_id(cls, unique_id: str, is_explicit: bool = False) -> Optional[DebugProbe]:
+    def get_probe_with_id(
+        cls, unique_id: str, is_explicit: bool = False
+    ) -> Optional[DebugProbe]:
         try:
             dap_access = DAPAccess.get_device(unique_id)
             if dap_access is not None:
@@ -244,7 +267,12 @@ class CMSISDAPProbe(DebugProbe):
                     binary_name = info.binary if (info is not None) else None
 
                     # Create a new board info object with the data from the probe.
-                    info = BoardInfo(name=board, target=target_device_name, vendor=vendor, binary=binary_name)
+                    info = BoardInfo(
+                        name=board,
+                        target=target_device_name,
+                        vendor=vendor,
+                        binary=binary_name,
+                    )
 
         return info
 
@@ -253,7 +281,9 @@ class CMSISDAPProbe(DebugProbe):
 
         board_info = self.associated_board_info
         if self.board_id or board_info:
-            return MbedBoard(self.session, board_info=board_info, board_id=self.board_id)
+            return MbedBoard(
+                self.session, board_info=board_info, board_id=self.board_id
+            )
         return None
 
     def get_accessible_pins(self, group: DebugProbe.PinGroup) -> Tuple[int, int]:
@@ -276,20 +306,32 @@ class CMSISDAPProbe(DebugProbe):
 
             self._link.open()
             self._is_open = True
-            self._link.set_deferred_transfer(self.session.options.get('cmsis_dap.deferred_transfers'))
+            self._link.set_deferred_transfer(
+                self.session.options.get("cmsis_dap.deferred_transfers")
+            )
 
             if self._link.supports_board_and_target_names:
                 board_names = self._link.board_names
                 target_names = self._link.target_names
                 if board_names != (None, None):
-                    LOG.debug("Board: %s %s", board_names[0] or "(no vendor)", board_names[1] or "(no name)")
+                    LOG.debug(
+                        "Board: %s %s",
+                        board_names[0] or "(no vendor)",
+                        board_names[1] or "(no name)",
+                    )
                 if target_names != (None, None):
-                    LOG.debug("Target: %s %s", target_names[0] or "(no vendor)", target_names[1] or "(no name)")
+                    LOG.debug(
+                        "Target: %s %s",
+                        target_names[0] or "(no vendor)",
+                        target_names[1] or "(no name)",
+                    )
 
             # Read CMSIS-DAP capabilities
             caps_value = self._link.identify(DAPAccess.ID.CAPABILITIES)
             if not isinstance(caps_value, int):
-                raise exceptions.ProbeError(f"probe {self.unique_id} returned invalid capabilities")
+                raise exceptions.ProbeError(
+                    f"probe {self.unique_id} returned invalid capabilities"
+                )
             self._capabilities = caps_value
             self._supported_protocols = [DebugProbe.Protocol.DEFAULT]
             if self._capabilities & self.SWD_CAPABILITY_MASK:
@@ -297,9 +339,14 @@ class CMSISDAPProbe(DebugProbe):
             if self._capabilities & self.JTAG_CAPABILITY_MASK:
                 self._supported_protocols.append(DebugProbe.Protocol.JTAG)
             # Warn if neither SWD nor JTAG is supported.
-            if (self._capabilities & (self.SWD_CAPABILITY_MASK | self.JTAG_CAPABILITY_MASK)) == 0:
-                LOG.warning("probe %s reported capabilities indicating it supports neither SWD nor JTAG",
-                        self.unique_id)
+            if (
+                self._capabilities
+                & (self.SWD_CAPABILITY_MASK | self.JTAG_CAPABILITY_MASK)
+            ) == 0:
+                LOG.warning(
+                    "probe %s reported capabilities indicating it supports neither SWD nor JTAG",
+                    self.unique_id,
+                )
 
             self._caps = {
                 self.Capability.SWJ_SEQUENCE,
@@ -307,7 +354,7 @@ class CMSISDAPProbe(DebugProbe):
                 self.Capability.APv2_ADDRESSES,
                 self.Capability.JTAG_SEQUENCE,
                 self.Capability.PIN_ACCESS,
-                }
+            }
             if self._link.has_swd_sequence:
                 self._caps.add(self.Capability.SWD_SEQUENCE)
             if self._link.has_swo():
@@ -330,15 +377,20 @@ class CMSISDAPProbe(DebugProbe):
     #          Target control functions
     # ------------------------------------------- #
     def connect(self, protocol: Optional[DebugProbe.Protocol] = None) -> None:
-        TRACE.debug("trace: connect(%s)", protocol.name if (protocol is not None) else "None")
+        TRACE.debug(
+            "trace: connect(%s)", protocol.name if (protocol is not None) else "None"
+        )
 
         # Convert protocol to port enum.
         #
         # We must get a non-default port, since some CMSIS-DAP implementations do not accept the default
         # port. Note that the conversion of the default port type is contained in the PORT_MAP dict so it
         # is one location.
-        port = (self._PROTOCOL_TO_PORT.get(protocol)
-                if protocol else self._PROTOCOL_TO_PORT[DebugProbe.Protocol.DEFAULT])
+        port = (
+            self._PROTOCOL_TO_PORT.get(protocol)
+            if protocol
+            else self._PROTOCOL_TO_PORT[DebugProbe.Protocol.DEFAULT]
+        )
         assert port is not DAPAccess.PORT.DEFAULT
 
         try:
@@ -359,7 +411,9 @@ class CMSISDAPProbe(DebugProbe):
         except DAPAccess.Error as exc:
             raise self._convert_exception(exc) from exc
 
-    def swd_sequence(self, sequences: Sequence[Union[Tuple[int], Tuple[int, int]]]) -> Tuple[int, Sequence[bytes]]:
+    def swd_sequence(
+        self, sequences: Sequence[Union[Tuple[int], Tuple[int, int]]]
+    ) -> Tuple[int, Sequence[bytes]]:
         TRACE.debug("trace: swd_sequence(sequences=%r)", sequences)
 
         try:
@@ -367,8 +421,16 @@ class CMSISDAPProbe(DebugProbe):
         except DAPAccess.Error as exc:
             raise self._convert_exception(exc) from exc
 
-    def jtag_sequence(self, cycles: int, tms: int, read_tdo: bool, tdi: int) -> Optional[int]:
-        TRACE.debug("trace: jtag_sequence(cycles=%i, tms=%x, read_tdo=%s, tdi=%x)", cycles, tms, read_tdo, tdi)
+    def jtag_sequence(
+        self, cycles: int, tms: int, read_tdo: bool, tdi: int
+    ) -> Optional[int]:
+        TRACE.debug(
+            "trace: jtag_sequence(cycles=%i, tms=%x, read_tdo=%s, tdi=%x)",
+            cycles,
+            tms,
+            read_tdo,
+            tdi,
+        )
 
         try:
             self._link.jtag_sequence(cycles, tms, read_tdo, tdi)
@@ -398,9 +460,9 @@ class CMSISDAPProbe(DebugProbe):
 
         try:
             self._link.assert_reset(True)
-            sleep(self.session.options.get('reset.hold_time'))
+            sleep(self.session.options.get("reset.hold_time"))
             self._link.assert_reset(False)
-            sleep(self.session.options.get('reset.post_delay'))
+            sleep(self.session.options.get("reset.post_delay"))
         except DAPAccess.Error as exc:
             raise self._convert_exception(exc) from exc
 
@@ -465,7 +527,9 @@ class CMSISDAPProbe(DebugProbe):
         """
         try:
             if group is DebugProbe.PinGroup.PROTOCOL_PINS:
-                self._link.pin_access(self.to_cmsis_dap_pins(mask), self.to_cmsis_dap_pins(value))
+                self._link.pin_access(
+                    self.to_cmsis_dap_pins(mask), self.to_cmsis_dap_pins(value)
+                )
                 TRACE.debug("trace: write_pins(%s, %s)", mask, value)
         except DAPAccess.Error as exc:
             raise self._convert_exception(exc) from exc
@@ -515,20 +579,16 @@ class CMSISDAPProbe(DebugProbe):
     # ------------------------------------------- #
 
     @overload
-    def read_dp(self, addr: int) -> int:
-        ...
+    def read_dp(self, addr: int) -> int: ...
 
     @overload
-    def read_dp(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_dp(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_dp(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_dp(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_dp(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_dp(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     def read_dp(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
         reg_id = self.REG_ADDR_TO_ID_MAP[self.DP, addr]
@@ -565,24 +625,25 @@ class CMSISDAPProbe(DebugProbe):
             self._link.write_reg(reg_id, data)
             TRACE.debug("trace: write_dp(addr=%#010x, data=%#010x)", addr, data)
         except DAPAccess.Error as error:
-            TRACE.debug("trace: write_dp(addr=%#010x, data=%#010x) -> error(%s)", addr, data, error)
+            TRACE.debug(
+                "trace: write_dp(addr=%#010x, data=%#010x) -> error(%s)",
+                addr,
+                data,
+                error,
+            )
             raise self._convert_exception(error) from error
 
     @overload
-    def read_ap(self, addr: int) -> int:
-        ...
+    def read_ap(self, addr: int) -> int: ...
 
     @overload
-    def read_ap(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_ap(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_ap(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_ap(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_ap(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_ap(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     def read_ap(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
         assert isinstance(addr, int)
@@ -620,33 +681,43 @@ class CMSISDAPProbe(DebugProbe):
             self._link.write_reg(ap_reg, data)
             TRACE.debug("trace: write_ap(addr=%#010x, data=%#010x)", addr, data)
         except DAPAccess.Error as error:
-            TRACE.debug("trace: write_ap(addr=%#010x, data=%#010x) -> error(%s)", addr, data, error)
+            TRACE.debug(
+                "trace: write_ap(addr=%#010x, data=%#010x) -> error(%s)",
+                addr,
+                data,
+                error,
+            )
             raise self._convert_exception(error) from error
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int = 1) -> Sequence[int]:
-        ...
+    def read_ap_multiple(self, addr: int, count: int = 1) -> Sequence[int]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: Literal[True] = True) -> Sequence[int]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: Literal[True] = True
+    ) -> Sequence[int]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: Literal[False]) -> Callable[[], Sequence[int]]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: Literal[False]
+    ) -> Callable[[], Sequence[int]]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: bool) -> Union[Sequence[int], Callable[[], Sequence[int]]]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: bool
+    ) -> Union[Sequence[int], Callable[[], Sequence[int]]]: ...
 
-    def read_ap_multiple(self, addr: int, count: int = 1, now: bool = True) \
-             -> Union[Sequence[int], Callable[[], Sequence[int]]]:
+    def read_ap_multiple(
+        self, addr: int, count: int = 1, now: bool = True
+    ) -> Union[Sequence[int], Callable[[], Sequence[int]]]:
         assert isinstance(addr, int)
         ap_reg = self.REG_ADDR_TO_ID_MAP[self.AP, (addr & self.A32)]
 
         try:
             if not now:
-                TRACE.debug("trace: read_ap_multi(addr=%#010x, count=%i) -> ...", addr, count)
+                TRACE.debug(
+                    "trace: read_ap_multi(addr=%#010x, count=%i) -> ...", addr, count
+                )
             result = self._link.reg_read_repeat(count, ap_reg, dap_index=0, now=now)
         except DAPAccess.Error as exc:
             raise self._convert_exception(exc) from exc
@@ -655,17 +726,29 @@ class CMSISDAPProbe(DebugProbe):
         def read_ap_repeat_callback():
             try:
                 values = result()
-                TRACE.debug("trace: ... read_ap_multi(addr=%#010x, count=%i) -> [%s]", addr, count,
-                        ", ".join(["%#010x" % v for v in values]))
+                TRACE.debug(
+                    "trace: ... read_ap_multi(addr=%#010x, count=%i) -> [%s]",
+                    addr,
+                    count,
+                    ", ".join(["%#010x" % v for v in values]),
+                )
                 return values
             except DAPAccess.Error as exc:
-                TRACE.debug("trace: ... read_ap_multi(addr=%#010x, count=%i) -> error(%s)",
-                    addr, count, exc)
+                TRACE.debug(
+                    "trace: ... read_ap_multi(addr=%#010x, count=%i) -> error(%s)",
+                    addr,
+                    count,
+                    exc,
+                )
                 raise self._convert_exception(exc) from exc
 
         if now:
-            TRACE.debug("trace: read_ap_multi(addr=%#010x, count=%i) -> [%s]", addr, count,
-                    ", ".join(["%#010x" % v for v in result])) # type: ignore # result is always iterable if now is True
+            TRACE.debug(
+                "trace: read_ap_multi(addr=%#010x, count=%i) -> [%s]",
+                addr,
+                count,
+                ", ".join(["%#010x" % v for v in result]),
+            )  # type: ignore # result is always iterable if now is True
             return result
         else:
             return read_ap_repeat_callback
@@ -676,11 +759,20 @@ class CMSISDAPProbe(DebugProbe):
 
         try:
             self._link.reg_write_repeat(len(values), ap_reg, values, dap_index=0)
-            TRACE.debug("trace: write_ap_multi(addr=%#010x, (%i)[%s])", addr, len(values),
-                   ", ".join(["%#010x" % v for v in values]))
+            TRACE.debug(
+                "trace: write_ap_multi(addr=%#010x, (%i)[%s])",
+                addr,
+                len(values),
+                ", ".join(["%#010x" % v for v in values]),
+            )
         except DAPAccess.Error as exc:
-            TRACE.debug("trace: write_ap_multi(addr=%#010x, (%i)[%s]) -> error(%s)", addr, len(values),
-                    ", ".join(["%#010x" % v for v in values]), exc)
+            TRACE.debug(
+                "trace: write_ap_multi(addr=%#010x, (%i)[%s]) -> error(%s)",
+                addr,
+                len(values),
+                ", ".join(["%#010x" % v for v in values]),
+                exc,
+            )
             raise self._convert_exception(exc) from exc
 
     # ------------------------------------------- #
@@ -727,6 +819,7 @@ class CMSISDAPProbe(DebugProbe):
         else:
             return exc
 
+
 class CMSISDAPProbePlugin(Plugin):
     """@brief Plugin class for CMSISDAPProbe."""
 
@@ -745,8 +838,16 @@ class CMSISDAPProbePlugin(Plugin):
     def options(self):
         """@brief Returns CMSIS-DAP probe options."""
         return [
-            OptionInfo('cmsis_dap.deferred_transfers', bool, True,
-                "Whether the CMSIS-DAP probe backend will use deferred transfers for improved performance."),
-            OptionInfo('cmsis_dap.limit_packets', bool, False,
-                "Restrict CMSIS-DAP backend to using a single in-flight command at a time."),
-            ]
+            OptionInfo(
+                "cmsis_dap.deferred_transfers",
+                bool,
+                True,
+                "Whether the CMSIS-DAP probe backend will use deferred transfers for improved performance.",
+            ),
+            OptionInfo(
+                "cmsis_dap.limit_packets",
+                bool,
+                False,
+                "Restrict CMSIS-DAP backend to using a single in-flight command at a time.",
+            ),
+        ]

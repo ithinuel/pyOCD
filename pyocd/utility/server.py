@@ -24,6 +24,7 @@ from .compatibility import to_bytes_safe
 
 LOG = logging.getLogger(__name__)
 
+
 class StreamServer(threading.Thread):
     """@brief File-like object that serves data over a TCP socket.
 
@@ -33,7 +34,9 @@ class StreamServer(threading.Thread):
     server and its thread, call the stop() method.
     """
 
-    def __init__(self, port, serve_local_only=True, name=None, is_read_only=True, extra_info=None):
+    def __init__(
+        self, port, serve_local_only=True, name=None, is_read_only=True, extra_info=None
+    ):
         """@brief Constructor.
 
         Starts the server immediately.
@@ -59,7 +62,7 @@ class StreamServer(threading.Thread):
         self._abstract_socket = ListenerSocket(port, 4096)
         if not serve_local_only:
             # We really should be binding to explicit interfaces, not all available.
-            self._abstract_socket.host = ''
+            self._abstract_socket.host = ""
         self._abstract_socket.init()
         self._port = self._abstract_socket.port
         self._buffer = bytearray()
@@ -83,8 +86,12 @@ class StreamServer(threading.Thread):
         self.join()
 
     def run(self):
-        LOG.info("%sserver started on port %d%s", self._formatted_name, self._port,
-            (" (%s)" % self._extra_info) if self._extra_info else "")
+        LOG.info(
+            "%sserver started on port %d%s",
+            self._formatted_name,
+            self._port,
+            (" (%s)" % self._extra_info) if self._extra_info else "",
+        )
         self.connected = None
         try:
             self._is_running = True
@@ -179,4 +186,3 @@ class StreamServer(threading.Thread):
             return len(b)
         else:
             return None
-

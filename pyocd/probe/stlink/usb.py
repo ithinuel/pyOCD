@@ -35,12 +35,15 @@ LOG = logging.getLogger(__name__)
 TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.CRITICAL)
 
+
 class STLinkInfo(NamedTuple):
     """@brief STLink USB interface numbers and version name."""
+
     version_name: str
     out_ep: int
     in_ep: int
     swv_ep: int
+
 
 class STLinkUSBInterface:
     """@brief Provides low-level USB enumeration and transfers for STLinkV2/3 devices."""
@@ -58,17 +61,17 @@ class STLinkUSBInterface:
     # - 0x374d: STLink V3 DFU
     USB_PID_EP_MAP = {
         # PID              Version  OUT     IN      SWV
-        0x3748: STLinkInfo('V2',    0x02,   0x81,   0x83),
-        0x374a: STLinkInfo('V2-1',  0x01,   0x81,   0x82),  # Audio
-        0x374b: STLinkInfo('V2-1',  0x01,   0x81,   0x82),
-        0x374e: STLinkInfo('V3',    0x01,   0x81,   0x82),
-        0x374f: STLinkInfo('V3',    0x01,   0x81,   0x82),  # Bridge
-        0x3752: STLinkInfo('V2-1',  0x01,   0x81,   0x82),  # No MSD
-        0x3753: STLinkInfo('V3',    0x01,   0x81,   0x82),  # 2VCP, No MSD
-        0x3754: STLinkInfo('V3',    0x01,   0x81,   0x82),  # No MSD
-        0x3755: STLinkInfo('V3',    0x01,   0x81,   0x82),
-        0x3757: STLinkInfo('V3',    0x01,   0x81,   0x82),
-        }
+        0x3748: STLinkInfo("V2", 0x02, 0x81, 0x83),
+        0x374A: STLinkInfo("V2-1", 0x01, 0x81, 0x82),  # Audio
+        0x374B: STLinkInfo("V2-1", 0x01, 0x81, 0x82),
+        0x374E: STLinkInfo("V3", 0x01, 0x81, 0x82),
+        0x374F: STLinkInfo("V3", 0x01, 0x81, 0x82),  # Bridge
+        0x3752: STLinkInfo("V2-1", 0x01, 0x81, 0x82),  # No MSD
+        0x3753: STLinkInfo("V3", 0x01, 0x81, 0x82),  # 2VCP, No MSD
+        0x3754: STLinkInfo("V3", 0x01, 0x81, 0x82),  # No MSD
+        0x3755: STLinkInfo("V3", 0x01, 0x81, 0x82),
+        0x3757: STLinkInfo("V3", 0x01, 0x81, 0x82),
+    }
 
     ## STLink devices only have one USB interface.
     DEBUG_INTERFACE_NUMBER = 0
@@ -77,7 +80,9 @@ class STLinkUSBInterface:
     def _usb_match(cls, dev):
         try:
             # Check VID/PID.
-            isSTLink = (dev.idVendor == cls.USB_VID) and (dev.idProduct in cls.USB_PID_EP_MAP)
+            isSTLink = (dev.idVendor == cls.USB_VID) and (
+                dev.idProduct in cls.USB_PID_EP_MAP
+            )
 
             # Try accessing the current config, which will cause a permission error on Linux. Better
             # to error out here than later when building the device description. For Windows we
@@ -88,15 +93,24 @@ class STLinkUSBInterface:
 
             return isSTLink
         except usb.core.USBError as error:
-            if error.errno == errno.EACCES and platform.system() == "Linux" \
-                and common.should_show_libusb_device_error((dev.idVendor, dev.idProduct)):
+            if (
+                error.errno == errno.EACCES
+                and platform.system() == "Linux"
+                and common.should_show_libusb_device_error(
+                    (dev.idVendor, dev.idProduct)
+                )
+            ):
                 # We've already checked that this is an STLink device by VID/PID, so we
                 # can use a warning log level to let the user know it's almost certainly
                 # a permissions issue.
-                LOG.warning("%s while trying to get the STLink USB device configuration "
-                   "(VID=%04x PID=%04x). This can probably be remedied with a udev rule. "
-                   "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help.",
-                   error, dev.idVendor, dev.idProduct)
+                LOG.warning(
+                    "%s while trying to get the STLink USB device configuration "
+                    "(VID=%04x PID=%04x). This can probably be remedied with a udev rule. "
+                    "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help.",
+                    error,
+                    dev.idVendor,
+                    dev.idProduct,
+                )
             return False
         except (IndexError, NotImplementedError, ValueError):
             return False
@@ -140,9 +154,14 @@ class STLinkUSBInterface:
         # reading the strings, everything is ok. This workaround doesn't cause any issues with
         # Linux or macOS.
         try:
-            if len(self._dev.serial_number) == 12:  # Workaround for unprintable characters in the ST-Link V2 probes
-                self._serial_number = hexlify(self._dev.serial_number.encode('utf-16-le')[::2])\
-                    .decode('utf-8', 'replace').upper()
+            if (
+                len(self._dev.serial_number) == 12
+            ):  # Workaround for unprintable characters in the ST-Link V2 probes
+                self._serial_number = (
+                    hexlify(self._dev.serial_number.encode("utf-16-le")[::2])
+                    .decode("utf-8", "replace")
+                    .upper()
+                )
             else:
                 self._serial_number = self._dev.serial_number
             self._vendor_name = self._dev.manufacturer
@@ -236,19 +255,27 @@ class STLinkUSBInterface:
         # Pad command to required 16 bytes.
         assert len(cmd) <= self.CMD_SIZE
         paddedCmd = bytearray(self.CMD_SIZE)
-        paddedCmd[0:len(cmd)] = cmd
+        paddedCmd[0 : len(cmd)] = cmd
 
         try:
             # Command phase.
             if TRACE.isEnabledFor(logging.DEBUG):
-                TRACE.debug("  USB CMD> (%d) %s", len(paddedCmd), ' '.join([f'{i:02x}' for i in paddedCmd]))
+                TRACE.debug(
+                    "  USB CMD> (%d) %s",
+                    len(paddedCmd),
+                    " ".join([f"{i:02x}" for i in paddedCmd]),
+                )
             count = self._ep_out.write(paddedCmd, timeout)
             assert count == len(paddedCmd)
 
             # Optional data out phase.
             if writeData is not None:
                 if TRACE.isEnabledFor(logging.DEBUG):
-                    TRACE.debug("  USB OUT> (%d) %s", len(writeData), ' '.join([f'{i:02x}' for i in writeData]))
+                    TRACE.debug(
+                        "  USB OUT> (%d) %s",
+                        len(writeData),
+                        " ".join([f"{i:02x}" for i in writeData]),
+                    )
                 count = self._ep_out.write(writeData, timeout)
                 assert count == len(writeData)
 
@@ -258,12 +285,18 @@ class STLinkUSBInterface:
                     TRACE.debug("  USB IN < (req %d bytes)", readSize)
                 data = self._read(readSize)
                 if TRACE.isEnabledFor(logging.DEBUG):
-                    TRACE.debug("  USB IN < (%d) %s", len(data), ' '.join([f'{i:02x}' for i in data]))
+                    TRACE.debug(
+                        "  USB IN < (%d) %s",
+                        len(data),
+                        " ".join([f"{i:02x}" for i in data]),
+                    )
 
                 # Verify we got all requested data.
                 if len(data) < readSize:
-                    raise exceptions.ProbeError("received incomplete command response from STLink "
-                            f"(got {len(data)}, expected {readSize}")
+                    raise exceptions.ProbeError(
+                        "received incomplete command response from STLink "
+                        f"(got {len(data)}, expected {readSize}"
+                    )
 
                 return data
         except usb.core.USBError as exc:
@@ -276,6 +309,10 @@ class STLinkUSBInterface:
 
     def __repr__(self):
         return "<{} @ {:#x} vid={:#06x} pid={:#06x} sn={} version={}>".format(
-            self.__class__.__name__, id(self),
-            self._dev.idVendor, self._dev.idProduct, self.serial_number,
-            self.version_name)
+            self.__class__.__name__,
+            id(self),
+            self._dev.idVendor,
+            self._dev.idProduct,
+            self.serial_number,
+            self.version_name,
+        )

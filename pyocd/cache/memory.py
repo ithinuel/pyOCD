@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from intervaltree import (Interval, IntervalTree)
+from intervaltree import Interval, IntervalTree
 import logging
 
 from ..utility import conversion
@@ -23,6 +23,7 @@ from .metrics import CacheMetrics
 from ..core.exceptions import TransferFaultError
 
 LOG = logging.getLogger(__name__)
+
 
 class MemoryCache(object):
     """@brief Memory cache.
@@ -71,7 +72,6 @@ class MemoryCache(object):
         for cachedIv in cached:
             newUncachedSet = set()
             for uncachedIv in uncached:
-
                 # No overlap.
                 if cachedIv.end < uncachedIv.begin or cachedIv.begin > uncachedIv.end:
                     newUncachedSet.add(uncachedIv)
@@ -88,15 +88,17 @@ class MemoryCache(object):
         return cached, uncached
 
     def _read_uncached(self, uncached):
-        """"@brief Reads uncached memory ranges and updates the cache.
+        """ "@brief Reads uncached memory ranges and updates the cache.
         @return A list of Interval objects is returned. Each Interval has its @a data attribute set
           to a bytearray of the data read from target memory.
         """
         uncachedData = []
         for uncachedIv in uncached:
-            data = self._context.read_memory_block8(uncachedIv.begin, uncachedIv.end - uncachedIv.begin)
+            data = self._context.read_memory_block8(
+                uncachedIv.begin, uncachedIv.end - uncachedIv.begin
+            )
             iv = Interval(uncachedIv.begin, uncachedIv.end, bytearray(data))
-            self._cache.add(iv) # TODO merge contiguous cached intervals
+            self._cache.add(iv)  # TODO merge contiguous cached intervals
             uncachedData.append(iv)
         return uncachedData
 
@@ -119,9 +121,14 @@ class MemoryCache(object):
 
     def _dump_metrics(self):
         if self._metrics.total > 0:
-            LOG.debug("%d reads, %d bytes [%d%% hits, %d bytes]; %d bytes written",
-                self._metrics.reads, self._metrics.total, self._metrics.percent_hit,
-                self._metrics.hits, self._metrics.writes)
+            LOG.debug(
+                "%d reads, %d bytes [%d%% hits, %d bytes]; %d bytes written",
+                self._metrics.reads,
+                self._metrics.total,
+                self._metrics.percent_hit,
+                self._metrics.hits,
+                self._metrics.writes,
+            )
         else:
             LOG.debug("no reads")
 
@@ -219,7 +226,9 @@ class MemoryCache(object):
 
         # Raise if not fully contained within one region.
         if len(regions) > 1 or not regions[0].contains_range(addr, length=count):
-            raise TransferFaultError("individual memory accesses must not cross memory region boundaries")
+            raise TransferFaultError(
+                "individual memory accesses must not cross memory region boundaries"
+            )
 
         # Otherwise return whether the region is cacheable.
         return regions[0].is_cacheable
@@ -229,14 +238,17 @@ class MemoryCache(object):
         if transfer_size == 8:
             data = self.read_memory_block8(addr, 1)[0]
         else:
-            data = conversion.byte_list_to_nbit_le_list(self.read_memory_block8(addr, transfer_size // 8),
-                    transfer_size)[0]
+            data = conversion.byte_list_to_nbit_le_list(
+                self.read_memory_block8(addr, transfer_size // 8), transfer_size
+            )[0]
 
         if now:
             return data
         else:
+
             def read_cb():
                 return data
+
             return read_cb
 
     def read_memory_block8(self, addr, size):
@@ -247,7 +259,7 @@ class MemoryCache(object):
 
         # Validate memory regions.
         if not self._check_regions(addr, size):
-            LOG.debug("range [%x:%x] is not cacheable", addr, addr+size)
+            LOG.debug("range [%x:%x] is not cacheable", addr, addr + size)
             return self._context.read_memory_block8(addr, size)
 
         # Get the cached and uncached subranges of the requested read.
@@ -255,17 +267,23 @@ class MemoryCache(object):
 
         # Extract data out of combined intervals.
         result = list(self._merge_data(combined, addr, size))
-        assert len(result) == size, "result size ({}) != requested size ({})".format(len(result), size)
+        assert len(result) == size, "result size ({}) != requested size ({})".format(
+            len(result), size
+        )
         return result
 
     def read_memory_block32(self, addr, size):
-        return conversion.byte_list_to_u32le_list(self.read_memory_block8(addr, size*4))
+        return conversion.byte_list_to_u32le_list(
+            self.read_memory_block8(addr, size * 4)
+        )
 
     def write_memory(self, addr, value, transfer_size=32):
         if transfer_size == 8:
             return self.write_memory_block8(addr, [value])
         else:
-            return self.write_memory_block8(addr, conversion.nbit_le_list_to_byte_list([value], transfer_size))
+            return self.write_memory_block8(
+                addr, conversion.nbit_le_list_to_byte_list([value], transfer_size)
+            )
 
     def write_memory_block8(self, addr, value):
         if len(value) <= 0:
@@ -282,7 +300,7 @@ class MemoryCache(object):
         if cacheable:
             size = len(value)
             end = addr + size
-            cached = sorted(self._cache.overlap(addr, end), key=lambda x:x.begin)
+            cached = sorted(self._cache.overlap(addr, end), key=lambda x: x.begin)
             self._metrics.writes += size
 
             if len(cached):
@@ -305,4 +323,3 @@ class MemoryCache(object):
 
     def invalidate(self):
         self._reset_cache()
-

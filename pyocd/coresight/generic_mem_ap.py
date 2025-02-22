@@ -42,7 +42,9 @@ class GenericMemAPTarget(Target, CoreSightCoreComponent):
     Most of the methods in this class (except memory access methods) are empty/dummy.
     """
 
-    def __init__(self, session, ap, memory_map=None, core_num=0, cmpid=None, address=None):
+    def __init__(
+        self, session, ap, memory_map=None, core_num=0, cmpid=None, address=None
+    ):
         Target.__init__(self, session, memory_map)
         CoreSightCoreComponent.__init__(self, ap, cmpid, address)
         self.core_number = core_num
@@ -59,7 +61,7 @@ class GenericMemAPTarget(Target, CoreSightCoreComponent):
 
     @property
     def supported_security_states(self):
-        return Target.SecurityState.NONSECURE,
+        return (Target.SecurityState.NONSECURE,)
 
     def init(self):
         pass
@@ -116,22 +118,34 @@ class GenericMemAPTarget(Target, CoreSightCoreComponent):
         return None
 
     def read_core_register(self, reg):
-        raise exceptions.CoreRegisterAccessError("GenericMemAPTarget does not support core register access")
+        raise exceptions.CoreRegisterAccessError(
+            "GenericMemAPTarget does not support core register access"
+        )
 
     def read_core_register_raw(self, reg):
-        raise exceptions.CoreRegisterAccessError("GenericMemAPTarget does not support core register access")
+        raise exceptions.CoreRegisterAccessError(
+            "GenericMemAPTarget does not support core register access"
+        )
 
     def read_core_registers_raw(self, reg_list):
-        raise exceptions.CoreRegisterAccessError("GenericMemAPTarget does not support core register access")
+        raise exceptions.CoreRegisterAccessError(
+            "GenericMemAPTarget does not support core register access"
+        )
 
     def write_core_register(self, reg, data):
-        raise exceptions.CoreRegisterAccessError("GenericMemAPTarget does not support core register access")
+        raise exceptions.CoreRegisterAccessError(
+            "GenericMemAPTarget does not support core register access"
+        )
 
     def write_core_register_raw(self, reg, data):
-        raise exceptions.CoreRegisterAccessError("GenericMemAPTarget does not support core register access")
+        raise exceptions.CoreRegisterAccessError(
+            "GenericMemAPTarget does not support core register access"
+        )
 
     def write_core_registers_raw(self, reg_list, data_list):
-        raise exceptions.CoreRegisterAccessError("GenericMemAPTarget does not support core register access")
+        raise exceptions.CoreRegisterAccessError(
+            "GenericMemAPTarget does not support core register access"
+        )
 
     def set_breakpoint(self, addr, type=Target.BreakpointType.AUTO):
         return False

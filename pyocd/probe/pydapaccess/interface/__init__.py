@@ -27,17 +27,19 @@ from .pywinusb_backend import PyWinUSB
 LOG = logging.getLogger(__name__)
 
 INTERFACE = {
-             'hidapiusb': HidApiUSB,
-             'pyusb': PyUSB,
-             'pyusb_v2': PyUSBv2,
-             'pywinusb': PyWinUSB,
-            }
+    "hidapiusb": HidApiUSB,
+    "pyusb": PyUSB,
+    "pyusb_v2": PyUSBv2,
+    "pywinusb": PyWinUSB,
+}
 
 # Allow user to override backend with an environment variable.
-USB_BACKEND = os.getenv('PYOCD_USB_BACKEND', "") # pylint: disable=invalid-name
+USB_BACKEND = os.getenv("PYOCD_USB_BACKEND", "")  # pylint: disable=invalid-name
 
 # Check validity of backend env var.
-if USB_BACKEND and ((USB_BACKEND not in INTERFACE) or (not INTERFACE[USB_BACKEND].isAvailable)):
+if USB_BACKEND and (
+    (USB_BACKEND not in INTERFACE) or (not INTERFACE[USB_BACKEND].isAvailable)
+):
     LOG.error("Invalid USB backend specified in PYOCD_USB_BACKEND: " + USB_BACKEND)
     USB_BACKEND = ""
 

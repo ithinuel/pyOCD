@@ -20,7 +20,7 @@ from time import sleep
 from pyocd.coresight.generic_mem_ap import GenericMemAPTarget
 from ...core import exceptions
 from ...coresight.coresight_target import CoreSightTarget
-from ...core.memory_map import (MemoryMap, RamRegion)
+from ...core.memory_map import MemoryMap, RamRegion
 from ...core.target import Target
 from ...coresight.cortex_m import CortexM
 from ...utility.timeout import Timeout
@@ -98,12 +98,16 @@ class CortexM_PSoC6(CortexM):
 
         vtbase &= 0xFFFFFF00
         if vtbase < 0x10000000 or vtbase > 0x10200000:
-            LOG.info("Vector Table address invalid (0x%08X), will not halt at main()", vtbase)
+            LOG.info(
+                "Vector Table address invalid (0x%08X), will not halt at main()", vtbase
+            )
             return
 
         entry = self.read_memory(vtbase + 4)
         if entry < 0x10000000 or entry > 0x10200000:
-            LOG.info("Entry Point address invalid (0x%08X), will not halt at main()", entry)
+            LOG.info(
+                "Entry Point address invalid (0x%08X), will not halt at main()", entry
+            )
             return
 
         self.set_breakpoint(entry)
@@ -135,9 +139,10 @@ class PSoC6(CoreSightTarget):
 
     def create_init_sequence(self):
         seq = super(PSoC6, self).create_init_sequence()
-        seq.wrap_task('discovery',
-            lambda seq: seq.replace_task('create_cores', self.create_psoc_cores)
-            )
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.replace_task("create_cores", self.create_psoc_cores),
+        )
         return seq
 
     def create_psoc_cores(self):
@@ -274,7 +279,9 @@ class CortexM_PSoC64(CortexM):
 
         patch = fb_ver_lo >> 24
         if b1 == 4 and b2 == 0 and patch == 0:
-            LOG.warning("Pre-production version of device is detected which is incompatible with this software")
+            LOG.warning(
+                "Pre-production version of device is detected which is incompatible with this software"
+            )
             LOG.warning("Please contact Cypress for new production parts")
 
         return
@@ -312,13 +319,14 @@ class CortexM_PSoC64(CortexM):
                     self._ap.dp.connect()
                     self.halt()
                     self.wait_halted()
-                    self.write_core_register('xpsr', CortexM.XPSR_THUMB)
+                    self.write_core_register("xpsr", CortexM.XPSR_THUMB)
                     break
                 except exceptions.TransferError:
                     pass
 
     def resume(self):
         from .flash_psoc6 import Flash_PSoC64
+
         super(CortexM_PSoC64, self).resume()
 
         if not Flash_PSoC64.isFlashing:
@@ -398,11 +406,12 @@ class PSoC64(CoreSightTarget):
 
     def create_init_sequence(self):
         seq = super(PSoC64, self).create_init_sequence()
-        seq.wrap_task('discovery',
-            lambda seq: seq
-                        .replace_task('find_aps', self.find_aps)
-                        .replace_task('create_cores', self.create_psoc_core)
-            )
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.replace_task("find_aps", self.find_aps).replace_task(
+                "create_cores", self.create_psoc_core
+            ),
+        )
         return seq
 
     def find_aps(self):
@@ -410,20 +419,30 @@ class PSoC64(CoreSightTarget):
             return
 
         if self.AP_NUM:
-            self.dp.valid_aps = (0, self.AP_NUM,)
+            self.dp.valid_aps = (
+                0,
+                self.AP_NUM,
+            )
         else:
             self.dp.valid_aps = (0,)
 
     def create_psoc_core(self):
-        sysap = SYS_AP_PSoC64(self.session, self.aps[0], self.memory_map, 0, self.DEFAULT_ACQUIRE_TIMEOUT)
+        sysap = SYS_AP_PSoC64(
+            self.session, self.aps[0], self.memory_map, 0, self.DEFAULT_ACQUIRE_TIMEOUT
+        )
         sysap.default_reset_type = self.ResetType.SW_SYSRESETREQ
         self.aps[0].core = sysap
         sysap.init()
         self.add_core(sysap)
 
         if self.AP_NUM:
-            core = self.cortex_m_core_class(self.session, self.aps[self.AP_NUM], self.memory_map, 1,
-                                     self.DEFAULT_ACQUIRE_TIMEOUT)
+            core = self.cortex_m_core_class(
+                self.session,
+                self.aps[self.AP_NUM],
+                self.memory_map,
+                1,
+                self.DEFAULT_ACQUIRE_TIMEOUT,
+            )
             core.default_reset_type = self.ResetType.SW_SYSRESETREQ
             self.aps[self.AP_NUM].core = core
             core.init()

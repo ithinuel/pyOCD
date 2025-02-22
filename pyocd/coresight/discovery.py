@@ -17,13 +17,14 @@
 import logging
 
 from ..core import exceptions
-from .ap import (APv1Address, APv2Address, AccessPort)
-from .dap import (ADIVersion, APAccessMemoryInterface)
-from .rom_table import (CoreSightComponentID, ROMTable)
-from . import (cortex_m, cortex_m_v8m)
+from .ap import APv1Address, APv2Address, AccessPort
+from .dap import ADIVersion, APAccessMemoryInterface
+from .rom_table import CoreSightComponentID, ROMTable
+from . import cortex_m, cortex_m_v8m
 from ..utility.sequencer import CallSequence
 
 LOG = logging.getLogger(__name__)
+
 
 class CoreSightDiscovery(object):
     """@brief Base class for discovering CoreSight components in a target."""
@@ -50,28 +51,39 @@ class CoreSightDiscovery(object):
         """
         raise NotImplementedError()
 
-    def _create_component(self, cmpid):
+    def _create_component(self, cmpid: CoreSightComponentID):
         try:
             LOG.debug("Creating %s component", cmpid.name)
             cmp = cmpid.factory(cmpid.ap, cmpid, cmpid.address)
             cmp.init()
         except exceptions.Error as err:
-            LOG.error("Error attempting to create component %s: %s", cmpid.name, err,
-                    exc_info=self.session.log_tracebacks)
+            LOG.error(
+                "Error attempting to create component %s: %s",
+                cmpid.name,
+                err,
+                exc_info=self.session.log_tracebacks,
+            )
 
     def _create_cores(self):
-        self._apply_to_all_components(self._create_component,
-            filter=lambda c: c.factory in (cortex_m.CortexM.factory, cortex_m_v8m.CortexM_v8M.factory))
+        self._apply_to_all_components(
+            self._create_component,
+            filter=lambda c: c.factory
+            in (cortex_m.CortexM.factory, cortex_m_v8m.CortexM_v8M.factory),
+        )
 
     def _create_components(self):
-        self._apply_to_all_components(self._create_component,
+        self._apply_to_all_components(
+            self._create_component,
             filter=lambda c: c.factory is not None
-                and c.factory not in (cortex_m.CortexM.factory, cortex_m_v8m.CortexM_v8M.factory))
+            and c.factory
+            not in (cortex_m.CortexM.factory, cortex_m_v8m.CortexM_v8M.factory),
+        )
 
     def _apply_to_all_components(self, action, filter=None):
         # Iterate over every top-level ROM table.
         for ap in [x for x in self.dp.aps.values() if x.rom_table]:
             ap.rom_table.for_each(action, filter)
+
 
 class ADIv5Discovery(CoreSightDiscovery):
     """@brief Component discovery process for ADIv5.
@@ -95,12 +107,12 @@ class ADIv5Discovery(CoreSightDiscovery):
 
     def discover(self):
         return CallSequence(
-            ('find_aps',            self._find_aps),
-            ('create_aps',          self._create_aps),
-            ('find_components',     self._find_components),
-            ('create_cores',        self._create_cores),
-            ('create_components',   self._create_components),
-            )
+            ("find_aps", self._find_aps),
+            ("create_aps", self._create_aps),
+            ("find_components", self._find_components),
+            ("create_cores", self._create_cores),
+            ("create_components", self._create_components),
+        )
 
     def _find_aps(self):
         """@brief Find valid APs using the ADIv5 method.
@@ -131,13 +143,20 @@ class ADIv5Discovery(CoreSightDiscovery):
                 else:
                     invalid_count += 1
             except exceptions.Error as e:
-                LOG.error("Error probing AP#%d: %s", apsel, e,
-                    exc_info=self.session.log_tracebacks)
+                LOG.error(
+                    "Error probing AP#%d: %s",
+                    apsel,
+                    e,
+                    exc_info=self.session.log_tracebacks,
+                )
                 invalid_count += 1
 
             # Stop scanning if we've seen a maximum number of invalid APs, unless `scan_all_aps` is set.
-            if not self.session.options.get('scan_all_aps') \
-                    and invalid_count >= self.session.options.get('adi.v5.max_invalid_ap_count'):
+            if not self.session.options.get(
+                "scan_all_aps"
+            ) and invalid_count >= self.session.options.get(
+                "adi.v5.max_invalid_ap_count"
+            ):
                 break
 
         # Update the AP list once we know it's complete.
@@ -151,9 +170,12 @@ class ADIv5Discovery(CoreSightDiscovery):
         """
         seq = CallSequence()
         for apsel in self.dp.valid_aps:
-            seq.append(
-                ('create_ap.{}'.format(apsel), lambda apsel=apsel: self._create_1_ap(apsel))
-                )
+            # fmt: off
+            seq.append((
+                "create_ap.{}".format(apsel),
+                lambda apsel=apsel: self._create_1_ap(apsel),
+            ))
+            # fmt: on
         return seq
 
     def _create_1_ap(self, apsel):
@@ -163,19 +185,24 @@ class ADIv5Discovery(CoreSightDiscovery):
             ap = AccessPort.create(self.dp, ap_address)
             self.dp.aps[ap_address] = ap
 
-            LOG.info("%s IDR = 0x%08x (%s)", ap.short_description, ap.idr, ap.description)
+            LOG.info(
+                "%s IDR = 0x%08x (%s)", ap.short_description, ap.idr, ap.description
+            )
         except exceptions.Error as e:
-            LOG.error("Error reading AP#%d IDR: %s", apsel, e,
-                exc_info=self.session.log_tracebacks)
+            LOG.error(
+                "Error reading AP#%d IDR: %s",
+                apsel,
+                e,
+                exc_info=self.session.log_tracebacks,
+            )
 
     def _find_components(self):
         """@brief Init task that generates a call sequence to ask each AP to find its components."""
         seq = CallSequence()
         for ap in [x for x in self.dp.aps.values() if x.has_rom_table]:
-            seq.append(
-                ('init_ap.{}'.format(ap.address.apsel), ap.find_components)
-                )
+            seq.append(("init_ap.{}".format(ap.address.apsel), ap.find_components))
         return seq
+
 
 class ADIv6Discovery(CoreSightDiscovery):
     """@brief Component discovery process for ADIv6.
@@ -202,11 +229,11 @@ class ADIv6Discovery(CoreSightDiscovery):
 
     def discover(self):
         return CallSequence(
-            ('find_root_components',    self._find_root_components),
-            ('find_components',         self._find_components_on_aps),
-            ('create_cores',            self._create_cores),
-            ('create_components',       self._create_components),
-            )
+            ("find_root_components", self._find_root_components),
+            ("find_components", self._find_components_on_aps),
+            ("create_cores", self._create_cores),
+            ("create_components", self._create_components),
+        )
 
     def _find_root_components(self):
         """@brief Read top-level ROM table pointed to by the DP."""
@@ -227,12 +254,16 @@ class ADIv6Discovery(CoreSightDiscovery):
             self._top_rom_table.init()
 
             # Create components defined in the DP ROM table.
-            self._top_rom_table.for_each(self._create_1_ap,
-                    filter=lambda c: c.factory == AccessPort.create)
+            self._top_rom_table.for_each(
+                self._create_1_ap, filter=lambda c: c.factory == AccessPort.create
+            )
 
             # Create non-AP components in the DP ROM table.
-            self._top_rom_table.for_each(self._create_root_component,
-                    filter=lambda c: (c.factory is not None) and (c.factory != AccessPort.create))
+            self._top_rom_table.for_each(
+                self._create_root_component,
+                filter=lambda c: (c.factory is not None)
+                and (c.factory != AccessPort.create),
+            )
         elif cmpid.factory == AccessPort.create:
             self._create_1_ap(cmpid)
         else:
@@ -245,10 +276,16 @@ class ADIv6Discovery(CoreSightDiscovery):
             ap = AccessPort.create(self.dp, ap_address, cmpid=cmpid)
             self.dp.aps[ap_address] = ap
 
-            LOG.info("%s IDR = 0x%08x (%s)", ap.short_description, ap.idr, ap.description)
+            LOG.info(
+                "%s IDR = 0x%08x (%s)", ap.short_description, ap.idr, ap.description
+            )
         except exceptions.Error as e:
-            LOG.error("Error reading AP@0x%08x IDR: %s", cmpid.address, e,
-                    exc_info=self.session.log_tracebacks)
+            LOG.error(
+                "Error reading AP@0x%08x IDR: %s",
+                cmpid.address,
+                e,
+                exc_info=self.session.log_tracebacks,
+            )
 
     def _create_root_component(self, cmpid):
         """@brief Init task to create a component attached directly to the DP.
@@ -266,20 +303,23 @@ class ADIv6Discovery(CoreSightDiscovery):
             self.target.add_child(component)
             component.init()
         except exceptions.Error as e:
-            LOG.error("Error creating root component at address 0x%08x: %s", cmpid.address, e,
-                    exc_info=self.session.log_tracebacks)
+            LOG.error(
+                "Error creating root component at address 0x%08x: %s",
+                cmpid.address,
+                e,
+                exc_info=self.session.log_tracebacks,
+            )
 
     def _find_components_on_aps(self):
         """@brief Init task that generates a call sequence to ask each AP to find its components."""
         seq = CallSequence()
         for ap in [x for x in self.dp.aps.values() if x.has_rom_table]:
-            seq.append(
-                ('init_ap.{}'.format(str(ap.address)), ap.find_components)
-                )
+            seq.append(("init_ap.{}".format(str(ap.address)), ap.find_components))
         return seq
+
 
 ## Map from ADI version to the discovery class.
 ADI_DISCOVERY_CLASS_MAP = {
-        ADIVersion.ADIv5: ADIv5Discovery,
-        ADIVersion.ADIv6: ADIv6Discovery,
-    }
+    ADIVersion.ADIv5: ADIv5Discovery,
+    ADIVersion.ADIv6: ADIv6Discovery,
+}

@@ -39,15 +39,17 @@ from test_util import (
     get_test_binary_path,
     PYOCD_DIR,
     binary_to_elf_file,
-    )
+)
 
 GDB_TEST_BIN = "src/gdb_test_program/gdb_test.bin"
 GDB_TEST_ELF = "src/gdb_test_program/gdb_test.elf"
+
 
 class DebugContextTestResult(TestResult):
     def __init__(self):
         super(DebugContextTestResult, self).__init__(None, None, None)
         self.name = "debug_context"
+
 
 class DebugContextTest(Test):
     def __init__(self):
@@ -65,13 +67,16 @@ class DebugContextTest(Test):
         result.test = self
         return result
 
+
 def debug_context_test(board_id):
-    with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
+    with ConnectHelper.session_with_chosen_probe(
+        unique_id=board_id, **get_session_options()
+    ) as session:
         board = session.board
         target = session.target
 
         test_params = get_target_test_params(session)
-        session.probe.set_clock(test_params['test_clock'])
+        session.probe.set_clock(test_params["test_clock"])
 
         memory_map = target.get_memory_map()
         boot_region = memory_map.get_boot_memory()
@@ -118,9 +123,9 @@ def debug_context_test(board_id):
         print("Reading N chunks")
         did_pass = True
         for n in range(8):
-            offset = 0x7e + (4 * n)
+            offset = 0x7E + (4 * n)
             data = ctx.read_memory_block8(ram_base + offset, 4)
-            if data == gdb_test_binary_data[offset:offset + 4]:
+            if data == gdb_test_binary_data[offset : offset + 4]:
                 test_pass_count += 1
             else:
                 did_pass = False
@@ -155,7 +160,9 @@ def debug_context_test(board_id):
         print("Programming test binary to boot memory")
         FileProgrammer(session).program(binary_file, base_address=boot_region.start)
 
-        with mock.patch.object(target.selected_core, 'read_memory_block32') as read_block32_mock:
+        with mock.patch.object(
+            target.selected_core, "read_memory_block32"
+        ) as read_block32_mock:
             test_len = min(4096, test_binary_data_length)
             print("Reading %d bytes of test binary from context." % test_len)
             data = ctx.read_memory_block32(boot_region.start, test_len // 4)
@@ -190,10 +197,13 @@ def debug_context_test(board_id):
         result.passed = test_count == test_pass_count
         return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD debug context test')
+    parser = argparse.ArgumentParser(description="pyOCD debug context test")
+    # fmt: off
     parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
     parser.add_argument("-da", "--daparg", dest="daparg", nargs='+', help="Send setting to DAPAccess layer.")
+    # fmt: on
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)
@@ -202,4 +212,3 @@ if __name__ == "__main__":
     session = ConnectHelper.session_with_chosen_probe(**get_session_options())
     test = DebugContextTest()
     result = [test.run(session.board)]
-

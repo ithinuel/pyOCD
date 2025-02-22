@@ -29,31 +29,41 @@ from test_util import (
     TestResult,
     get_session_options,
     get_test_binary_path,
-    )
+)
 
 STATE_NAMES = {
-    Target.State.RUNNING : "running",
-    Target.State.HALTED : "halted",
-    Target.State.RESET : "reset",
-    Target.State.SLEEPING : "sleeping",
-    Target.State.LOCKUP : "lockup",
-    }
+    Target.State.RUNNING: "running",
+    Target.State.HALTED: "halted",
+    Target.State.RESET: "reset",
+    Target.State.SLEEPING: "sleeping",
+    Target.State.LOCKUP: "lockup",
+}
 
 RUNNING = Target.State.RUNNING
 HALTED = Target.State.HALTED
 
+
 class ConnectTestCase(object):
-    def __init__(self, prev_exit_state, connect_mode, expected_state, disconnect_resume, exit_state):
+    def __init__(
+        self,
+        prev_exit_state,
+        connect_mode,
+        expected_state,
+        disconnect_resume,
+        exit_state,
+    ):
         self.prev_exit_state = prev_exit_state
         self.connect_mode = connect_mode
         self.expected_state = expected_state
         self.disconnect_resume = disconnect_resume
         self.exit_state = exit_state
 
+
 class ConnectTestResult(TestResult):
     def __init__(self):
         super(ConnectTestResult, self).__init__(None, None, None)
         self.name = "connect"
+
 
 class ConnectTest(Test):
     def __init__(self):
@@ -82,7 +92,9 @@ def connect_test(board):
     result = ConnectTestResult()
 
     # Install binary.
-    live_session = ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options())
+    live_session = ConnectHelper.session_with_chosen_probe(
+        unique_id=board_id, **get_session_options()
+    )
     live_session.open()
     live_board = live_session.board
     memory_map = board.target.get_memory_map()
@@ -92,31 +104,37 @@ def connect_test(board):
     def test_connect(connect_mode, expected_state, resume):
         print("Connecting with connect_mode=%s" % connect_mode)
         live_session = ConnectHelper.session_with_chosen_probe(
-                        unique_id=board_id,
-                        init_board=False,
-                        connect_mode=connect_mode,
-                        resume_on_disconnect=resume,
-                        **get_session_options())
+            unique_id=board_id,
+            init_board=False,
+            connect_mode=connect_mode,
+            resume_on_disconnect=resume,
+            **get_session_options(),
+        )
         live_session.open()
         live_board = live_session.board
         print("Verifying target is", STATE_NAMES.get(expected_state, "unknown"))
         actualState = live_board.target.get_state()
         # Accept sleeping for running, as a hack to work around nRF52840-DK test binary.
         # TODO remove sleeping hack.
-        if (actualState == expected_state) \
-                or (expected_state == RUNNING and actualState == Target.State.SLEEPING):
+        if (actualState == expected_state) or (
+            expected_state == RUNNING and actualState == Target.State.SLEEPING
+        ):
             passed = 1
             print("TEST PASSED")
         else:
             passed = 0
-            print("TEST FAILED (state={}, expected={})".format(
-                STATE_NAMES.get(actualState, "unknown"),
-                STATE_NAMES.get(expected_state, "unknown")))
+            print(
+                "TEST FAILED (state={}, expected={})".format(
+                    STATE_NAMES.get(actualState, "unknown"),
+                    STATE_NAMES.get(expected_state, "unknown"),
+                )
+            )
         print("Disconnecting with resume=%s" % resume)
         live_session.close()
         live_session = None
         return passed
 
+    # fmt: off
     # TEST CASE COMBINATIONS
     test_cases = [
     #                <prev_exit> <connect_mode>    <expected_state> <disconnect_resume> <exit_state>
@@ -131,6 +149,7 @@ def connect_test(board):
     ConnectTestCase( HALTED,     'attach',         HALTED,          True,               RUNNING  ),
     ConnectTestCase( RUNNING,    'attach',         RUNNING,         False,              RUNNING  ),
     ]
+    # fmt: on
 
     print("\n\n----- TESTING CONNECT/DISCONNECT -----")
     print("Flashing new binary")
@@ -146,7 +165,7 @@ def connect_test(board):
         print("State=%s" % current_state)
         print("TEST FAILED")
     print("Disconnecting with resume=True")
-    live_session.options['resume_on_disconnect'] = True
+    live_session.options["resume_on_disconnect"] = True
     live_session.close()
     live_session = None
     # Leave running.
@@ -157,35 +176,50 @@ def connect_test(board):
         did_pass = test_connect(
             connect_mode=case.connect_mode,
             expected_state=case.expected_state,
-            resume=case.disconnect_resume
-            )
+            resume=case.disconnect_resume,
+        )
         test_pass_count += did_pass
-        case.passed=did_pass
+        case.passed = did_pass
 
     print("\n\nTest Summary:")
-    print("\n{:<4}{:<12}{:<19}{:<12}{:<21}{:<11}{:<10}".format(
-        "#", "Prev Exit", "Connect Mode", "Expected", "Disconnect Resume", "Exit", "Passed"))
+    print(
+        "\n{:<4}{:<12}{:<19}{:<12}{:<21}{:<11}{:<10}".format(
+            "#",
+            "Prev Exit",
+            "Connect Mode",
+            "Expected",
+            "Disconnect Resume",
+            "Exit",
+            "Passed",
+        )
+    )
     for i, case in enumerate(test_cases):
-        print("{:<4}{:<12}{:<19}{:<12}{:<21}{:<11}{:<10}".format(
-            i,
-            STATE_NAMES[case.prev_exit_state],
-            case.connect_mode,
-            STATE_NAMES[case.expected_state],
-            repr(case.disconnect_resume),
-            STATE_NAMES[case.exit_state],
-            "PASS" if case.passed else "FAIL"))
+        print(
+            "{:<4}{:<12}{:<19}{:<12}{:<21}{:<11}{:<10}".format(
+                i,
+                STATE_NAMES[case.prev_exit_state],
+                case.connect_mode,
+                STATE_NAMES[case.expected_state],
+                repr(case.disconnect_resume),
+                STATE_NAMES[case.exit_state],
+                "PASS" if case.passed else "FAIL",
+            )
+        )
     print("\nPass count %i of %i tests" % (test_pass_count, test_count))
     if test_pass_count == test_count:
         print("CONNECT TEST SCRIPT PASSED")
     else:
         print("CONNECT TEST SCRIPT FAILED")
 
-    result.passed = (test_count == test_pass_count)
+    result.passed = test_count == test_pass_count
     return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD connect test')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
+    parser = argparse.ArgumentParser(description="pyOCD connect test")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)

@@ -28,10 +28,12 @@ from ..board.board_ids import BOARD_ID_TO_INFO
 from ..target.pack import pack_target
 from ..probe.debug_probe import DebugProbe
 
+
 class StubProbe(DebugProbe):
     @property
     def unique_id(self) -> str:
         return "0"
+
 
 class ListGenerator(object):
     @staticmethod
@@ -53,14 +55,14 @@ class ListGenerator(object):
 
         probes_info_list = []
         obj = {
-            'pyocd_version' : __version__,
-            'version' : { 'major' : 1, 'minor' : 1 },
-            'status' : status,
-            'boards' : probes_info_list,
-            }
+            "pyocd_version": __version__,
+            "version": {"major": 1, "minor": 1},
+            "status": status,
+            "boards": probes_info_list,
+        }
 
         if status != 0:
-            obj['error'] = error
+            obj["error"] = error
 
         for probe in probes:
             board_info = probe.associated_board_info
@@ -74,14 +76,14 @@ class ListGenerator(object):
                 desc = f"{probe.vendor_name} {probe.product_name}"
 
             d = {
-                'unique_id' : probe.unique_id,
-                'info' : desc,
-                'board_vendor': board_vendor,
-                'board_name' : board_name,
-                'target' : target_type_name or "cortex_m",
-                'vendor_name' : probe.vendor_name,
-                'product_name' : probe.product_name,
-                }
+                "unique_id": probe.unique_id,
+                "info": desc,
+                "board_vendor": board_vendor,
+                "board_name": board_name,
+                "target": target_type_name or "cortex_m",
+                "vendor_name": probe.vendor_name,
+                "product_name": probe.product_name,
+            }
             probes_info_list.append(d)
 
         return obj
@@ -100,14 +102,17 @@ class ListGenerator(object):
 
         boards = []
         obj = {
-            'pyocd_version' : __version__,
-            'version' : { 'major' : 1, 'minor' : 1 },
-            'status' : 0,
-            'boards' : boards
-            }
+            "pyocd_version": __version__,
+            "version": {"major": 1, "minor": 1},
+            "status": 0,
+            "boards": boards,
+        }
 
         # Lowercase target names for comparison
-        managed_targets = [dev.part_number.lower() for dev in pack_target.ManagedPacks.get_installed_targets()]
+        managed_targets = [
+            dev.part_number.lower()
+            for dev in pack_target.ManagedPacks.get_installed_targets()
+        ]
         builtin_target_names = [target_name.lower() for target_name in BUILTIN_TARGETS]
         target_names = [target_name.lower() for target_name in TARGET]
 
@@ -116,15 +121,20 @@ class ListGenerator(object):
             if name_filter and name_filter not in info.name.lower():
                 continue
             d = {
-                'id' : board_id,
-                'name' : info.name,
-                'target': info.target,
-                'binary' : info.binary,
-                'is_target_builtin': (info.target.lower() in builtin_target_names) \
-                    if info.target else False,
-                'is_target_supported': (info.target.lower() in target_names \
-                    or info.target in managed_targets) if info.target else False,
-                }
+                "id": board_id,
+                "name": info.name,
+                "target": info.target,
+                "binary": info.binary,
+                "is_target_builtin": (info.target.lower() in builtin_target_names)
+                if info.target
+                else False,
+                "is_target_supported": (
+                    info.target.lower() in target_names
+                    or info.target in managed_targets
+                )
+                if info.target
+                else False,
+            }
             boards.append(d)
 
         return obj
@@ -146,11 +156,11 @@ class ListGenerator(object):
 
         targets = []
         obj = {
-            'pyocd_version' : __version__,
-            'version' : { 'major' : 1, 'minor' : 2 },
-            'status' : 0,
-            'targets' : targets
-            }
+            "pyocd_version": __version__,
+            "version": {"major": 1, "minor": 2},
+            "status": 0,
+            "targets": targets,
+        }
 
         for name in TARGET.keys():
             # Filter by name.
@@ -159,7 +169,7 @@ class ListGenerator(object):
 
             # Create session with a stub probe that allows us to instantiate the target. This will create
             # Board and Target instances of its own, so set some options to control that.
-            s = Session(StubProbe(), no_config=True, target_override='cortex_m')
+            s = Session(StubProbe(), no_config=True, target_override="cortex_m")
             t = TARGET[name](s)
 
             # Filter by vendor.
@@ -167,24 +177,24 @@ class ListGenerator(object):
                 continue
 
             # Filter by source.
-            source = 'pack' if hasattr(t, '_pack_device') else 'builtin'
+            source = "pack" if hasattr(t, "_pack_device") else "builtin"
             if source_filter and source_filter != source:
                 continue
 
             d = {
-                'name' : name,
-                'vendor' : t.vendor,
-                'part_families' : t.part_families,
-                'part_number' : t.part_number,
-                'source': source,
-                }
+                "name": name,
+                "vendor": t.vendor,
+                "part_families": t.part_families,
+                "part_number": t.part_number,
+                "source": source,
+            }
             if t._svd_location is not None:
                 svdPath = t._svd_location.filename
                 if isinstance(svdPath, str) and os.path.exists(svdPath):
-                    d['svd_path'] = svdPath
+                    d["svd_path"] = svdPath
             targets.append(d)
 
-        if not source_filter or source_filter == 'pack':
+        if not source_filter or source_filter == "pack":
             # Add targets from cmsis-pack-manager cache.
             for dev in pack_target.ManagedPacks.get_installed_targets():
                 try:
@@ -194,13 +204,15 @@ class ListGenerator(object):
                     # Filter by vendor.
                     if vendor_filter and vendor_filter not in dev.vendor.lower():
                         continue
-                    targets.append({
-                        'name' : dev.part_number.lower(),
-                        'part_families' : dev.families,
-                        'part_number' : dev.part_number,
-                        'vendor' : dev.vendor,
-                        'source' : 'pack',
-                        })
+                    targets.append(
+                        {
+                            "name": dev.part_number.lower(),
+                            "part_families": dev.families,
+                            "part_number": dev.part_number,
+                            "vendor": dev.vendor,
+                            "source": "pack",
+                        }
+                    )
                 except KeyError:
                     pass
 
@@ -214,34 +226,34 @@ class ListGenerator(object):
         - 1.0, initial version with debug probe and RTOS plugins
         """
         plugin_groups = [
-                'pyocd.probe',
-                'pyocd.rtos',
-                ]
+            "pyocd.probe",
+            "pyocd.rtos",
+        ]
         plugin_groups_list = []
         obj = {
-            'pyocd_version': __version__,
-            'version': { 'major': 1, 'minor': 0 },
-            'status': 0,
-            'plugins': plugin_groups_list,
-            }
+            "pyocd_version": __version__,
+            "version": {"major": 1, "minor": 0},
+            "status": 0,
+            "plugins": plugin_groups_list,
+        }
 
         # Add plugins info
         for group_name in plugin_groups:
             plugin_list = []
             group_info = {
-                'plugin_type': group_name,
-                'plugins': plugin_list,
-                }
+                "plugin_type": group_name,
+                "plugins": plugin_list,
+            }
 
             for entry_point in entry_points(group=group_name):
                 klass = entry_point.load()
                 plugin = klass()
                 info = {
-                    'name': plugin.name,
-                    'version': plugin.version,
-                    'description': plugin.description,
-                    'classname': klass.__name__,
-                    }
+                    "name": plugin.name,
+                    "version": plugin.version,
+                    "description": plugin.description,
+                    "classname": klass.__name__,
+                }
                 plugin_list.append(info)
             plugin_groups_list.append(group_info)
 
@@ -258,37 +270,37 @@ class ListGenerator(object):
         options_list = []
         plugins_list = []
         obj = {
-            'pyocd_version' : __version__,
-            'version' : { 'major' : 1, 'minor' : 1 },
-            'status' : 0,
-            'features' : [
-                    {
-                        'name': 'plugins',
-                        'plugins': plugins_list,
-                    },
-                ],
-            'options' : options_list,
-            }
+            "pyocd_version": __version__,
+            "version": {"major": 1, "minor": 1},
+            "status": 0,
+            "features": [
+                {
+                    "name": "plugins",
+                    "plugins": plugins_list,
+                },
+            ],
+            "options": options_list,
+        }
 
         # Add plugins
         plugins = ListGenerator.list_plugins()
-        plugins_list.extend(plugins['plugins'])
+        plugins_list.extend(plugins["plugins"])
 
         # Add options
         for option_name in options.OPTIONS_INFO.keys():
             info = options.OPTIONS_INFO[option_name]
             option_dict = {
-                        'name' : option_name,
-                        'default' : info.default,
-                        'description' : info.help,
-                        }
+                "name": option_name,
+                "default": info.default,
+                "description": info.help,
+            }
             try:
                 types_list = []
                 for t in info.type:
                     types_list.append(t.__name__)
             except TypeError:
                 types_list = [info.type.__name__]
-            option_dict['type'] = types_list
+            option_dict["type"] = types_list
             options_list.append(option_dict)
 
         return obj

@@ -15,19 +15,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class Commands:
     """
     @brief STLink V2 and V3 commands.
     """
 
     # Common commands.
-    GET_VERSION = 0xf1
-    JTAG_COMMAND = 0xf2
-    DFU_COMMAND = 0xf3
-    SWIM_COMMAND = 0xf4
-    GET_CURRENT_MODE = 0xf5
-    GET_TARGET_VOLTAGE = 0xf7
-    GET_VERSION_EXT = 0xfb
+    GET_VERSION = 0xF1
+    JTAG_COMMAND = 0xF2
+    DFU_COMMAND = 0xF3
+    SWIM_COMMAND = 0xF4
+    GET_CURRENT_MODE = 0xF5
+    GET_TARGET_VOLTAGE = 0xF7
+    GET_VERSION_EXT = 0xFB
 
     # Modes returned by GET_CURRENT_MODE.
     DEV_DFU_MODE = 0x00
@@ -42,39 +43,39 @@ class Commands:
     # JTAG commands.
     JTAG_READMEM_32BIT = 0x07
     JTAG_WRITEMEM_32BIT = 0x08
-    JTAG_READMEM_8BIT = 0x0c
-    JTAG_WRITEMEM_8BIT = 0x0d
+    JTAG_READMEM_8BIT = 0x0C
+    JTAG_WRITEMEM_8BIT = 0x0D
     JTAG_EXIT = 0x21
     JTAG_ENTER2 = 0x30
-    JTAG_GETLASTRWSTATUS2 = 0x3e # From V2J15
-    JTAG_DRIVE_NRST = 0x3c
+    JTAG_GETLASTRWSTATUS2 = 0x3E  # From V2J15
+    JTAG_DRIVE_NRST = 0x3C
     SWV_START_TRACE_RECEPTION = 0x40
     SWV_STOP_TRACE_RECEPTION = 0x41
     SWV_GET_TRACE_NEW_RECORD_NB = 0x42
-    SWD_SET_FREQ = 0x43 # From V2J20
-    JTAG_SET_FREQ = 0x44 # From V2J24
-    JTAG_READ_DAP_REG = 0x45 # From V2J24
-    JTAG_WRITE_DAP_REG = 0x46 # From V2J24
-    JTAG_READMEM_16BIT = 0x47 # From V2J26
-    JTAG_WRITEMEM_16BIT = 0x48 # From V2J26
-    JTAG_BLINK_LED = 0x49 # From V2J28
-    JTAG_GET_DISK_NAME = 0x4a # From V2J28
-    JTAG_INIT_AP = 0x4b # From V2J28
-    JTAG_CLOSE_AP_DBG = 0x4c # From V2J28
-    JTAG_WRITEMEM_32BIT_NO_ADDR_INC = 0x50 # From V2J26
-    JTAG_READWRITEMISC_OUT = 0x51 # From V2J32 or from V3J2
-    JTAG_READWRITEMISC_IN  = 0x52 # Internal from V2J32 or from V3J2
-    JTAG_READWRITEMISC_GET_MAX = 0x53 # Internal from V2J32 or from V3J2
-    JTAG_READMEM_32BIT_NO_ADDR_INC = 0x54 # From V2J32 or from V3J2
-    JTAG_WRITE_DFTREG = 0x55 # From V2J35 or from V3J5
-    JTAG_GET_BOARD_IDENTIFIERS = 0x56 # From V2J36 or from V3J6
-    SET_COM_FREQ = 0x61 # V3 only, replaces SWD/JTAG_SET_FREQ
-    GET_COM_FREQ = 0x62 # V3 only
-    SWITCH_STLINK_FREQ = 0x63 # V3 only
+    SWD_SET_FREQ = 0x43  # From V2J20
+    JTAG_SET_FREQ = 0x44  # From V2J24
+    JTAG_READ_DAP_REG = 0x45  # From V2J24
+    JTAG_WRITE_DAP_REG = 0x46  # From V2J24
+    JTAG_READMEM_16BIT = 0x47  # From V2J26
+    JTAG_WRITEMEM_16BIT = 0x48  # From V2J26
+    JTAG_BLINK_LED = 0x49  # From V2J28
+    JTAG_GET_DISK_NAME = 0x4A  # From V2J28
+    JTAG_INIT_AP = 0x4B  # From V2J28
+    JTAG_CLOSE_AP_DBG = 0x4C  # From V2J28
+    JTAG_WRITEMEM_32BIT_NO_ADDR_INC = 0x50  # From V2J26
+    JTAG_READWRITEMISC_OUT = 0x51  # From V2J32 or from V3J2
+    JTAG_READWRITEMISC_IN = 0x52  # Internal from V2J32 or from V3J2
+    JTAG_READWRITEMISC_GET_MAX = 0x53  # Internal from V2J32 or from V3J2
+    JTAG_READMEM_32BIT_NO_ADDR_INC = 0x54  # From V2J32 or from V3J2
+    JTAG_WRITE_DFTREG = 0x55  # From V2J35 or from V3J5
+    JTAG_GET_BOARD_IDENTIFIERS = 0x56  # From V2J36 or from V3J6
+    SET_COM_FREQ = 0x61  # V3 only, replaces SWD/JTAG_SET_FREQ
+    GET_COM_FREQ = 0x62  # V3 only
+    SWITCH_STLINK_FREQ = 0x63  # V3 only
 
     # Parameters for JTAG_ENTER2.
-    JTAG_ENTER_SWD = 0xa3
-    JTAG_ENTER_JTAG_NO_CORE_RESET = 0xa3
+    JTAG_ENTER_SWD = 0xA3
+    JTAG_ENTER_JTAG_NO_CORE_RESET = 0xA3
 
     # Parameters for JTAG_DRIVE_NRST.
     JTAG_DRIVE_NRST_LOW = 0x00
@@ -89,10 +90,12 @@ class Commands:
     JTAG_STLINK_SWD_COM = 0x00
     JTAG_STLINK_JTAG_COM = 0x01
 
+
 class Status:
     """
     @brief STLink status codes and messages.
     """
+
     # Status codes.
     JTAG_OK = 0x80
     JTAG_UNKNOWN_ERROR = 0x01
@@ -104,11 +107,11 @@ class Status:
     JTAG_CMD_WAIT = 0x07
     JTAG_CMD_ERROR = 0x08
     JTAG_GET_IDCODE_ERROR = 0x09
-    JTAG_ALIGNMENT_ERROR = 0x0a
-    JTAG_DBG_POWER_ERROR = 0x0b
-    JTAG_WRITE_ERROR = 0x0c
-    JTAG_WRITE_VERIF_ERROR = 0x0d
-    JTAG_ALREADY_OPENED_IN_OTHER_MODE = 0x0e
+    JTAG_ALIGNMENT_ERROR = 0x0A
+    JTAG_DBG_POWER_ERROR = 0x0B
+    JTAG_WRITE_ERROR = 0x0C
+    JTAG_WRITE_VERIF_ERROR = 0x0D
+    JTAG_ALREADY_OPENED_IN_OTHER_MODE = 0x0E
     SWD_AP_WAIT = 0x10
     SWD_AP_FAULT = 0x11
     SWD_AP_ERROR = 0x12
@@ -119,8 +122,8 @@ class Status:
     SWD_DP_PARITY_ERROR = 0x17
     SWD_AP_WDATA_ERROR = 0x18
     SWD_AP_STICKY_ERROR = 0x19
-    SWD_AP_STICKYORUN_ERROR = 0x1a
-    BAD_AP = 0x1d
+    SWD_AP_STICKYORUN_ERROR = 0x1A
+    BAD_AP = 0x1D
     SWV_NOT_AVAILABLE = 0x20
     JTAG_CONF_CHANGED = 0x40
     JTAG_FREQ_NOT_SUPPORTED = 0x41
@@ -128,67 +131,69 @@ class Status:
 
     ## Map from status code to error message.
     MESSAGES = {
-        JTAG_UNKNOWN_ERROR : "Unknown error",
-        JTAG_SPI_ERROR : "SPI error",
-        JTAG_DMA_ERROR : "DMA error",
-        JTAG_UNKNOWN_JTAG_CHAIN : "Unknown JTAG chain",
-        JTAG_NO_DEVICE_CONNECTED : "No device connected",
-        JTAG_INTERNAL_ERROR : "Internal error",
-        JTAG_CMD_WAIT : "Command wait",
-        JTAG_CMD_ERROR : "Command error",
-        JTAG_GET_IDCODE_ERROR : "Get IDCODE error",
-        JTAG_ALIGNMENT_ERROR : "Alignment error",
-        JTAG_DBG_POWER_ERROR : "Debug power error",
-        JTAG_WRITE_ERROR : "Write error",
-        JTAG_WRITE_VERIF_ERROR : "Write verification error",
-        JTAG_ALREADY_OPENED_IN_OTHER_MODE : "Already opened in another mode",
-        SWD_AP_WAIT : "AP wait",
-        SWD_AP_FAULT : "AP fault",
-        SWD_AP_ERROR : "AP error",
-        SWD_AP_PARITY_ERROR : "AP parity error",
-        SWD_DP_WAIT : "DP wait",
-        SWD_DP_FAULT : "DP fault",
-        SWD_DP_ERROR : "DP error",
-        SWD_DP_PARITY_ERROR : "DP parity error",
-        SWD_AP_WDATA_ERROR : "AP WDATA error",
-        SWD_AP_STICKY_ERROR : "AP sticky error",
-        SWD_AP_STICKYORUN_ERROR : "AP sticky overrun error",
-        BAD_AP : "Bad AP",
-        SWV_NOT_AVAILABLE : "SWV not available",
-        JTAG_CONF_CHANGED : "Configuration changed",
-        JTAG_FREQ_NOT_SUPPORTED : "Frequency not supported",
-        JTAG_UNKNOWN_CMD : "Unknown command",
+        JTAG_UNKNOWN_ERROR: "Unknown error",
+        JTAG_SPI_ERROR: "SPI error",
+        JTAG_DMA_ERROR: "DMA error",
+        JTAG_UNKNOWN_JTAG_CHAIN: "Unknown JTAG chain",
+        JTAG_NO_DEVICE_CONNECTED: "No device connected",
+        JTAG_INTERNAL_ERROR: "Internal error",
+        JTAG_CMD_WAIT: "Command wait",
+        JTAG_CMD_ERROR: "Command error",
+        JTAG_GET_IDCODE_ERROR: "Get IDCODE error",
+        JTAG_ALIGNMENT_ERROR: "Alignment error",
+        JTAG_DBG_POWER_ERROR: "Debug power error",
+        JTAG_WRITE_ERROR: "Write error",
+        JTAG_WRITE_VERIF_ERROR: "Write verification error",
+        JTAG_ALREADY_OPENED_IN_OTHER_MODE: "Already opened in another mode",
+        SWD_AP_WAIT: "AP wait",
+        SWD_AP_FAULT: "AP fault",
+        SWD_AP_ERROR: "AP error",
+        SWD_AP_PARITY_ERROR: "AP parity error",
+        SWD_DP_WAIT: "DP wait",
+        SWD_DP_FAULT: "DP fault",
+        SWD_DP_ERROR: "DP error",
+        SWD_DP_PARITY_ERROR: "DP parity error",
+        SWD_AP_WDATA_ERROR: "AP WDATA error",
+        SWD_AP_STICKY_ERROR: "AP sticky error",
+        SWD_AP_STICKYORUN_ERROR: "AP sticky overrun error",
+        BAD_AP: "Bad AP",
+        SWV_NOT_AVAILABLE: "SWV not available",
+        JTAG_CONF_CHANGED: "Configuration changed",
+        JTAG_FREQ_NOT_SUPPORTED: "Frequency not supported",
+        JTAG_UNKNOWN_CMD: "Unknown command",
     }
 
     @staticmethod
     def get_error_message(status: int) -> str:
-        return "STLink error ({}): {}".format(status, Status.MESSAGES.get(status, "Unknown error"))
+        return "STLink error ({}): {}".format(
+            status, Status.MESSAGES.get(status, "Unknown error")
+        )
+
 
 ## Map from SWD frequency in Hertz to delay loop count.
 SWD_FREQ_MAP = {
-    4600000 :   0,
-    1800000 :   1, # Default
-    1200000 :   2,
-    950000 :    3,
-    650000 :    5,
-    480000 :    7,
-    400000 :    9,
-    360000 :    10,
-    240000 :    15,
-    150000 :    25,
-    125000 :    31,
-    100000 :    40,
+    4600000: 0,
+    1800000: 1,  # Default
+    1200000: 2,
+    950000: 3,
+    650000: 5,
+    480000: 7,
+    400000: 9,
+    360000: 10,
+    240000: 15,
+    150000: 25,
+    125000: 31,
+    100000: 40,
 }
 
 ## Map from JTAG frequency in Hertz to frequency divider.
 JTAG_FREQ_MAP = {
-    18000000 :  2,
-    9000000 :   4,
-    4500000 :   8,
-    2250000 :   16,
-    1120000 :   32, # Default
-    560000 :    64,
-    280000 :    128,
-    140000 :    256,
+    18000000: 2,
+    9000000: 4,
+    4500000: 8,
+    2250000: 16,
+    1120000: 32,  # Default
+    560000: 64,
+    280000: 128,
+    140000: 256,
 }
-

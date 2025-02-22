@@ -16,7 +16,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import (Dict, Tuple)
+from typing import Dict, Tuple
 
 # pylint: disable=invalid_name
 
@@ -42,45 +42,53 @@ ARM_China_StarMC1 = 0x132
 
 # pylint: enable=invalid_name
 
+# fmt: off
 ## @brief User-friendly names for core types.
 CORE_TYPE_NAME: Dict[Tuple[int, int], str] = {
-        (CPUID_ARM,        ARM_SC000):         "SecurCore SC000",
-        (CPUID_ARM,        ARM_SC300):         "SecurCore SC300",
-        (CPUID_ARM,        ARM_CortexM0):      "Cortex-M0",
-        (CPUID_ARM,        ARM_CortexM1):      "Cortex-M1",
-        (CPUID_ARM,        ARM_CortexM3):      "Cortex-M3",
-        (CPUID_ARM,        ARM_CortexM4):      "Cortex-M4",
-        (CPUID_ARM,        ARM_CortexM7):      "Cortex-M7",
-        (CPUID_ARM,        ARM_CortexM0p):     "Cortex-M0+",
-        (CPUID_ARM,        ARM_CortexM23):     "Cortex-M23",
-        (CPUID_ARM,        ARM_CortexM33):     "Cortex-M33",
-        (CPUID_ARM,        ARM_CortexM35P):    "Cortex-M35P",
-        (CPUID_ARM,        ARM_CortexM55):     "Cortex-M55",
-        (CPUID_ARM,        ARM_CortexM85):     "Cortex-M85",
-        (CPUID_ARM_CHINA,  ARM_China_StarMC1): "Star-MC1",
-    }
+    (CPUID_ARM,        ARM_SC000):         "SecurCore SC000",
+    (CPUID_ARM,        ARM_SC300):         "SecurCore SC300",
+    (CPUID_ARM,        ARM_CortexM0):      "Cortex-M0",
+    (CPUID_ARM,        ARM_CortexM1):      "Cortex-M1",
+    (CPUID_ARM,        ARM_CortexM3):      "Cortex-M3",
+    (CPUID_ARM,        ARM_CortexM4):      "Cortex-M4",
+    (CPUID_ARM,        ARM_CortexM7):      "Cortex-M7",
+    (CPUID_ARM,        ARM_CortexM0p):     "Cortex-M0+",
+    (CPUID_ARM,        ARM_CortexM23):     "Cortex-M23",
+    (CPUID_ARM,        ARM_CortexM33):     "Cortex-M33",
+    (CPUID_ARM,        ARM_CortexM35P):    "Cortex-M35P",
+    (CPUID_ARM,        ARM_CortexM55):     "Cortex-M55",
+    (CPUID_ARM,        ARM_CortexM85):     "Cortex-M85",
+    (CPUID_ARM_CHINA,  ARM_China_StarMC1): "Star-MC1",
+}
+# fmt: on
+
 
 class CoreArchitecture(Enum):
     """@brief CPU architectures."""
+
     ARMv6M = 1
     ARMv7M = 2
     ARMv8M_BASE = 3
     ARMv8M_MAIN = 4
 
+
 class CortexMExtension(Enum):
     """@brief Extensions for the Cortex-M architecture."""
-    FPU = "FPU" # Single-Precision floating point
-    DSP = "DSP" # Digital Signal Processing instructions
-    FPU_DP = "FPU_DP" # Double-Precision floating point
-    FPU_HP = "FPU_HP" # Half-Precision floating point
-    FPU_V4 = "FPUv4" # FPv4, only present in Cortex-M4F
-    FPU_V5 = "FPUv5" # FPv5 single or double precision
-    SEC = "SEC" # Security Extension
-    SEC_V81 = "SEC_V81" # v8.1-M additions to the Security Extension
-    MVE = "MVE" # M-profile Vector Extension, with integer support
-    MVE_FP = "MVE_FP" # M-profile Vector Extension single- and half-precision floating-point
-    UDE = "UDE" # Unprivileged Debug Extension
-    RAS = "RAS" # Reliability, Serviceability, and Availability
-    PMU = "PMU" # Performance Monitoring Unit
-    MPU = "MPU" # Memory Protection Unit
-    PACBTI = "PACBTI" # Pointer Authentication and Branch Target Identification
+
+    FPU = "FPU"  # Single-Precision floating point
+    DSP = "DSP"  # Digital Signal Processing instructions
+    FPU_DP = "FPU_DP"  # Double-Precision floating point
+    FPU_HP = "FPU_HP"  # Half-Precision floating point
+    FPU_V4 = "FPUv4"  # FPv4, only present in Cortex-M4F
+    FPU_V5 = "FPUv5"  # FPv5 single or double precision
+    SEC = "SEC"  # Security Extension
+    SEC_V81 = "SEC_V81"  # v8.1-M additions to the Security Extension
+    MVE = "MVE"  # M-profile Vector Extension, with integer support
+    MVE_FP = (
+        "MVE_FP"  # M-profile Vector Extension single- and half-precision floating-point
+    )
+    UDE = "UDE"  # Unprivileged Debug Extension
+    RAS = "RAS"  # Reliability, Serviceability, and Availability
+    PMU = "PMU"  # Performance Monitoring Unit
+    MPU = "MPU"  # Memory Protection Unit
+    PACBTI = "PACBTI"  # Pointer Authentication and Branch Target Identification

@@ -18,9 +18,10 @@
 import sys
 import logging
 from shutil import get_terminal_size
-from typing import (IO, Iterable, List, Optional, Tuple)
+from typing import IO, Iterable, List, Optional, Tuple
 
 LOG = logging.getLogger(__name__)
+
 
 class ColumnFormatter:
     """@brief Formats a set of values in multiple columns.
@@ -62,21 +63,25 @@ class ColumnFormatter:
         @param self The object.
         @return String containing the output of the column printer.
         """
-        item_width = self._max_name_width + self._max_value_width  + self._inset * 2 + 2
+        item_width = self._max_name_width + self._max_value_width + self._inset * 2 + 2
         column_count = self._term_width // item_width
         row_count = (len(self._items) + column_count - 1) // column_count
 
-        rows = [[i for i in self._items[r::row_count]]
-                for r in range(row_count)]
+        rows = [[i for i in self._items[r::row_count]] for r in range(row_count)]
 
         txt = ""
         for r in rows:
             txt += " " * self._inset
             for i in r:
-                txt += "{inset}{name:>{name_width}}: {value:<{value_width}}{inset}".format(
-                    name=i[0], name_width=self._max_name_width,
-                    value=i[1], value_width=self._max_value_width,
-                    inset=(" " * self._inset))
+                txt += (
+                    "{inset}{name:>{name_width}}: {value:<{value_width}}{inset}".format(
+                        name=i[0],
+                        name_width=self._max_name_width,
+                        value=i[1],
+                        value_width=self._max_value_width,
+                        inset=(" " * self._inset),
+                    )
+                )
             txt += "\n"
         return txt
 
@@ -89,5 +94,3 @@ class ColumnFormatter:
         if output_file is None:
             output_file = sys.stdout
         output_file.write(self.format())
-
-

@@ -27,18 +27,19 @@ from ..utility.cmdline import convert_session_options
 
 LOG = logging.getLogger(__name__)
 
+
 class ListSubcommand(SubcommandBase):
     """@brief `pyocd list` subcommand."""
 
-    NAMES = ['list']
+    NAMES = ["list"]
     HELP = "List information about probes, targets, or boards."
     DEFAULT_LOG_LEVEL = logging.ERROR
 
     ## @brief Map to convert plugin groups to user friendly names.
     PLUGIN_GROUP_NAMES = {
-        'pyocd.probe': "Debug Probe",
-        'pyocd.rtos': "RTOS",
-        }
+        "pyocd.probe": "Debug Probe",
+        "pyocd.rtos": "RTOS",
+    }
 
     @classmethod
     def get_args(cls) -> List[argparse.ArgumentParser]:
@@ -46,6 +47,7 @@ class ListSubcommand(SubcommandBase):
         list_parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
         list_output = list_parser.add_argument_group("list output")
+        # fmt: off
         list_output.add_argument('-p', '--probes', action='store_true',
             help="List available probes.")
         list_output.add_argument('-t', '--targets', action='store_true',
@@ -64,12 +66,18 @@ class ListSubcommand(SubcommandBase):
             help="Restrict listing to targets from the specified source. Applies to targets.")
         list_options.add_argument('-H', '--no-header', action='store_true',
             help="Don't print a table header.")
+        # fmt: on
 
         return [cls.CommonOptions.COMMON, list_parser]
 
     def invoke(self) -> int:
         """@brief Handle 'list' subcommand."""
-        all_outputs = (self._args.probes, self._args.targets, self._args.boards, self._args.plugins)
+        all_outputs = (
+            self._args.probes,
+            self._args.targets,
+            self._args.boards,
+            self._args.plugins,
+        )
 
         # Default to listing probes.
         if not any(all_outputs):
@@ -77,62 +85,84 @@ class ListSubcommand(SubcommandBase):
 
         # Check for more than one output option being selected.
         if sum(int(x) for x in all_outputs) > 1:
-            LOG.error("Only one of the output options '--probes', '--targets', '--boards', "
-                      "or '--plugins' may be selected at a time.")
+            LOG.error(
+                "Only one of the output options '--probes', '--targets', '--boards', "
+                "or '--plugins' may be selected at a time."
+            )
             return 1
 
         # Create a session with no device so we load any config.
-        session = Session(None,
-                            project_dir=self._args.project_dir,
-                            config_file=self._args.config,
-                            no_config=self._args.no_config,
-                            pack=self._args.pack,
-                            **convert_session_options(self._args.options)
-                            )
+        session = Session(
+            None,
+            project_dir=self._args.project_dir,
+            config_file=self._args.config,
+            no_config=self._args.no_config,
+            pack=self._args.pack,
+            **convert_session_options(self._args.options),
+        )
 
         if self._args.probes:
             ConnectHelper.list_connected_probes()
         elif self._args.targets:
             # Create targets from provided CMSIS pack.
-            if session.options['pack'] is not None:
-                pack_target.PackTargets.populate_targets_from_pack(session.options['pack'])
+            if session.options["pack"] is not None:
+                pack_target.PackTargets.populate_targets_from_pack(
+                    session.options["pack"]
+                )
 
-            obj = ListGenerator.list_targets(name_filter=self._args.name,
-                                            vendor_filter=self._args.vendor,
-                                            source_filter=self._args.source)
-            pt = self._get_pretty_table(["Name", "Vendor", "Part Number", "Families", "Source"])
-            for info in sorted(obj['targets'], key=lambda i: i['name']):
-                pt.add_row([
-                            info['name'],
-                            info['vendor'],
-                            info['part_number'],
-                            ', '.join(info['part_families']),
-                            info['source'],
-                            ])
+            obj = ListGenerator.list_targets(
+                name_filter=self._args.name,
+                vendor_filter=self._args.vendor,
+                source_filter=self._args.source,
+            )
+            pt = self._get_pretty_table(
+                [
+                    "Name",
+                    "Vendor",
+                    "Part Number",
+                    "Families",
+                    "Source",
+                ]
+            )
+            for info in sorted(obj["targets"], key=lambda i: i["name"]):
+                pt.add_row(
+                    [
+                        info["name"],
+                        info["vendor"],
+                        info["part_number"],
+                        ", ".join(info["part_families"]),
+                        info["source"],
+                    ]
+                )
             print(pt)
         elif self._args.boards:
             obj = ListGenerator.list_boards(name_filter=self._args.name)
             pt = self._get_pretty_table(["ID", "Name", "Target", "Test Binary"])
-            for info in sorted(obj['boards'], key=lambda i: i['id']):
-                pt.add_row([
-                            info['id'],
-                            info['name'],
-                            info['target'],
-                            info['binary']
-                            ])
+            for info in sorted(obj["boards"], key=lambda i: i["id"]):
+                pt.add_row([info["id"], info["name"], info["target"], info["binary"]])
             print(pt)
         elif self._args.plugins:
             obj = ListGenerator.list_plugins()
-            pt = self._get_pretty_table(["Type", "Plugin Name", "Version", "Description"])
-            for group_info in sorted(obj['plugins'], key=lambda i: i['plugin_type']):
-                for plugin_info in sorted(group_info['plugins'], key=lambda i: i['name']):
-                    pt.add_row([
-                                self.PLUGIN_GROUP_NAMES[group_info['plugin_type']],
-                                plugin_info['name'],
-                                plugin_info['version'],
-                                plugin_info['description'],
-                                ])
+            pt = self._get_pretty_table(
+                [
+                    "Type",
+                    "Plugin Name",
+                    "Version",
+                    "Description",
+                ]
+            )
+            for group_info in sorted(obj["plugins"], key=lambda i: i["plugin_type"]):
+                for plugin_info in sorted(
+                    group_info["plugins"], key=lambda i: i["name"]
+                ):
+                    pt.add_row(
+                        [
+                            self.PLUGIN_GROUP_NAMES[group_info["plugin_type"]],
+                            plugin_info["name"],
+                            plugin_info["version"],
+                            plugin_info["description"],
+                        ]
+                    )
             print(pt)
 
         return 0
-

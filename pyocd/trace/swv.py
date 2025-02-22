@@ -19,10 +19,10 @@
 import logging
 import threading
 from time import sleep
-from typing import (Optional, TextIO, TYPE_CHECKING)
+from typing import Optional, TextIO, TYPE_CHECKING
 
 from .sink import TraceEventSink
-from .events import (TraceEvent, TraceITMEvent)
+from .events import TraceEvent, TraceITMEvent
 from .swo import SWOParser
 from ..coresight.itm import ITM
 from ..coresight.tpiu import TPIU
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from ..utility.notification import Notification
 
 LOG = logging.getLogger(__name__)
+
 
 class SWVEventSink(TraceEventSink):
     """@brief Trace event sink that converts ITM packets to a text stream."""
@@ -61,21 +62,29 @@ class SWVEventSink(TraceEventSink):
         if event.width == 1:
             data = chr(event.data)
         elif event.width == 2:
-            data = chr(event.data & 0xff) + chr((event.data >> 8) & 0xff)
+            data = chr(event.data & 0xFF) + chr((event.data >> 8) & 0xFF)
         elif event.width == 4:
-            data = (chr(event.data & 0xff)
-                    + chr((event.data >> 8) & 0xff)
-                    + chr((event.data >> 16) & 0xff)
-                    + chr((event.data >> 24) & 0xff))
+            data = (
+                chr(event.data & 0xFF)
+                + chr((event.data >> 8) & 0xFF)
+                + chr((event.data >> 16) & 0xFF)
+                + chr((event.data >> 24) & 0xFF)
+            )
         else:
             return
 
         self._console.write(data)
 
+
 class SWVReader(threading.Thread):
     """@brief Sets up SWV and processes data in a background thread."""
 
-    def __init__(self, session: "Session", core_number: int = 0, lock: Optional[threading.Lock] = None) -> None:
+    def __init__(
+        self,
+        session: "Session",
+        core_number: int = 0,
+        lock: Optional[threading.Lock] = None,
+    ) -> None:
         """@brief Constructor.
         @param self
         @param session The Session instance.
@@ -93,7 +102,9 @@ class SWVReader(threading.Thread):
         self._target = target
         self._core = target.cores[core_number]
 
-        self._session.subscribe(self._reset_handler, Target.Event.POST_RESET, self._core)
+        self._session.subscribe(
+            self._reset_handler, Target.Event.POST_RESET, self._core
+        )
 
     def init(self, sys_clock: int, swo_clock: int, console: TextIO) -> bool:
         """@brief Configures trace graph and starts thread.
@@ -117,7 +128,9 @@ class SWVReader(threading.Thread):
 
         assert self._session.probe
         if DebugProbe.Capability.SWO not in self._session.probe.capabilities:
-            LOG.warning(f"SWV not initalized: Probe {self._session.probe.unique_id} does not support SWO")
+            LOG.warning(
+                f"SWV not initalized: Probe {self._session.probe.unique_id} does not support SWO"
+            )
             return False
 
         itm = self._target.get_first_child_of_type(ITM)
@@ -182,12 +195,16 @@ class SWVReader(threading.Thread):
         if self._lock:
             self._lock.acquire()
 
-        swv_raw_server = StreamServer(
-                            self._session.options.get('swv_raw_port'),
-                            serve_local_only=self._session.options.get('serve_local_only'),
-                            name="SWV raw",
-                            is_read_only=True) \
-                         if self._session.options.get('swv_raw_enable') else None
+        swv_raw_server = (
+            StreamServer(
+                self._session.options.get("swv_raw_port"),
+                serve_local_only=self._session.options.get("serve_local_only"),
+                name="SWV raw",
+                is_read_only=True,
+            )
+            if self._session.options.get("swv_raw_enable")
+            else None
+        )
 
         # Stop SWO first in case the probe already had it started. Ignore if this fails.
         try:
@@ -227,4 +244,3 @@ class SWVReader(threading.Thread):
         """
         if self.is_alive():
             self._target.trace_start()
-

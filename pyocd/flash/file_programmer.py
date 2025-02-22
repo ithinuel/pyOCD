@@ -19,18 +19,30 @@ import errno
 import itertools
 import logging
 import os
-from typing import (IO, TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Tuple, Union)
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from elftools.elf.elffile import ELFFile
 from intelhex import IntelHex
 
 from ..core import exceptions
-from .loader import (FlashLoader, ProgressCallback)
+from .loader import FlashLoader, ProgressCallback
 
 if TYPE_CHECKING:
     from ..core.session import Session
 
 LOG = logging.getLogger(__name__)
+
 
 def ranges(i: List[int]) -> Iterator[Tuple[int, int]]:
     """Accepts a sorted list of byte addresses. Breaks the addresses into contiguous ranges.
@@ -42,6 +54,7 @@ def ranges(i: List[int]) -> Iterator[Tuple[int, int]]:
     for a, b in itertools.groupby(enumerate(i), lambda x: x[1] - x[0]):
         b = list(b)
         yield b[0][1], b[-1][1]
+
 
 class FileProgrammer(object):
     """@brief Class to manage programming a file in any supported format with many options.
@@ -56,15 +69,17 @@ class FileProgrammer(object):
     - Intel Hex (.hex)
     - ELF (.elf or .axf)
     """
-    def __init__(self,
-            session: "Session",
-            progress: Optional[ProgressCallback] = None,
-            chip_erase: Optional[str] = None,
-            smart_flash: Optional[bool] = None,
-            trust_crc: Optional[bool] = None,
-            keep_unwritten: Optional[bool] = None,
-            no_reset: Optional[bool] = None
-        ):
+
+    def __init__(
+        self,
+        session: "Session",
+        progress: Optional[ProgressCallback] = None,
+        chip_erase: Optional[str] = None,
+        smart_flash: Optional[bool] = None,
+        trust_crc: Optional[bool] = None,
+        keep_unwritten: Optional[bool] = None,
+        no_reset: Optional[bool] = None,
+    ):
         """@brief Constructor.
 
         @param self
@@ -97,13 +112,18 @@ class FileProgrammer(object):
         self._loader = None
 
         self._format_handlers: Dict[str, Callable[..., None]] = {
-            'axf': self._program_elf,
-            'bin': self._program_bin,
-            'elf': self._program_elf,
-            'hex': self._program_hex,
-            }
+            "axf": self._program_elf,
+            "bin": self._program_bin,
+            "elf": self._program_elf,
+            "hex": self._program_hex,
+        }
 
-    def program(self, file_or_path: Union[str, IO[bytes]], file_format: Optional[str] = None, **kwargs: Any):
+    def program(
+        self,
+        file_or_path: Union[str, IO[bytes]],
+        file_format: Optional[str] = None,
+        **kwargs: Any,
+    ):
         """@brief Program a file into flash.
 
         @param self
@@ -126,19 +146,23 @@ class FileProgrammer(object):
         is_path = isinstance(file_or_path, str)
 
         # Check for valid path first.
-        if is_path and not os.path.isfile(file_or_path): # type: ignore # (type checker doesn't use is_path)
-            raise FileNotFoundError(errno.ENOENT, "No such file: '{}'".format(file_or_path))
+        if is_path and not os.path.isfile(file_or_path):  # type: ignore # (type checker doesn't use is_path)
+            raise FileNotFoundError(
+                errno.ENOENT, "No such file: '{}'".format(file_or_path)
+            )
 
         # If no format provided, use the file's extension.
         if not file_format:
             if is_path:
                 # Extract the extension from the path.
-                file_format = os.path.splitext(file_or_path)[1][1:] # type: ignore # (type checker doesn't use is_path)
+                file_format = os.path.splitext(file_or_path)[1][1:]  # type: ignore # (type checker doesn't use is_path)
 
                 # Explicitly check for no extension.
-                if file_format == '':
-                    raise ValueError("file path '{}' does not have an extension and "
-                                        "no format is set".format(file_or_path))
+                if file_format == "":
+                    raise ValueError(
+                        "file path '{}' does not have an extension and "
+                        "no format is set".format(file_or_path)
+                    )
             else:
                 raise ValueError("file object provided but no format is set")
 
@@ -146,28 +170,29 @@ class FileProgrammer(object):
         if file_format is None or file_format not in self._format_handlers:
             raise ValueError("unknown file format '%s'" % file_format)
 
-        self._loader = FlashLoader(self._session,
-                                    progress=self._progress,
-                                    chip_erase=self._chip_erase,
-                                    smart_flash=self._smart_flash,
-                                    trust_crc=self._trust_crc,
-                                    keep_unwritten=self._keep_unwritten,
-                                    no_reset=self._no_reset)
+        self._loader = FlashLoader(
+            self._session,
+            progress=self._progress,
+            chip_erase=self._chip_erase,
+            smart_flash=self._smart_flash,
+            trust_crc=self._trust_crc,
+            keep_unwritten=self._keep_unwritten,
+            no_reset=self._no_reset,
+        )
 
         # file_obj = None
         # Open the file if a path was provided.
         if is_path:
-            mode = 'rb'
-            if file_format == 'hex':
+            mode = "rb"
+            if file_format == "hex":
                 # hex file must be read as plain text file
-                mode = 'r'
+                mode = "r"
             assert isinstance(file_or_path, str)
             file_obj = open(file_or_path, mode)
         else:
             assert not isinstance(file_or_path, str)
             file_obj = file_or_path
         try:
-
             # Pass to the format-specific programmer.
             self._format_handlers[file_format](file_obj, **kwargs)
             self._loader.commit()
@@ -180,16 +205,18 @@ class FileProgrammer(object):
         assert self._loader
 
         # If no base address is specified use the start of the boot memory.
-        address = kwargs.get('base_address', None)
+        address = kwargs.get("base_address", None)
         if address is None:
             assert self._session.target
             boot_memory = self._session.target.memory_map.get_boot_memory()
             if boot_memory is None:
-                raise exceptions.TargetSupportError("No boot memory is defined for this device")
+                raise exceptions.TargetSupportError(
+                    "No boot memory is defined for this device"
+                )
             address = boot_memory.start
         assert isinstance(address, int)
 
-        skip_offset = kwargs.get('skip', 0)
+        skip_offset = kwargs.get("skip", 0)
         if not isinstance(skip_offset, int):
             raise TypeError("skip argument must be an integer")
         file_obj.seek(skip_offset, os.SEEK_SET)
@@ -223,15 +250,23 @@ class FileProgrammer(object):
 
         elf = ELFFile(file_obj)
         for segment in elf.iter_segments():
-            addr = segment['p_paddr']
-            if segment.header.p_type == 'PT_LOAD' and segment.header.p_filesz != 0:
+            addr = segment["p_paddr"]
+            if segment.header.p_type == "PT_LOAD" and segment.header.p_filesz != 0:
                 data = bytearray(segment.data())
-                LOG.debug("Writing segment LMA:0x%08x, VMA:0x%08x, size %d", addr,
-                          segment['p_vaddr'], segment.header.p_filesz)
+                LOG.debug(
+                    "Writing segment LMA:0x%08x, VMA:0x%08x, size %d",
+                    addr,
+                    segment["p_vaddr"],
+                    segment.header.p_filesz,
+                )
                 try:
                     self._loader.add_data(addr, data)
                 except ValueError as e:
                     LOG.warning("Failed to add data chunk: %s", e)
             else:
-                LOG.debug("Skipping segment LMA:0x%08x, VMA:0x%08x, size %d", addr,
-                          segment['p_vaddr'], segment.header.p_filesz)
+                LOG.debug(
+                    "Skipping segment LMA:0x%08x, VMA:0x%08x, size %d",
+                    addr,
+                    segment["p_vaddr"],
+                    segment.header.p_filesz,
+                )

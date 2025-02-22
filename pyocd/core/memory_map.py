@@ -19,8 +19,20 @@ from enum import Enum
 import collections.abc
 import copy
 from functools import total_ordering
-from typing import (Any, Callable, Dict, Iterable, Iterator, List, Optional, TYPE_CHECKING,
-        Sequence, Tuple, Type, Union)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    TYPE_CHECKING,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 from typing_extensions import Self
 
 from ..utility.strings import uniquify_name
@@ -29,23 +41,30 @@ if TYPE_CHECKING:
     from ..target.pack.flash_algo import PackFlashAlgo
     from ..flash.flash import Flash
 
+
 class MemoryType(Enum):
     """@brief Known types of memory."""
+
     OTHER = 0
     RAM = 1
     ROM = 2
     FLASH = 3
     DEVICE = 4
 
+
 def check_range(
-            start: Union[int, "MemoryRangeBase", None] = None,
-            end: Optional[int] = None,
-            length: Optional[int] = None,
-            range: Optional["MemoryRangeBase"] = None
-        ) -> Tuple[int, int]:
-    assert ((range is not None)
-        or ((start is not None) and (isinstance(start, MemoryRangeBase)
-            or ((end is not None) ^ (length is not None)))))
+    start: Union[int, "MemoryRangeBase", None] = None,
+    end: Optional[int] = None,
+    length: Optional[int] = None,
+    range: Optional["MemoryRangeBase"] = None,
+) -> Tuple[int, int]:
+    assert (range is not None) or (
+        (start is not None)
+        and (
+            isinstance(start, MemoryRangeBase)
+            or ((end is not None) ^ (length is not None))
+        )
+    )
     if isinstance(start, MemoryRangeBase):
         range = start
     if range is not None:
@@ -61,6 +80,7 @@ def check_range(
             actual_end = end
     return actual_start, actual_end
 
+
 @total_ordering
 class MemoryRangeBase:
     """@brief Base class for a range of memory.
@@ -68,7 +88,10 @@ class MemoryRangeBase:
     This base class provides the basic address range support and methods to test for containment
     or intersection with another range.
     """
-    def __init__(self, start: int = 0, end: int = 0, length: Optional[int] = None) -> None:
+
+    def __init__(
+        self, start: int = 0, end: int = 0, length: Optional[int] = None
+    ) -> None:
         self._start = start
         if length is not None:
             self._end = self._start + length - 1
@@ -97,40 +120,45 @@ class MemoryRangeBase:
         return (address >= self.start) and (address <= self.end)
 
     def contains_range(
-                self,
-                start: Union[int, "MemoryRangeBase", None] = None,
-                end: Optional[int] = None,
-                length: Optional[int] = None,
-                range: Optional["MemoryRangeBase"] = None
-            ) -> bool:
+        self,
+        start: Union[int, "MemoryRangeBase", None] = None,
+        end: Optional[int] = None,
+        length: Optional[int] = None,
+        range: Optional["MemoryRangeBase"] = None,
+    ) -> bool:
         """@return Whether the given range is fully contained by the region."""
         start, end = check_range(start, end, length, range)
         return self.contains_address(start) and self.contains_address(end)
 
     def contained_by_range(
-                self,
-                start: Union[int, "MemoryRangeBase", None] = None,
-                end: Optional[int] = None,
-                length: Optional[int] = None,
-                range: Optional["MemoryRangeBase"] = None
-            ) -> bool:
+        self,
+        start: Union[int, "MemoryRangeBase", None] = None,
+        end: Optional[int] = None,
+        length: Optional[int] = None,
+        range: Optional["MemoryRangeBase"] = None,
+    ) -> bool:
         """@return Whether the region is fully within the bounds of the given range."""
         start, end = check_range(start, end, length, range)
         return start <= self.start and end >= self.end
 
     def intersects_range(
-                self,
-                start: Union[int, "MemoryRangeBase", None] = None,
-                end: Optional[int] = None,
-                length: Optional[int] = None,
-                range: Optional["MemoryRangeBase"] = None
-            ) -> bool:
+        self,
+        start: Union[int, "MemoryRangeBase", None] = None,
+        end: Optional[int] = None,
+        length: Optional[int] = None,
+        range: Optional["MemoryRangeBase"] = None,
+    ) -> bool:
         """@return Whether the region and the given range intersect at any point."""
         start, end = check_range(start, end, length, range)
-        return (start <= self.start and end >= self.start) or (start <= self.end and end >= self.end) \
+        return (
+            (start <= self.start and end >= self.start)
+            or (start <= self.end and end >= self.end)
             or (start >= self.start and end <= self.end)
+        )
 
-    def iter_split_by_address(self, addresses: Iterable[int]) -> Iterator["MemoryRange"]:
+    def iter_split_by_address(
+        self, addresses: Iterable[int]
+    ) -> Iterator["MemoryRange"]:
         """@brief Yield ranges by splitting the object at the given addresses.
 
         The values in _addresses_ are points at which _self_'s bounds are split. Each value in _addresses_
@@ -170,17 +198,21 @@ class MemoryRangeBase:
         return self.start == other.start and self.length == other.length
 
     def __lt__(self, other: "MemoryRangeBase") -> bool:
-        return self.start < other.start or (self.start == other.start and self.length == other.length)
+        return self.start < other.start or (
+            self.start == other.start and self.length == other.length
+        )
+
 
 class MemoryRange(MemoryRangeBase):
     """@brief A range of memory optionally tied to a region."""
+
     def __init__(
-                self,
-                start: int = 0,
-                end: int = 0,
-                length: Optional[int] = None,
-                region: Optional["MemoryRegion"] = None
-            ) -> None:
+        self,
+        start: int = 0,
+        end: int = 0,
+        length: Optional[int] = None,
+        region: Optional["MemoryRegion"] = None,
+    ) -> None:
         super().__init__(start=start, end=end, length=length)
         self._region = region
 
@@ -195,11 +227,22 @@ class MemoryRange(MemoryRangeBase):
         return h
 
     def __eq__(self, other: "MemoryRange") -> bool:
-        return self.start == other.start and self.length == other.length and self.region == other.region
+        return (
+            self.start == other.start
+            and self.length == other.length
+            and self.region == other.region
+        )
 
     def __repr__(self) -> str:
-        return "<%s@0x%x start=0x%x end=0x%x length=0x%x region=%s>" % (self.__class__.__name__,
-            id(self), self.start, self.end, self.length, self.region)
+        return "<%s@0x%x start=0x%x end=0x%x length=0x%x region=%s>" % (
+            self.__class__.__name__,
+            id(self),
+            self.start,
+            self.end,
+            self.length,
+            self.region,
+        )
+
 
 class MemoryRegion(MemoryRangeBase):
     """@brief One contiguous range of memory.
@@ -243,36 +286,36 @@ class MemoryRegion(MemoryRangeBase):
 
     ## Default attribute values for all memory region types.
     DEFAULT_ATTRS: Dict[str, Any] = {
-        'name': lambda r: r.type.name.lower(),
-        'access': 'rwx',
-        'alias': None,
-        'is_boot_memory': False,
-        'is_default': True,
-        'is_powered_on_boot': True,
-        'is_cacheable': True,
-        'invalidate_cache_on_run': True,
-        'is_testable': True,
-        'is_external': False,
-        'is_ram': lambda r: r.type is MemoryType.RAM,
-        'is_rom': lambda r: r.type is MemoryType.ROM,
-        'is_flash': lambda r: r.type is MemoryType.FLASH,
-        'is_device': lambda r: r.type is MemoryType.DEVICE,
-        'is_readable': lambda r: 'r' in r.access,
-        'is_writable': lambda r: 'w' in r.access,
-        'is_executable': lambda r: 'x' in r.access,
-        'is_erasable' : True,
-        'is_secure': lambda r: 's' in r.access,
-        'is_nonsecure': lambda r: not r.is_secure,
-        }
+        "name": lambda r: r.type.name.lower(),
+        "access": "rwx",
+        "alias": None,
+        "is_boot_memory": False,
+        "is_default": True,
+        "is_powered_on_boot": True,
+        "is_cacheable": True,
+        "invalidate_cache_on_run": True,
+        "is_testable": True,
+        "is_external": False,
+        "is_ram": lambda r: r.type is MemoryType.RAM,
+        "is_rom": lambda r: r.type is MemoryType.ROM,
+        "is_flash": lambda r: r.type is MemoryType.FLASH,
+        "is_device": lambda r: r.type is MemoryType.DEVICE,
+        "is_readable": lambda r: "r" in r.access,
+        "is_writable": lambda r: "w" in r.access,
+        "is_executable": lambda r: "x" in r.access,
+        "is_erasable": True,
+        "is_secure": lambda r: "s" in r.access,
+        "is_nonsecure": lambda r: not r.is_secure,
+    }
 
     def __init__(
-                self,
-                type: MemoryType = MemoryType.OTHER,
-                start: int = 0,
-                end: int = 0,
-                length: Optional[int] = None,
-                **attrs: Any
-            ) -> None:
+        self,
+        type: MemoryType = MemoryType.OTHER,
+        start: int = 0,
+        end: int = 0,
+        length: Optional[int] = None,
+        **attrs: Any,
+    ) -> None:
         """Memory region constructor.
 
         Memory regions are required to have non-zero lengths, unlike memory ranges.
@@ -294,7 +337,8 @@ class MemoryRegion(MemoryRangeBase):
         self._submap = MemoryMap(
             start=self.start,
             end=self.end,
-            region_validator=lambda r: (r.type == self._type) or (self._type is MemoryType.OTHER),
+            region_validator=lambda r: (r.type == self._type)
+            or (self._type is MemoryType.OTHER),
         )
 
         # Assign default values to any attributes missing from kw args.
@@ -330,12 +374,14 @@ class MemoryRegion(MemoryRangeBase):
     @property
     def alias(self) -> Any:
         # Resolve alias reference.
-        alias_value = self._attributes['alias']
+        alias_value = self._attributes["alias"]
         if isinstance(alias_value, str) and self._map is not None:
             referent = self._map.get_first_matching_region(name=alias_value)
             if referent is None:
-                raise ValueError("unable to resolve memory region alias reference '%s'" % alias_value)
-            self._attributes['alias'] = referent
+                raise ValueError(
+                    "unable to resolve memory region alias reference '%s'" % alias_value
+                )
+            self._attributes["alias"] = referent
             return referent
         else:
             return alias_value
@@ -359,7 +405,7 @@ class MemoryRegion(MemoryRangeBase):
         # Get our ._attributes dict instance attribute without going through our own __getattr__().
         # This can fail if called before ._attributes has been set the first time.
         try:
-            attrs = super().__getattribute__('_attributes')
+            attrs = super().__getattribute__("_attributes")
         except AttributeError:
             return super().__setattr__(name, value)
 
@@ -393,48 +439,61 @@ class MemoryRegion(MemoryRangeBase):
 
     def __eq__(self, other: "MemoryRegion") -> bool:
         # Include type and attributes in equality comparison.
-        return self.start == other.start and self.length == other.length \
-            and self.type == other.type and self.attributes == other.attributes
+        return (
+            self.start == other.start
+            and self.length == other.length
+            and self.type == other.type
+            and self.attributes == other.attributes
+        )
 
     def __repr__(self) -> str:
-        return "<%s@0x%x name=%s type=%s start=0x%x end=0x%x length=0x%x access=%s>" % (self.__class__.__name__, id(self), self.name, self.type, self.start, self.end, self.length, self.access)
+        return "<%s@0x%x name=%s type=%s start=0x%x end=0x%x length=0x%x access=%s>" % (
+            self.__class__.__name__,
+            id(self),
+            self.name,
+            self.type,
+            self.start,
+            self.end,
+            self.length,
+            self.access,
+        )
+
 
 class RamRegion(MemoryRegion):
     """@brief Contiguous region of RAM."""
+
     def __init__(
-                self,
-                start: int = 0,
-                end: int = 0,
-                length: Optional[int] = None,
-                **attrs: Any
-            ) -> None:
-        attrs['type'] = MemoryType.RAM
+        self, start: int = 0, end: int = 0, length: Optional[int] = None, **attrs: Any
+    ) -> None:
+        attrs["type"] = MemoryType.RAM
         super().__init__(start=start, end=end, length=length, **attrs)
+
 
 class RomRegion(MemoryRegion):
     """@brief Contiguous region of ROM."""
 
     # Default attribute values for ROM regions.
     DEFAULT_ATTRS = MemoryRegion.DEFAULT_ATTRS.copy()
-    DEFAULT_ATTRS.update({
-        'access': 'rx', # ROM is by definition not writable.
-        })
+    DEFAULT_ATTRS.update(
+        {
+            "access": "rx",  # ROM is by definition not writable.
+        }
+    )
 
     def __init__(
-                self,
-                start: int = 0,
-                end: int = 0,
-                length: Optional[int] = None,
-                **attrs: Any
-            ) -> None:
-        attrs['type'] = MemoryType.ROM
+        self, start: int = 0, end: int = 0, length: Optional[int] = None, **attrs: Any
+    ) -> None:
+        attrs["type"] = MemoryType.ROM
         super().__init__(start=start, end=end, length=length, **attrs)
+
 
 class DefaultFlashWeights:
     """@brief Default weights for flash programming operations."""
+
     PROGRAM_PAGE_WEIGHT = 0.130
     ERASE_SECTOR_WEIGHT = 0.048
     ERASE_ALL_WEIGHT = 0.174
+
 
 class FlashRegion(MemoryRegion):
     """@brief Contiguous region of flash memory.
@@ -463,18 +522,20 @@ class FlashRegion(MemoryRegion):
 
     # Add some default attribute values for flash regions.
     DEFAULT_ATTRS = MemoryRegion.DEFAULT_ATTRS.copy()
-    DEFAULT_ATTRS.update({
-        'blocksize': lambda r: r.sector_size, # Erase sector size. Alias for sector_size.
-        'sector_size': lambda r: r.blocksize, # Erase sector size. Alias for blocksize.
-        'page_size': lambda r: r.blocksize, # Program page size.
-        'phrase_size': lambda r: r.page_size, # Minimum programmable unit.
-        'erase_all_weight': DefaultFlashWeights.ERASE_ALL_WEIGHT,
-        'erase_sector_weight': DefaultFlashWeights.ERASE_SECTOR_WEIGHT,
-        'program_page_weight': DefaultFlashWeights.PROGRAM_PAGE_WEIGHT,
-        'erased_byte_value': 0xff,
-        'access': 'rx', # By default flash is not writable.
-        'are_erased_sectors_readable': True,
-        })
+    DEFAULT_ATTRS.update(
+        {
+            "blocksize": lambda r: r.sector_size,  # Erase sector size. Alias for sector_size.
+            "sector_size": lambda r: r.blocksize,  # Erase sector size. Alias for blocksize.
+            "page_size": lambda r: r.blocksize,  # Program page size.
+            "phrase_size": lambda r: r.page_size,  # Minimum programmable unit.
+            "erase_all_weight": DefaultFlashWeights.ERASE_ALL_WEIGHT,
+            "erase_sector_weight": DefaultFlashWeights.ERASE_SECTOR_WEIGHT,
+            "program_page_weight": DefaultFlashWeights.PROGRAM_PAGE_WEIGHT,
+            "erased_byte_value": 0xFF,
+            "access": "rx",  # By default flash is not writable.
+            "are_erased_sectors_readable": True,
+        }
+    )
 
     _algo: Optional[Dict[str, Any]]
     _flm: Optional[Union[str, "PackFlashAlgo"]]
@@ -482,39 +543,35 @@ class FlashRegion(MemoryRegion):
     _flash_class: Type["Flash"]
 
     def __init__(
-                self,
-                start: int = 0,
-                end: int = 0,
-                length: Optional[int] = None,
-                **attrs: Any
-            ) -> None:
+        self, start: int = 0, end: int = 0, length: Optional[int] = None, **attrs: Any
+    ) -> None:
         # Import locally to prevent import loops.
         from ..flash.flash import Flash
 
-        assert ('blocksize' in attrs) or ('sector_size' in attrs) or ('flm' in attrs)
-        attrs['type'] = MemoryType.FLASH
+        assert ("blocksize" in attrs) or ("sector_size" in attrs) or ("flm" in attrs)
+        attrs["type"] = MemoryType.FLASH
         super().__init__(start=start, end=end, length=length, **attrs)
-        self._algo = attrs.get('algo', None)
-        self._flm = attrs.get('flm', None)
+        self._algo = attrs.get("algo", None)
+        self._flm = attrs.get("flm", None)
         self._flash = None
 
-        if ('flash_class' in attrs) and (attrs['flash_class'] is not None):
-            self._flash_class = attrs['flash_class']
+        if ("flash_class" in attrs) and (attrs["flash_class"] is not None):
+            self._flash_class = attrs["flash_class"]
             assert issubclass(self._flash_class, Flash)
         else:
             self._flash_class = Flash
 
         # Remove writable region attributes from attributes dict so there is only one copy.
         try:
-            del self._attributes['algo']
+            del self._attributes["algo"]
         except KeyError:
             pass
         try:
-            del self._attributes['flash_class']
+            del self._attributes["flash_class"]
         except KeyError:
             pass
         try:
-            del self._attributes['flm']
+            del self._attributes["flm"]
         except KeyError:
             pass
 
@@ -571,10 +628,10 @@ class FlashRegion(MemoryRegion):
         """@brief Return a dict containing all the attributes of this region."""
         d = super()._get_attributes_for_clone()
         d.update(
-                algo=self._algo,
-                flash_class=self._flash_class,
-                flm=self._flm,
-                )
+            algo=self._algo,
+            flash_class=self._flash_class,
+            flm=self._flm,
+        )
         return d
 
     # Need to redefine __hash__ since we redefine __eq__.
@@ -582,43 +639,59 @@ class FlashRegion(MemoryRegion):
 
     def __eq__(self, other: "FlashRegion") -> bool:
         # Include flash algo, class, and flm in equality test.
-        return super().__eq__(other) and self.algo == other.algo and \
-                self.flash_class == other.flash_class and self.flm == other.flm
+        return (
+            super().__eq__(other)
+            and self.algo == other.algo
+            and self.flash_class == other.flash_class
+            and self.flm == other.flm
+        )
 
     def __repr__(self) -> str:
-        return "<%s@0x%x name=%s type=%s start=0x%x end=0x%x length=0x%x access=%s blocksize=0x%x>" % (
-                self.__class__.__name__, id(self), self.name, self.type, self.start, self.end,
-                self.length, self.access, self.blocksize)
+        return (
+            "<%s@0x%x name=%s type=%s start=0x%x end=0x%x length=0x%x access=%s blocksize=0x%x>"
+            % (
+                self.__class__.__name__,
+                id(self),
+                self.name,
+                self.type,
+                self.start,
+                self.end,
+                self.length,
+                self.access,
+                self.blocksize,
+            )
+        )
+
 
 class DeviceRegion(MemoryRegion):
     """@brief Device or peripheral memory."""
 
     # Default attribute values for device regions.
     DEFAULT_ATTRS = MemoryRegion.DEFAULT_ATTRS.copy()
-    DEFAULT_ATTRS.update({
-        'access': 'rw', # By default device regions are not executable.
-        'is_cacheable': False,
-        'is_testable': False,
-        })
+    DEFAULT_ATTRS.update(
+        {
+            "access": "rw",  # By default device regions are not executable.
+            "is_cacheable": False,
+            "is_testable": False,
+        }
+    )
 
     def __init__(
-                self,
-                start: int = 0,
-                end: int = 0,
-                length: Optional[int] = None,
-                **attrs: Any
-            ) -> None:
-        attrs['type'] = MemoryType.DEVICE
+        self, start: int = 0, end: int = 0, length: Optional[int] = None, **attrs: Any
+    ) -> None:
+        attrs["type"] = MemoryType.DEVICE
         super().__init__(start=start, end=end, length=length, **attrs)
+
 
 ## @brief Map from memory type to class.
 MEMORY_TYPE_CLASS_MAP: Dict[MemoryType, Type[MemoryRegion]] = {
-        MemoryType.OTHER:   MemoryRegion,
-        MemoryType.RAM:     RamRegion,
-        MemoryType.ROM:     RomRegion,
-        MemoryType.FLASH:   FlashRegion,
-        MemoryType.DEVICE:  DeviceRegion,
-    }
+    MemoryType.OTHER: MemoryRegion,
+    MemoryType.RAM: RamRegion,
+    MemoryType.ROM: RomRegion,
+    MemoryType.FLASH: FlashRegion,
+    MemoryType.DEVICE: DeviceRegion,
+}
+
 
 class MemoryMap(MemoryRangeBase, collections.abc.Sequence):
     """@brief Memory map consisting of memory regions.
@@ -650,10 +723,10 @@ class MemoryMap(MemoryRangeBase, collections.abc.Sequence):
     _region_validator: Callable[[MemoryRegion], bool]
 
     def __init__(
-            self,
-            *more_regions: Union[Sequence[MemoryRegion], MemoryRegion],
-            **kwargs: Any,
-            ) -> None:
+        self,
+        *more_regions: Union[Sequence[MemoryRegion], MemoryRegion],
+        **kwargs: Any,
+    ) -> None:
         """@brief Constructor.
 
         All parameters passed to the constructor are assumed to be MemoryRegion instances, and
@@ -672,12 +745,12 @@ class MemoryMap(MemoryRangeBase, collections.abc.Sequence):
         """
         MemoryRangeBase.__init__(
             self,
-            start=kwargs.get('start', 0),
-            end=kwargs.get('end', 0xffffffff),
-            length=kwargs.get('length')
+            start=kwargs.get("start", 0),
+            end=kwargs.get("end", 0xFFFFFFFF),
+            length=kwargs.get("length"),
         )
         self._regions = []
-        self._region_validator = kwargs.get('region_validator', lambda r: True)
+        self._region_validator = kwargs.get("region_validator", lambda r: True)
         self.add_regions(*more_regions)
 
     @property
@@ -707,7 +780,9 @@ class MemoryMap(MemoryRangeBase, collections.abc.Sequence):
         """
         return MemoryMap(*[copy.copy(r) for r in self.regions])
 
-    def add_regions(self, *more_regions: Union[Sequence[MemoryRegion], MemoryRegion]) -> None:
+    def add_regions(
+        self, *more_regions: Union[Sequence[MemoryRegion], MemoryRegion]
+    ) -> None:
         """@brief Add multiple regions to the memory map.
 
         There are two options for passing the list of regions to be added. The first is to pass
@@ -747,13 +822,19 @@ class MemoryMap(MemoryRangeBase, collections.abc.Sequence):
         # Check for an existing region with the same name. Multiple unnamed regions are allowed.
         existing_names = [r.name for r in self._regions if r]
         if new_region.name and (new_region.name in existing_names):
-            new_region = new_region.clone_with_changes(name=uniquify_name(new_region.name, existing_names))
+            new_region = new_region.clone_with_changes(
+                name=uniquify_name(new_region.name, existing_names)
+            )
 
         # Validate the region.
         if not self.contains_range(new_region):
-            raise ValueError(f"attempt add region {new_region} failed because it is out of bounds")
+            raise ValueError(
+                f"attempt add region {new_region} failed because it is out of bounds"
+            )
         if not self._region_validator(new_region):
-            raise ValueError(f"attempt add region {new_region} failed because validator returned False")
+            raise ValueError(
+                f"attempt add region {new_region} failed because validator returned False"
+            )
 
         new_region.map = self
         self._regions.append(new_region)
@@ -802,12 +883,12 @@ class MemoryMap(MemoryRangeBase, collections.abc.Sequence):
         return self.get_region_for_address(address) is not None
 
     def get_contained_regions(
-                self,
-                start: Union[int, "MemoryRangeBase"],
-                end: Optional[int] = None,
-                length: Optional[int] = None,
-                range: Optional["MemoryRangeBase"] = None
-            ) -> List[MemoryRegion]:
+        self,
+        start: Union[int, "MemoryRangeBase"],
+        end: Optional[int] = None,
+        length: Optional[int] = None,
+        range: Optional["MemoryRangeBase"] = None,
+    ) -> List[MemoryRegion]:
         """@brief Get all regions fully contained by an address range.
 
         @param self
@@ -822,12 +903,12 @@ class MemoryMap(MemoryRangeBase, collections.abc.Sequence):
         return [r for r in self._regions if r.contained_by_range(start, end)]
 
     def get_intersecting_regions(
-                self,
-                start: Union[int, "MemoryRangeBase"],
-                end: Optional[int] = None,
-                length: Optional[int] = None,
-                range: Optional["MemoryRangeBase"] = None
-            ) -> List[MemoryRegion]:
+        self,
+        start: Union[int, "MemoryRangeBase"],
+        end: Optional[int] = None,
+        length: Optional[int] = None,
+        range: Optional["MemoryRangeBase"] = None,
+    ) -> List[MemoryRegion]:
         """@brief Get all regions intersected by an address range.
 
         @param self
@@ -927,7 +1008,3 @@ class MemoryMap(MemoryRangeBase, collections.abc.Sequence):
 
     def __repr__(self) -> str:
         return "<MemoryMap@0x%08x regions=%s>" % (id(self), repr(self._regions))
-
-
-
-

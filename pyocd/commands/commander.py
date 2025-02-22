@@ -20,13 +20,13 @@ import io
 import logging
 import os
 import traceback
-from typing import (IO, Optional, Sequence, TYPE_CHECKING, Union)
+from typing import IO, Optional, Sequence, TYPE_CHECKING, Union
 
 from ..core.helpers import ConnectHelper
-from ..core import (exceptions, session)
+from ..core import exceptions, session
 from ..probe.shared_probe_proxy import SharedDebugProbeProxy
 from ..utility.cmdline import convert_session_options
-from ..commands.repl import (PyocdRepl, ToolExitException)
+from ..commands.repl import PyocdRepl, ToolExitException
 from ..commands.execution_context import CommandExecutionContext
 
 if TYPE_CHECKING:
@@ -36,6 +36,7 @@ LOG = logging.getLogger(__name__)
 
 ## Default SWD clock in Hz.
 DEFAULT_CLOCK_FREQ_HZ = 1000000
+
 
 class PyOCDCommander:
     """@brief Manages the commander interface.
@@ -55,20 +56,18 @@ class PyOCDCommander:
     CommandsListType = Sequence[Union[str, IO[str]]]
 
     ## Commands that can run without requiring a connection.
-    _CONNECTIONLESS_COMMANDS = ('list', 'help', 'exit')
+    _CONNECTIONLESS_COMMANDS = ("list", "help", "exit")
 
     def __init__(
-                self,
-                args: "argparse.Namespace",
-                cmds: Optional[CommandsListType] = None
-            ) -> None:
+        self, args: "argparse.Namespace", cmds: Optional[CommandsListType] = None
+    ) -> None:
         """@brief Constructor."""
         # Read command-line arguments.
         self.args = args
         self.cmds: PyOCDCommander.CommandsListType = cmds or []
 
         self.context = CommandExecutionContext(no_init=self.args.no_init)
-        self.context.command_set.add_command_group('commander')
+        self.context.command_set.add_command_group("commander")
         self.session: Optional[session.Session] = None
         self.exit_code: int = 0
 
@@ -101,7 +100,9 @@ class PyOCDCommander:
                             status = "locked"
                         else:
                             try:
-                                status = self.session.target.get_state().name.capitalize()
+                                status = (
+                                    self.session.target.get_state().name.capitalize()
+                                )
                             except (AttributeError, KeyError):
                                 status = "<no core>"
                     except exceptions.TransferFaultError:
@@ -111,9 +112,14 @@ class PyOCDCommander:
                     status = "no init mode"
 
                 # Say what we're connected to.
-                print(colorama.Fore.GREEN + f"Connected to {self.session.target.part_number} " +
-                        colorama.Fore.CYAN + f"[{status}]" +
-                        colorama.Style.RESET_ALL + f": {self.session.board.unique_id}")
+                print(
+                    colorama.Fore.GREEN
+                    + f"Connected to {self.session.target.part_number} "
+                    + colorama.Fore.CYAN
+                    + f"[{status}]"
+                    + colorama.Style.RESET_ALL
+                    + f": {self.session.board.unique_id}"
+                )
 
                 # Run the REPL interface.
                 console = PyocdRepl(self.context)
@@ -148,7 +154,10 @@ class PyOCDCommander:
             else:
                 assert isinstance(args, str)
 
-                if not ((len(args) == 1) and (args[0].lower() in self._CONNECTIONLESS_COMMANDS)):
+                if not (
+                    (len(args) == 1)
+                    and (args[0].lower() in self._CONNECTIONLESS_COMMANDS)
+                ):
                     return True
 
         # No command was found that needs a connection.
@@ -174,28 +183,32 @@ class PyOCDCommander:
 
     def connect(self) -> bool:
         """@brief Connect to the probe."""
-        if (self.args.frequency is not None) and (self.args.frequency != DEFAULT_CLOCK_FREQ_HZ):
-            self.context.writei("Setting SWD clock to %d kHz", self.args.frequency // 1000)
+        if (self.args.frequency is not None) and (
+            self.args.frequency != DEFAULT_CLOCK_FREQ_HZ
+        ):
+            self.context.writei(
+                "Setting SWD clock to %d kHz", self.args.frequency // 1000
+            )
 
         options = convert_session_options(self.args.options)
 
         # Set connect mode. The --connect option takes precedence when set. Then, if --halt is set
         # then the connect mode is halt. If connect_mode is set through -O then use that.
         # Otherwise default to attach.
-        if hasattr(self.args, 'connect_mode') and self.args.connect_mode is not None:
+        if hasattr(self.args, "connect_mode") and self.args.connect_mode is not None:
             connect_mode = self.args.connect_mode
         elif self.args.halt:
-            connect_mode = 'halt'
-        elif 'connect_mode' in options:
+            connect_mode = "halt"
+        elif "connect_mode" in options:
             connect_mode = None
         else:
-            connect_mode = 'attach'
+            connect_mode = "attach"
 
         # Connect to board.
         probe = ConnectHelper.choose_probe(
-                        blocking=(not self.args.no_wait),
-                        unique_id=self.args.unique_id,
-                        )
+            blocking=(not self.args.no_wait),
+            unique_id=self.args.unique_id,
+        )
         if probe is None:
             self.exit_code = 3
             return False
@@ -204,22 +217,25 @@ class PyOCDCommander:
         probe_proxy = SharedDebugProbeProxy(probe)
 
         # Create the session.
-        self.session = session.Session(probe_proxy,
-                        project_dir=self.args.project_dir,
-                        config_file=self.args.config,
-                        user_script=self.args.script,
-                        no_config=self.args.no_config,
-                        pack=self.args.pack,
-                        target_override=self.args.target_override,
-                        connect_mode=connect_mode,
-                        frequency=self.args.frequency,
-                        options=options,
-                        option_defaults={
-                            'auto_unlock': False,
-                            'resume_on_disconnect': False,
-                            'debug.traceback': logging.getLogger('pyocd').isEnabledFor(logging.DEBUG),
-                            }
-                        )
+        self.session = session.Session(
+            probe_proxy,
+            project_dir=self.args.project_dir,
+            config_file=self.args.config,
+            user_script=self.args.script,
+            no_config=self.args.no_config,
+            pack=self.args.pack,
+            target_override=self.args.target_override,
+            connect_mode=connect_mode,
+            frequency=self.args.frequency,
+            options=options,
+            option_defaults={
+                "auto_unlock": False,
+                "resume_on_disconnect": False,
+                "debug.traceback": logging.getLogger("pyocd").isEnabledFor(
+                    logging.DEBUG
+                ),
+            },
+        )
 
         if not self._post_connect():
             self.exit_code = 4
@@ -251,10 +267,18 @@ class PyOCDCommander:
             self.session.open(init_board=not self.args.no_init)
         except exceptions.TransferFaultError as e:
             if not self.session.target.is_locked():
-                LOG.error("Transfer fault while initing board: %s", e, exc_info=self.session.log_tracebacks)
+                LOG.error(
+                    "Transfer fault while initing board: %s",
+                    e,
+                    exc_info=self.session.log_tracebacks,
+                )
                 return False
         except exceptions.Error as e:
-            LOG.error("Error while initing target: %s", e, exc_info=self.session.log_tracebacks)
+            LOG.error(
+                "Error while initing target: %s",
+                e,
+                exc_info=self.session.log_tracebacks,
+            )
             return False
 
         # Set elf file if provided.
@@ -263,8 +287,9 @@ class PyOCDCommander:
 
         # Handle a device with flash security enabled.
         if not self.args.no_init and self.session.target.is_locked():
-            self.context.write("Warning: Target is locked, limited operations available. Use 'unlock' "
-                                "command to mass erase and unlock, then execute 'reinit'.")
+            self.context.write(
+                "Warning: Target is locked, limited operations available. Use 'unlock' "
+                "command to mass erase and unlock, then execute 'reinit'."
+            )
 
         return True
-

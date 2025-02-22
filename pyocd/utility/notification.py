@@ -21,6 +21,7 @@ LOG = logging.getLogger(__name__)
 TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.CRITICAL)
 
+
 class Notification(object):
     """@brief Holds information about a notification to subscribers."""
 
@@ -42,7 +43,13 @@ class Notification(object):
         return self._data
 
     def __repr__(self):
-        return "<Notification@0x%08x event=%s source=%s data=%s>" % (id(self), repr(self.event), repr(self.source), repr(self.data))
+        return "<Notification@0x%08x event=%s source=%s data=%s>" % (
+            id(self),
+            repr(self.event),
+            repr(self.source),
+            repr(self.data),
+        )
+
 
 class Notifier(object):
     """@brief Mix-in class that provides notification broadcast capabilities.
@@ -140,7 +147,9 @@ class Notifier(object):
             event_info = self._subscribers[event]
         except KeyError:
             # Nobody has subscribed to this event, so nothing to do.
-            TRACE.debug("Not sending notification because no subscribers: event=%s", event)
+            TRACE.debug(
+                "Not sending notification because no subscribers: event=%s", event
+            )
             return
 
         # Look up subscribers for this event + source combo.
@@ -153,17 +162,20 @@ class Notifier(object):
         # Create combined subscribers list. Exit if no subscribers matched.
         subscribers = event_info[0] + source_subscribers
         if not subscribers:
-            TRACE.debug("Not sending notification because no matching subscribers: event=%s", event)
+            TRACE.debug(
+                "Not sending notification because no matching subscribers: event=%s",
+                event,
+            )
             return
 
         # Create the notification object now that we know there are some subscribers.
         if source is None:
             source = self
         note = Notification(event, source, data)
-        TRACE.debug("Sending notification to %d subscribers: %s", len(subscribers), note)
+        TRACE.debug(
+            "Sending notification to %d subscribers: %s", len(subscribers), note
+        )
 
         # Tell everyone!
         for cb in subscribers:
             cb(note)
-
-

@@ -19,6 +19,7 @@ from typing import Optional
 
 from ...core.target import Target
 
+
 class Breakpoint:
     def __init__(self, provider):
         self.type: Target.BreakpointType = Target.BreakpointType.HW
@@ -28,10 +29,17 @@ class Breakpoint:
         self.provider: BreakpointProvider = provider
 
     def __repr__(self) -> str:
-        return "<%s@0x%08x type=%s addr=0x%08x>" % (self.__class__.__name__, id(self), self.type.name, self.addr)
+        return "<%s@0x%08x type=%s addr=0x%08x>" % (
+            self.__class__.__name__,
+            id(self),
+            self.type.name,
+            self.addr,
+        )
+
 
 class BreakpointProvider:
     """@brief Abstract base class for breakpoint providers."""
+
     def init(self) -> None:
         raise NotImplementedError()
 
@@ -64,6 +72,3 @@ class BreakpointProvider:
 
     def flush(self) -> None:
         pass
-
-
-

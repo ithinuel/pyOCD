@@ -30,6 +30,7 @@ APSR_MASK = 0xF80F0000
 EPSR_MASK = 0x0700FC00
 IPSR_MASK = 0x000001FF
 
+
 class CortexMCoreRegisterInfo(CoreRegisterInfo):
     """@brief Core register subclass for Cortex-M registers.
 
@@ -57,7 +58,7 @@ class CortexMCoreRegisterInfo(CoreRegisterInfo):
             try:
                 reg = cls._NAME_MAP[reg.lower()].index
             except KeyError as err:
-                raise KeyError('unknown core register name %s' % reg) from err
+                raise KeyError("unknown core register name %s" % reg) from err
         return reg
 
     @classmethod
@@ -96,14 +97,16 @@ class CortexMCoreRegisterInfo(CoreRegisterInfo):
             mask |= APSR_MASK
         return mask
 
+
 class CoreRegisterGroups:
     """@brief Namespace for lists of Cortex-M core register information."""
 
-    _I = CortexMCoreRegisterInfo # Reduce table width.
+    _I = CortexMCoreRegisterInfo  # Reduce table width.
 
     # For most registers, the index is the DCRSR register selector value. Those registers not directly
     # supported by the DCRSR have special values that are interpreted by the register read/write methods.
 
+    # fmt: off
     ## @brief Registers common to all M-profile cores.
     M_PROFILE_COMMON = [
         #  Name         index   bits    type            group       gdbnum  feature
@@ -255,16 +258,21 @@ class CoreRegisterGroups:
         _I('d14',       -0x5c,  64,     'ieee_double',  'double',   36,     "org.gnu.gdb.arm.vfp"),
         _I('d15',       -0x5e,  64,     'ieee_double',  'double',   37,     "org.gnu.gdb.arm.vfp"),
         ]
+    # fmt: on
 
-    del _I # Cleanup namespace.
+    del _I  # Cleanup namespace.
+
 
 # Build info map.
-CortexMCoreRegisterInfo.add_to_map(CoreRegisterGroups.M_PROFILE_COMMON
-            + CoreRegisterGroups.V7M_v8M_ML_ONLY
-            + CoreRegisterGroups.V8M_SEC_ONLY
-            + CoreRegisterGroups.V8M_ML_SEC_ONLY
-            + CoreRegisterGroups.V81M_MVE_ONLY
-            + CoreRegisterGroups.VFP_V5)
+CortexMCoreRegisterInfo.add_to_map(
+    CoreRegisterGroups.M_PROFILE_COMMON
+    + CoreRegisterGroups.V7M_v8M_ML_ONLY
+    + CoreRegisterGroups.V8M_SEC_ONLY
+    + CoreRegisterGroups.V8M_ML_SEC_ONLY
+    + CoreRegisterGroups.V81M_MVE_ONLY
+    + CoreRegisterGroups.VFP_V5
+)
+
 
 def index_for_reg(name: str) -> int:
     """@brief Utility to easily convert register name to index."""

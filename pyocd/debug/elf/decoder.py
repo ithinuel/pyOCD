@@ -25,16 +25,17 @@ import logging
 
 LOG = logging.getLogger(__name__)
 
-FunctionInfo = namedtuple('FunctionInfo', 'name subprogram low_pc high_pc')
-LineInfo = namedtuple('LineInfo', 'cu filename dirname line')
-SymbolInfo = namedtuple('SymbolInfo', 'name address size type')
+FunctionInfo = namedtuple("FunctionInfo", "name subprogram low_pc high_pc")
+LineInfo = namedtuple("LineInfo", "cu filename dirname line")
+SymbolInfo = namedtuple("SymbolInfo", "name address size type")
+
 
 class ElfSymbolDecoder(object):
     def __init__(self, elf):
         assert isinstance(elf, ELFFile)
         self.elffile = elf
 
-        self.symtab = self.elffile.get_section_by_name('.symtab')
+        self.symtab = self.elffile.get_section_by_name(".symtab")
         self.symcount = self.symtab.num_symbols()
         self.symbol_dict = {}
         self.symbol_tree = None
@@ -63,12 +64,12 @@ class ElfSymbolDecoder(object):
         symbols = self.symtab.iter_symbols()
         for symbol in symbols:
             # Only look for functions and objects.
-            sym_type = symbol.entry['st_info']['type']
-            if sym_type not in ['STT_FUNC', 'STT_OBJECT']:
+            sym_type = symbol.entry["st_info"]["type"]
+            if sym_type not in ["STT_FUNC", "STT_OBJECT"]:
                 continue
 
-            sym_value = symbol.entry['st_value']
-            sym_size = symbol.entry['st_size']
+            sym_value = symbol.entry["st_value"]
+            sym_size = symbol.entry["st_size"]
 
             # Cannot put an empty interval into the tree, so ensure symbols have
             # at least a size of 1.
@@ -76,30 +77,33 @@ class ElfSymbolDecoder(object):
             if sym_size == 0:
                 sym_size = 1
 
-            syminfo = SymbolInfo(name=symbol.name, address=sym_value, size=real_sym_size, type=sym_type)
+            syminfo = SymbolInfo(
+                name=symbol.name, address=sym_value, size=real_sym_size, type=sym_type
+            )
 
             # Add to symbol dict.
             self.symbol_dict[symbol.name] = syminfo
 
             # Add to symbol tree.
-            self.symbol_tree.addi(sym_value, sym_value+sym_size, syminfo)
+            self.symbol_tree.addi(sym_value, sym_value + sym_size, syminfo)
 
     def _process_arm_type_symbols(self):
         pass
-#         type_symbols = self._get_arm_type_symbol_iter()
-#         map(print, imap(lambda x:"%s : 0x%x" % (x.name, x['st_value']), type_symbols))
+
+    #         type_symbols = self._get_arm_type_symbol_iter()
+    #         map(print, imap(lambda x:"%s : 0x%x" % (x.name, x['st_value']), type_symbols))
 
     def _get_arm_type_symbol_iter(self):
         # Scan until we find $m symbol.
         i = 1
         while i < self.symcount:
             symbol = self.symtab.get_symbol(i)
-            if symbol.name == '$m':
+            if symbol.name == "$m":
                 break
             i += 1
         if i >= self.symcount:
             return
-        n = symbol['st_value']
+        n = symbol["st_value"]
         return islice(self.symtab.iter_symbols(), i, n)
 
 
@@ -135,14 +139,16 @@ class DwarfAddressDecoder(object):
 
     def _get_subprograms(self):
         for CU in self.dwarfinfo.iter_CUs():
-            self.subprograms.extend([d for d in CU.iter_DIEs() if d.tag == 'DW_TAG_subprogram'])
+            self.subprograms.extend(
+                [d for d in CU.iter_DIEs() if d.tag == "DW_TAG_subprogram"]
+            )
 
     def _build_function_search_tree(self):
         for prog in self.subprograms:
             try:
-                name = prog.attributes['DW_AT_name'].value
-                low_pc = prog.attributes['DW_AT_low_pc'].value
-                high_pc = prog.attributes['DW_AT_high_pc'].value
+                name = prog.attributes["DW_AT_name"].value
+                low_pc = prog.attributes["DW_AT_low_pc"].value
+                high_pc = prog.attributes["DW_AT_high_pc"].value
 
                 # Skip subprograms excluded from the link.
                 if low_pc == 0:
@@ -153,10 +159,12 @@ class DwarfAddressDecoder(object):
 
                 # If high_pc is not explicitly an address, then it's an offset from the
                 # low_pc value.
-                if prog.attributes['DW_AT_high_pc'].form != 'DW_FORM_addr':
+                if prog.attributes["DW_AT_high_pc"].form != "DW_FORM_addr":
                     high_pc = low_pc + high_pc
 
-                fninfo = FunctionInfo(name=name, subprogram=prog, low_pc=low_pc, high_pc=high_pc)
+                fninfo = FunctionInfo(
+                    name=name, subprogram=prog, low_pc=low_pc, high_pc=high_pc
+                )
 
                 self.function_tree.addi(low_pc, high_pc, fninfo)
             except KeyError:
@@ -173,8 +181,12 @@ class DwarfAddressDecoder(object):
                 #
                 # TODO: find a better way to determine the code is really not present and
                 #       doesn't have a real address of 0
-                if entry.is_extended and entry.command == DW_LNE_set_address \
-                        and len(entry.args) == 1 and entry.args[0] == 0:
+                if (
+                    entry.is_extended
+                    and entry.command == DW_LNE_set_address
+                    and len(entry.args) == 1
+                    and entry.args[0] == 0
+                ):
                     skipThisSequence = True
 
                 # We're interested in those entries where a new state is assigned
@@ -184,16 +196,20 @@ class DwarfAddressDecoder(object):
                 # Looking for a range of addresses in two consecutive states.
                 if prevstate and not skipThisSequence:
                     try:
-                        fileinfo = lineprog['file_entry'][prevstate.file - 1]
+                        fileinfo = lineprog["file_entry"][prevstate.file - 1]
                         filename = fileinfo.name
                         try:
-                            dirname = lineprog['include_directory'][fileinfo.dir_index - 1]
+                            dirname = lineprog["include_directory"][
+                                fileinfo.dir_index - 1
+                            ]
                         except IndexError:
                             dirname = ""
                     except IndexError:
                         filename = ""
                         dirname = ""
-                    info = LineInfo(cu=cu, filename=filename, dirname=dirname, line=prevstate.line)
+                    info = LineInfo(
+                        cu=cu, filename=filename, dirname=dirname, line=prevstate.line
+                    )
                     fromAddr = prevstate.address
                     toAddr = entry.state.address
                     try:
@@ -217,20 +233,45 @@ class DwarfAddressDecoder(object):
         for i, e in enumerate(lineprog.get_entries()):
             s = e.state
             if s is None:
-                LOG.debug("%d: cmd=%d ext=%d args=%s", i, e.command, int(e.is_extended), repr(e.args))
+                LOG.debug(
+                    "%d: cmd=%d ext=%d args=%s",
+                    i,
+                    e.command,
+                    int(e.is_extended),
+                    repr(e.args),
+                )
             else:
-                LOG.debug("%d: %06x %4d stmt=%1d block=%1d end=%d file=[%d]%s", i, s.address, s.line, s.is_stmt, int(s.basic_block), int(s.end_sequence), s.file, lineprog['file_entry'][s.file-1].name)
+                LOG.debug(
+                    "%d: %06x %4d stmt=%1d block=%1d end=%d file=[%d]%s",
+                    i,
+                    s.address,
+                    s.line,
+                    s.is_stmt,
+                    int(s.basic_block),
+                    int(s.end_sequence),
+                    s.file,
+                    lineprog["file_entry"][s.file - 1].name,
+                )
 
     def dump_subprograms(self):
         for prog in self.subprograms:
-            name = prog.attributes['DW_AT_name'].value
+            name = prog.attributes["DW_AT_name"].value
             try:
-                low_pc = prog.attributes['DW_AT_low_pc'].value
+                low_pc = prog.attributes["DW_AT_low_pc"].value
             except KeyError:
                 low_pc = 0
             try:
-                high_pc = prog.attributes['DW_AT_high_pc'].value
+                high_pc = prog.attributes["DW_AT_high_pc"].value
             except KeyError:
-                high_pc = 0xffffffff
-            filename = os.path.basename(prog._parent.attributes['DW_AT_name'].value.replace('\\', '/'))
-            LOG.debug("%s%s%08x %08x %s", name, (' ' * (50-len(name))), low_pc, high_pc, filename)
+                high_pc = 0xFFFFFFFF
+            filename = os.path.basename(
+                prog._parent.attributes["DW_AT_name"].value.replace("\\", "/")
+            )
+            LOG.debug(
+                "%s%s%08x %08x %s",
+                name,
+                (" " * (50 - len(name))),
+                low_pc,
+                high_pc,
+                filename,
+            )

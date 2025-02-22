@@ -45,38 +45,35 @@ CTRL_AP_ERASEALL_NOOPERATION = 0x0
 CTRL_AP_ERASEALL_ERASE = 0x1
 
 CTRL_IDR_EXPECTED = 0x2880000
-CTRL_IDR_VERSION_MASK = 0xf0000000
+CTRL_IDR_VERSION_MASK = 0xF0000000
 CTRL_IDR_VERSION_SHIFT = 28
 
 MASS_ERASE_TIMEOUT = 15.0
 
 LOG = logging.getLogger(__name__)
 
+
 def word_to_bytes(wrd):
     result = []
     for i in range(4):
-        result.append((wrd >> (8*i)) & 0xFF)
+        result.append((wrd >> (8 * i)) & 0xFF)
     return bytes(result)
 
-PACKAGE = {
-    0x2004 : "QI",
-    0x2000 : "QF",
-    0x2005 : "CK"
-}
+
+PACKAGE = {0x2004: "QI", 0x2000: "QF", 0x2005: "CK"}
 
 HARDENED_APPROTECT_REVISIONS = {
-    0x52805 : "B0",
-    0x52810 : "E0",
-    0x52811 : "B0",
-    0x52820 : "D0",
-    0x52833 : "B0",
-    0x52832 : "G0",
-    0x52840 : "F0"
+    0x52805: "B0",
+    0x52810: "E0",
+    0x52811: "B0",
+    0x52820: "D0",
+    0x52833: "B0",
+    0x52832: "G0",
+    0x52840: "F0",
 }
 
 
 class NRF52(CoreSightTarget):
-
     VENDOR = "Nordic Semiconductor"
 
     def __init__(self, session, memory_map=None):
@@ -89,18 +86,22 @@ class NRF52(CoreSightTarget):
 
         # Must check whether security is enabled, and potentially auto-unlock, before
         # any init tasks that require system bus access.
-        seq.wrap_task('discovery',
-            lambda seq: seq.insert_before('find_components',
-                              ('check_ctrl_ap_idr', self.check_ctrl_ap_idr),
-                              ('check_flash_security', self.check_flash_security),
-                          )
-            )
-        seq.wrap_task('discovery',
-            lambda seq: seq.insert_after('create_cores',
-                              ('check_part_info', self.check_part_info),
-                              ('persist_unlock', self.persist_unlock),
-                          )
-            )
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.insert_before(
+                "find_components",
+                ("check_ctrl_ap_idr", self.check_ctrl_ap_idr),
+                ("check_flash_security", self.check_flash_security),
+            ),
+        )
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.insert_after(
+                "create_cores",
+                ("check_part_info", self.check_part_info),
+                ("persist_unlock", self.persist_unlock),
+            ),
+        )
 
         return seq
 
@@ -109,9 +110,13 @@ class NRF52(CoreSightTarget):
 
         # Check CTRL-AP ID.
         if (self.ctrl_ap.idr & ~CTRL_IDR_VERSION_MASK) != CTRL_IDR_EXPECTED:
-            LOG.error("%s: bad CTRL-AP IDR (is 0x%08x)", self.part_number, self.ctrl_ap.idr)
+            LOG.error(
+                "%s: bad CTRL-AP IDR (is 0x%08x)", self.part_number, self.ctrl_ap.idr
+            )
 
-        ctrl_ap_version = (self.ctrl_ap.idr & CTRL_IDR_VERSION_MASK) >> CTRL_IDR_VERSION_SHIFT
+        ctrl_ap_version = (
+            self.ctrl_ap.idr & CTRL_IDR_VERSION_MASK
+        ) >> CTRL_IDR_VERSION_SHIFT
         LOG.debug("CTRL-AP version %d", ctrl_ap_version)
 
     def check_flash_security(self):
@@ -124,8 +129,11 @@ class NRF52(CoreSightTarget):
         """
 
         if self.is_locked():
-            if self.session.options.get('auto_unlock'):
-                LOG.warning("%s APPROTECT enabled: will try to unlock via mass erase", self.part_number)
+            if self.session.options.get("auto_unlock"):
+                LOG.warning(
+                    "%s APPROTECT enabled: will try to unlock via mass erase",
+                    self.part_number,
+                )
 
                 # Do the mass erase.
                 if not self.mass_erase():
@@ -136,12 +144,15 @@ class NRF52(CoreSightTarget):
                 self._discoverer._create_1_ap(AHB_AP_NUM)
 
             else:
-                LOG.warning("%s APPROTECT enabled: not automatically unlocking", self.part_number)
+                LOG.warning(
+                    "%s APPROTECT enabled: not automatically unlocking",
+                    self.part_number,
+                )
         else:
             LOG.info("%s not in secure state", self.part_number)
 
     def persist_unlock(self):
-        if self.session.options.get('auto_unlock') and self.hardened_approtect:
+        if self.session.options.get("auto_unlock") and self.hardened_approtect:
             # Write HwDisabled to UICR.APPROTECT
             self.write_uicr(0x10001208, 0x5A)
 
@@ -190,14 +201,17 @@ class NRF52(CoreSightTarget):
     def check_part_info(self):
         partno = self.read32(0x10000100)
         variant = self.read32(0x10000104)
-        variant = word_to_bytes(variant)[::-1].decode('ASCII', errors='ignore')
+        variant = word_to_bytes(variant)[::-1].decode("ASCII", errors="ignore")
         build_code = variant[2:]
         variant = variant[:2]
         package = self.read32(0x10000108)
         package = PACKAGE.get(package, "")
 
         hardened_approtect_min_revision = HARDENED_APPROTECT_REVISIONS.get(partno, None)
-        if hardened_approtect_min_revision and hardened_approtect_min_revision > build_code:
+        if (
+            hardened_approtect_min_revision
+            and hardened_approtect_min_revision > build_code
+        ):
             self.hardened_approtect = False
 
         LOG.info(f"This appears to be an nRF{partno:X} {package}{variant} {build_code}")

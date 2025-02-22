@@ -27,17 +27,23 @@ LOG = logging.getLogger(__name__)
 ## Path within the pyocd package to the generated zip containing builting SVD files.
 BUILTIN_SVD_DATA_PATH = "debug/svd/svd_data.zip"
 
+
 class SVDFile(object):
     @classmethod
     def from_builtin(cls, svd_name):
         try:
             zip_ref = importlib_resources.files("pyocd").joinpath(BUILTIN_SVD_DATA_PATH)
-            zip_stream = zip_ref.open('rb')
-            zip = zipfile.ZipFile(zip_stream, 'r')
+            zip_stream = zip_ref.open("rb")
+            zip = zipfile.ZipFile(zip_stream, "r")
             return SVDFile(zip.open(svd_name))
         except (KeyError, FileNotFoundError, zipfile.BadZipFile) as err:
             from ...core.session import Session
-            LOG.warning("unable to open builtin SVD file: %s", err, exc_info=Session.get_current().log_tracebacks)
+
+            LOG.warning(
+                "unable to open builtin SVD file: %s",
+                err,
+                exc_info=Session.get_current().log_tracebacks,
+            )
             return None
 
     def __init__(self, filename=None):
@@ -47,11 +53,12 @@ class SVDFile(object):
     def load(self):
         self.device = SVDParser.for_xml_file(self.filename).get_device()
 
+
 class SVDLoader(threading.Thread):
     """@brief Thread to read an SVD file in the background."""
 
     def __init__(self, svdFile, completionCallback):
-        super(SVDLoader, self).__init__(name='load-svd')
+        super(SVDLoader, self).__init__(name="load-svd")
         self.daemon = True
         self._svd_location = svdFile
         self._svd_device = None

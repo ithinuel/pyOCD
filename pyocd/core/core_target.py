@@ -14,13 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Optional, TYPE_CHECKING)
+from typing import Optional, TYPE_CHECKING
 
-from .target import (Target, TargetGraphNode)
+from .target import Target, TargetGraphNode
 
 if TYPE_CHECKING:
     from ..debug.context import DebugContext
     from ..debug.elf.elf import ELFBinaryFile
+
 
 class CoreTarget(TargetGraphNode):
     """@brief Target base class for CPU cores."""

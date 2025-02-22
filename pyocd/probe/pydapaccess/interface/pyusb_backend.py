@@ -32,7 +32,7 @@ from .common import (
     is_known_device_string,
     is_known_cmsis_dap_vid_pid,
     generate_device_unique_id,
-    )
+)
 from ..dap_access_api import DAPAccessIntf
 
 LOG = logging.getLogger(__name__)
@@ -42,6 +42,7 @@ TRACE.setLevel(logging.CRITICAL)
 try:
     import usb.core
     import usb.util
+
     try:
         from libusb_package import find as usb_find
     except ImportError:
@@ -65,8 +66,9 @@ class PyUSB(Interface):
         self.pid = dev.idProduct
         self.product_name = dev.product or f"{dev.idProduct:#06x}"
         self.vendor_name = dev.manufacturer or f"{dev.idVendor:#06x}"
-        self.serial_number = dev.serial_number \
-                or generate_device_unique_id(dev.idProduct, dev.idVendor, dev.bus, dev.address)
+        self.serial_number = dev.serial_number or generate_device_unique_id(
+            dev.idProduct, dev.idVendor, dev.bus, dev.address
+        )
         self.ep_out = None
         self.ep_in = None
         self.dev = None
@@ -92,13 +94,21 @@ class PyUSB(Interface):
         config = dev.get_active_configuration()
 
         # Get count of HID interfaces and create the matcher object
-        hid_interface_count = len(list(usb.util.find_descriptor(config, find_all=True, bInterfaceClass=USB_CLASS_HID)))
+        hid_interface_count = len(
+            list(
+                usb.util.find_descriptor(
+                    config, find_all=True, bInterfaceClass=USB_CLASS_HID
+                )
+            )
+        )
         matcher = MatchCmsisDapv1Interface(hid_interface_count)
 
         # Get CMSIS-DAPv1 interface
         interface = usb.util.find_descriptor(config, custom_match=matcher)
         if interface is None:
-            raise DAPAccessIntf.DeviceError(f"Probe {self.serial_number} has no CMSIS-DAPv1 interface")
+            raise DAPAccessIntf.DeviceError(
+                f"Probe {self.serial_number} has no CMSIS-DAPv1 interface"
+            )
         interface_number = interface.bInterfaceNumber
 
         # Find endpoints
@@ -113,20 +123,34 @@ class PyUSB(Interface):
         self.kernel_driver_was_attached = False
         try:
             if dev.is_kernel_driver_active(interface_number):
-                LOG.debug("Detaching Kernel Driver of Interface %d from USB device (VID=%04x PID=%04x).", interface_number, dev.idVendor, dev.idProduct)
+                LOG.debug(
+                    "Detaching Kernel Driver of Interface %d from USB device (VID=%04x PID=%04x).",
+                    interface_number,
+                    dev.idVendor,
+                    dev.idProduct,
+                )
                 dev.detach_kernel_driver(interface_number)
                 self.kernel_driver_was_attached = True
         except usb.core.USBError as e:
-            LOG.warning("USB Kernel Driver Detach Failed ([%s] %s). Attached driver may interfere with pyOCD operations.", e.errno, e.strerror)
+            LOG.warning(
+                "USB Kernel Driver Detach Failed ([%s] %s). Attached driver may interfere with pyOCD operations.",
+                e.errno,
+                e.strerror,
+            )
         except NotImplementedError:
             # Some implementations don't don't have kernel attach/detach
-            LOG.debug("Probe %s: USB kernel driver detaching is not supported. Attached HID driver may interfere with pyOCD operations.", self.serial_number)
+            LOG.debug(
+                "Probe %s: USB kernel driver detaching is not supported. Attached HID driver may interfere with pyOCD operations.",
+                self.serial_number,
+            )
 
         # Explicitly claim the interface
         try:
             usb.util.claim_interface(dev, interface_number)
         except usb.core.USBError as exc:
-            raise DAPAccessIntf.DeviceError(f"Unable to claim interface for probe {self.serial_number}") from exc
+            raise DAPAccessIntf.DeviceError(
+                f"Unable to claim interface for probe {self.serial_number}"
+            ) from exc
 
         # Update all class variables if we made it here
         self.ep_out = ep_out
@@ -158,8 +182,9 @@ class PyUSB(Interface):
             while not self.rx_stop_event.is_set():
                 self.read_sem.acquire()
                 if not self.rx_stop_event.is_set():
-                    read_data = self.ep_in.read(self.ep_in.wMaxPacketSize,
-                            timeout=self.DEFAULT_USB_TIMEOUT_MS).tobytes()
+                    read_data = self.ep_in.read(
+                        self.ep_in.wMaxPacketSize, timeout=self.DEFAULT_USB_TIMEOUT_MS
+                    ).tobytes()
 
                     # This trace log is commented out to reduce clutter, but left in to leave available
                     # when debugging rx_task issues.
@@ -186,7 +211,9 @@ class PyUSB(Interface):
             all_devices = usb_find(find_all=True, custom_match=FindDap())
         except usb.core.NoBackendError:
             if not PyUSB.did_show_no_libusb_warning:
-                LOG.warning("CMSIS-DAPv1 probes may not be detected because no libusb library was found.")
+                LOG.warning(
+                    "CMSIS-DAPv1 probes may not be detected because no libusb library was found."
+                )
                 PyUSB.did_show_no_libusb_warning = True
             return []
 
@@ -204,40 +231,56 @@ class PyUSB(Interface):
 
         # Trace output data before padding.
         if TRACE.isEnabledFor(logging.DEBUG):
-            TRACE.debug("  USB OUT> (%d) %s", len(data), ' '.join([f'{i:02x}' for i in data]))
+            TRACE.debug(
+                "  USB OUT> (%d) %s", len(data), " ".join([f"{i:02x}" for i in data])
+            )
 
         data.extend([0] * (report_size - len(data)))
 
         self.read_sem.release()
 
         if not self.ep_out:
-            bmRequestType = 0x21       # Host to device request of type Class of Recipient Interface
-            bmRequest = 0x09           # Set_REPORT (HID class-specific request for transferring data over EP0)
-            wValue = 0x200             # Issuing an OUT report
+            bmRequestType = (
+                0x21  # Host to device request of type Class of Recipient Interface
+            )
+            bmRequest = 0x09  # Set_REPORT (HID class-specific request for transferring data over EP0)
+            wValue = 0x200  # Issuing an OUT report
             wIndex = self.intf_number  # interface number for HID
-            self.dev.ctrl_transfer(bmRequestType, bmRequest, wValue, wIndex, data,
-                    timeout=self.DEFAULT_USB_TIMEOUT_MS)
+            self.dev.ctrl_transfer(
+                bmRequestType,
+                bmRequest,
+                wValue,
+                wIndex,
+                data,
+                timeout=self.DEFAULT_USB_TIMEOUT_MS,
+            )
         else:
             self.ep_out.write(data, timeout=self.DEFAULT_USB_TIMEOUT_MS)
 
     def read(self):
         """@brief Read data on the IN endpoint associated to the HID interface"""
         if self.closed:
-            return b''
+            return b""
         elif self._read_thread_did_exit:
-            raise DAPAccessIntf.DeviceError(f"Probe {self.serial_number} read thread exited unexpectedly") \
-                from self._read_thread_exception
+            raise DAPAccessIntf.DeviceError(
+                f"Probe {self.serial_number} read thread exited unexpectedly"
+            ) from self._read_thread_exception
 
         try:
             data = self.rcv_data.get(True, self.DEFAULT_USB_TIMEOUT_S)
         except queue.Empty:
-            raise DAPAccessIntf.DeviceError(f"Timeout reading from probe {self.serial_number}") from None
+            raise DAPAccessIntf.DeviceError(
+                f"Timeout reading from probe {self.serial_number}"
+            ) from None
 
         # Trace when the higher layer actually gets a packet previously read.
         if TRACE.isEnabledFor(logging.DEBUG):
             # Strip off trailing zero bytes to reduce clutter.
-            TRACE.debug("  USB RD < (%d) %s", len(data),
-                    ' '.join([f'{i:02x}' for i in bytes(data).rstrip(b'\x00')]))
+            TRACE.debug(
+                "  USB RD < (%d) %s",
+                len(data),
+                " ".join([f"{i:02x}" for i in bytes(data).rstrip(b"\x00")]),
+            )
 
         return data
 
@@ -250,15 +293,14 @@ class PyUSB(Interface):
         self.rx_stop_event.set()
         self.read_sem.release()
         self.thread.join()
-        self.rx_stop_event.clear() # Reset the stop event.
-        self.rcv_data = queue.SimpleQueue() # Recreate queue to ensure it's empty.
+        self.rx_stop_event.clear()  # Reset the stop event.
+        self.rcv_data = queue.SimpleQueue()  # Recreate queue to ensure it's empty.
         usb.util.release_interface(self.dev, self.intf_number)
         if self.kernel_driver_was_attached:
             try:
                 self.dev.attach_kernel_driver(self.intf_number)
             except Exception as exception:
-                LOG.warning('Exception attaching kernel driver: %s',
-                                str(exception))
+                LOG.warning("Exception attaching kernel driver: %s", str(exception))
         usb.util.dispose_resources(self.dev)
         self.ep_out = None
         self.ep_in = None
@@ -268,6 +310,7 @@ class PyUSB(Interface):
         self.thread = None
         self._read_thread_did_exit = False
         self._read_thread_exception = None
+
 
 class MatchCmsisDapv1Interface:
     """@brief Match class for finding CMSIS-DAPv1 interface.
@@ -291,15 +334,18 @@ class MatchCmsisDapv1Interface:
         """@brief Return True if this is a CMSIS-DAPv1 interface."""
         try:
             if self._hid_count > 1:
-                interface_name = usb.util.get_string(interface.device, interface.iInterface)
+                interface_name = usb.util.get_string(
+                    interface.device, interface.iInterface
+                )
 
                 # This tells us whether the interface is CMSIS-DAP, but not whether it's v1 or v2.
                 if (interface_name is None) or ("CMSIS-DAP" not in interface_name):
                     return False
 
             # Now check the interface class to distinguish v1 from v2.
-            if (interface.bInterfaceClass != USB_CLASS_HID) \
-                or (interface.bInterfaceSubClass != 0):
+            if (interface.bInterfaceClass != USB_CLASS_HID) or (
+                interface.bInterfaceSubClass != 0
+            ):
                 return False
 
             # Must have either 1 or 2 endpoints.
@@ -307,9 +353,11 @@ class MatchCmsisDapv1Interface:
                 return False
 
             endpoint_attrs = [
-                (usb.util.endpoint_direction(ep.bEndpointAddress),
-                 usb.util.endpoint_type(ep.bmAttributes))
-                 for ep in interface
+                (
+                    usb.util.endpoint_direction(ep.bEndpointAddress),
+                    usb.util.endpoint_type(ep.bmAttributes),
+                )
+                for ep in interface
             ]
 
             # Possible combinations of endpoints
@@ -317,11 +365,15 @@ class MatchCmsisDapv1Interface:
                 # One interrupt endpoint IN
                 [(usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_INTR)],
                 # Two interrupt endpoints, first one IN, second one OUT
-                [(usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_INTR),
-                 (usb.util.ENDPOINT_OUT, usb.util.ENDPOINT_TYPE_INTR)],
+                [
+                    (usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_INTR),
+                    (usb.util.ENDPOINT_OUT, usb.util.ENDPOINT_TYPE_INTR),
+                ],
                 # Two interrupt endpoints, first one OUT, second one IN
-                [(usb.util.ENDPOINT_OUT, usb.util.ENDPOINT_TYPE_INTR),
-                 (usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_INTR)],
+                [
+                    (usb.util.ENDPOINT_OUT, usb.util.ENDPOINT_TYPE_INTR),
+                    (usb.util.ENDPOINT_IN, usb.util.ENDPOINT_TYPE_INTR),
+                ],
             ]
             if endpoint_attrs not in ENDPOINT_ATTRS_ALLOWED:
                 return False
@@ -336,6 +388,7 @@ class MatchCmsisDapv1Interface:
             #
             # IndexError can be raised if an endpoint is missing.
             return False
+
 
 class FindDap:
     """@brief CMSIS-DAP match class to be used with usb.core.find"""
@@ -358,21 +411,31 @@ class FindDap:
 
             # Now read the product name string.
             device_string = dev.product
-            if ((device_string is None) or (not is_known_device_string(device_string))) and (not known_cmsis_dap):
+            if (
+                (device_string is None) or (not is_known_device_string(device_string))
+            ) and (not known_cmsis_dap):
                 return False
 
             # Get count of HID interfaces.
-            hid_interface_count = len(list(usb.util.find_descriptor(config, find_all=True, bInterfaceClass=USB_CLASS_HID)))
+            hid_interface_count = len(
+                list(
+                    usb.util.find_descriptor(
+                        config, find_all=True, bInterfaceClass=USB_CLASS_HID
+                    )
+                )
+            )
 
             # Find the CMSIS-DAPv1 interface.
             matcher = MatchCmsisDapv1Interface(hid_interface_count)
             cmsis_dap_interface = usb.util.find_descriptor(config, custom_match=matcher)
         except usb.core.USBError as error:
             if error.errno == errno.EACCES and platform.system() == "Linux":
-                msg = ("%s while trying to interrogate a USB device "
-                   "(VID=%04x PID=%04x). This can probably be remedied with a udev rule. "
-                   "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help." %
-                   (error, dev.idVendor, dev.idProduct))
+                msg = (
+                    "%s while trying to interrogate a USB device "
+                    "(VID=%04x PID=%04x). This can probably be remedied with a udev rule. "
+                    "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help."
+                    % (error, dev.idVendor, dev.idProduct)
+                )
                 # If we recognize this device as one that should be CMSIS-DAP, we can raise
                 # the level of the log message since it's almost certainly a permissions issue.
                 if known_cmsis_dap:
@@ -380,11 +443,25 @@ class FindDap:
                 else:
                     LOG.debug(msg)
             else:
-                LOG.debug("Error accessing USB device (VID=%04x PID=%04x): %s",
-                    dev.idVendor, dev.idProduct, error)
+                LOG.debug(
+                    "Error accessing USB device (VID=%04x PID=%04x): %s",
+                    dev.idVendor,
+                    dev.idProduct,
+                    error,
+                )
             return False
-        except (IndexError, NotImplementedError, ValueError, UnicodeDecodeError) as error:
-            LOG.debug("Error accessing USB device (VID=%04x PID=%04x): %s", dev.idVendor, dev.idProduct, error)
+        except (
+            IndexError,
+            NotImplementedError,
+            ValueError,
+            UnicodeDecodeError,
+        ) as error:
+            LOG.debug(
+                "Error accessing USB device (VID=%04x PID=%04x): %s",
+                dev.idVendor,
+                dev.idProduct,
+                error,
+            )
             return False
 
         if cmsis_dap_interface is None:
@@ -393,7 +470,9 @@ class FindDap:
             if dev.serial_number is None:
                 if self._serial == "":
                     return True
-                if self._serial == generate_device_unique_id(dev.idProduct, dev.idVendor, dev.bus, dev.address):
+                if self._serial == generate_device_unique_id(
+                    dev.idProduct, dev.idVendor, dev.bus, dev.address
+                ):
                     return True
             if self._serial != dev.serial_number:
                 return False

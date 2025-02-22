@@ -17,7 +17,7 @@
 
 import logging
 from copy import copy
-from typing import (Any, Callable, Dict, Iterator, List, Optional, Sequence, Set, Union)
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Set, Union
 
 from ..utility import conversion
 
@@ -26,6 +26,7 @@ LOG = logging.getLogger(__name__)
 # Core register related types.
 CoreRegisterNameOrNumberType = Union[str, int]
 CoreRegisterValueType = Union[int, float]
+
 
 class CoreRegisterInfo:
     """@brief Useful information about a core register.
@@ -70,18 +71,18 @@ class CoreRegisterInfo:
             else:
                 return cls._INDEX_MAP[reg]
         except KeyError as err:
-            raise KeyError('unknown core register %s' % reg) from err
+            raise KeyError("unknown core register %s" % reg) from err
 
     def __init__(
-                self,
-                name: str,
-                index: int,
-                bitsize: int,
-                reg_type: str,
-                reg_group: str,
-                reg_num: Optional[int] = None,
-                feature: Optional[str] = None
-                ) -> None:
+        self,
+        name: str,
+        index: int,
+        bitsize: int,
+        reg_type: str,
+        reg_group: str,
+        reg_num: Optional[int] = None,
+        feature: Optional[str] = None,
+    ) -> None:
         """@brief Constructor."""
         self._name = name
         self._index = index
@@ -134,12 +135,12 @@ class CoreRegisterInfo:
     @property
     def is_single_float_register(self) -> bool:
         """@brief Returns true for registers holding single-precision float values"""
-        return self.gdb_type == 'ieee_single'
+        return self.gdb_type == "ieee_single"
 
     @property
     def is_double_float_register(self) -> bool:
         """@brief Returns true for registers holding double-precision float values"""
-        return self.gdb_type == 'ieee_double'
+        return self.gdb_type == "ieee_double"
 
     def from_raw(self, value: int) -> "CoreRegisterValueType":
         """@brief Convert register value from raw (integer) to canonical type."""
@@ -174,7 +175,10 @@ class CoreRegisterInfo:
         return hash(self.index)
 
     def __repr__(self) -> str:
-        return "<{}@{:#x} {}={} {}-bit>".format(self.__class__.__name__, id(self), self.name, self.index, self.bitsize)
+        return "<{}@{:#x} {}={} {}-bit>".format(
+            self.__class__.__name__, id(self), self.name, self.index, self.bitsize
+        )
+
 
 class CoreRegistersIndex:
     """@brief Class to hold indexes of available core registers.
@@ -216,7 +220,9 @@ class CoreRegistersIndex:
         """@brief Dict of (register gdb feature) -> List[CoreRegisterInfo]."""
         return self._by_feature
 
-    def iter_matching(self, predicate: Callable[[CoreRegisterInfo], bool]) -> Iterator[CoreRegisterInfo]:
+    def iter_matching(
+        self, predicate: Callable[[CoreRegisterInfo], bool]
+    ) -> Iterator[CoreRegisterInfo]:
         """@brief Iterate over registers matching a given predicate callable.
         @param self The object.
         @param predicate Callable accepting a single argument, a CoreRegisterInfo, and returning a boolean.
@@ -242,4 +248,3 @@ class CoreRegistersIndex:
                     self._by_feature[reg_copy.gdb_feature].append(reg_copy)
                 except KeyError:
                     self._by_feature[reg_copy.gdb_feature] = [reg_copy]
-

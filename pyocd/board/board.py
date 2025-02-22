@@ -17,10 +17,10 @@
 # limitations under the License.
 
 import logging
-from typing import (Any, Optional, TYPE_CHECKING)
+from typing import Any, Optional, TYPE_CHECKING
 
 from ..core import exceptions
-from ..target import (TARGET, normalise_target_type_name)
+from ..target import TARGET, normalise_target_type_name
 from ..target.pack import pack_target
 from ..utility.graph import GraphNode
 
@@ -30,17 +30,20 @@ if TYPE_CHECKING:
 
 LOG = logging.getLogger(__name__)
 
+
 class Board(GraphNode):
     """@brief Represents the board containing the target and associated components.
 
     The board is the root of the runtime object graph. Responsible for creating the Target instance
     corresponding to the indicated target type name.
     """
-    def __init__(self,
-            session: "Session",
-            target: Optional[str] = None,
-            board_info: Optional["BoardInfo"] = None,
-            ) -> None:
+
+    def __init__(
+        self,
+        session: "Session",
+        target: Optional[str] = None,
+        board_info: Optional["BoardInfo"] = None,
+    ) -> None:
         """@brief Constructor
 
         This method is responsible for selecting the SoCTarget subclass for the SoC, implementing the target
@@ -65,22 +68,24 @@ class Board(GraphNode):
 
         # Use the session option if no target type was given to us.
         if target is None:
-            if session.options.is_set('target_override'):
-                target = session.options.get('target_override')
+            if session.options.is_set("target_override"):
+                target = session.options.get("target_override")
             elif board_info:
                 target = board_info.target
 
         # As a last resort, default the target to 'cortex_m'.
         if target is None:
-            target = 'cortex_m'
+            target = "cortex_m"
 
             # Log a helpful warning when defaulting to the generic cortex_m target.
-            if session.options.get('warning.cortex_m_default'):
-                LOG.warning("Generic 'cortex_m' target type is selected by default; is this "
-                            "intentional? You will be able to debug most devices, but not program "
-                            "flash. To set the target type use the '--target' argument or "
-                            "'target_override' option. Use 'pyocd list --targets' to see available "
-                            "targets types.")
+            if session.options.get("warning.cortex_m_default"):
+                LOG.warning(
+                    "Generic 'cortex_m' target type is selected by default; is this "
+                    "intentional? You will be able to debug most devices, but not program "
+                    "flash. To set the target type use the '--target' argument or "
+                    "'target_override' option. Use 'pyocd list --targets' to see available "
+                    "targets types."
+                )
 
         assert target is not None
 
@@ -88,20 +93,23 @@ class Board(GraphNode):
         target = normalise_target_type_name(target)
 
         # Write the effective target type back to options if it's different.
-        if target != session.options.get('target_override'):
-            session.options['target_override'] = target
+        if target != session.options.get("target_override"):
+            session.options["target_override"] = target
 
         self._session = session
         self._target_type = target
         self._info = board_info
-        self._test_binary = board_info.binary if (board_info and board_info.binary) \
-                else session.options.get('test_binary')
+        self._test_binary = (
+            board_info.binary
+            if (board_info and board_info.binary)
+            else session.options.get("test_binary")
+        )
         self._delegate = None
         self._inited = False
 
         # Create targets from provided CMSIS pack.
-        if session.options['pack'] is not None:
-            pack_target.PackTargets.populate_targets_from_pack(session.options['pack'])
+        if session.options["pack"] is not None:
+            pack_target.PackTargets.populate_targets_from_pack(session.options["pack"])
 
         # Create targets from the cmsis-pack-manager cache.
         if self._target_type not in TARGET:
@@ -115,17 +123,21 @@ class Board(GraphNode):
                 f"Target type {self._target_type} not recognized. Use 'pyocd list --targets' to see currently "
                 "available target types. "
                 "See <https://pyocd.io/docs/target_support.html> "
-                "for how to install additional target support.") from exc
+                "for how to install additional target support."
+            ) from exc
 
         # Tell the user what target type is selected.
         LOG.info("Target type is %s", self._target_type)
 
-        self._name = board_info.name if (board_info and board_info.name) \
-                else f"Generic {self.target_type} board"
+        self._name = (
+            board_info.name
+            if (board_info and board_info.name)
+            else f"Generic {self.target_type} board"
+        )
         self._vendor = board_info.vendor if (board_info and board_info.vendor) else ""
 
         # Standard graph node name.
-        self.node_name = 'board'
+        self.node_name = "board"
 
         self.add_child(self.target)
 
@@ -136,7 +148,7 @@ class Board(GraphNode):
             self.delegate = self.session.delegate
 
         # Delegate pre-init hook.
-        if (self.delegate is not None) and hasattr(self.delegate, 'will_connect'):
+        if (self.delegate is not None) and hasattr(self.delegate, "will_connect"):
             self.delegate.will_connect(board=self)
 
         # Init the target.
@@ -144,14 +156,14 @@ class Board(GraphNode):
         self._inited = True
 
         # Delegate post-init hook.
-        if (self.delegate is not None) and hasattr(self.delegate, 'did_connect'):
+        if (self.delegate is not None) and hasattr(self.delegate, "did_connect"):
             self.delegate.did_connect(board=self)
 
     def uninit(self) -> None:
         """@brief Uninitialize the board."""
         if self._inited:
             LOG.debug("uninit board %s", self)
-            resume = self.session.options.get('resume_on_disconnect')
+            resume = self.session.options.get("resume_on_disconnect")
             self.target.disconnect(resume)
             self._inited = False
 

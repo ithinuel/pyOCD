@@ -16,11 +16,12 @@
 # limitations under the License.
 
 import colorama
-from colorama import (Fore, Style)
+from colorama import Fore, Style
 import logging
 from shutil import get_terminal_size
 import sys
-from typing import (IO, Optional)
+from typing import IO, Optional
+
 
 class ColorFormatter(logging.Formatter):
     """@brief Log formatter that applies colours based on the record's log level."""
@@ -29,26 +30,26 @@ class ColorFormatter(logging.Formatter):
 
     ## Colors for the log level name.
     LEVEL_COLORS = {
-            'CRITICAL': Style.BRIGHT + Fore.LIGHTRED_EX,
-            'ERROR': Fore.LIGHTRED_EX,
-            'WARNING': Fore.LIGHTYELLOW_EX,
-            'INFO': Fore.CYAN,
-            'DEBUG': Style.DIM,
-        }
+        "CRITICAL": Style.BRIGHT + Fore.LIGHTRED_EX,
+        "ERROR": Fore.LIGHTRED_EX,
+        "WARNING": Fore.LIGHTYELLOW_EX,
+        "INFO": Fore.CYAN,
+        "DEBUG": Style.DIM,
+    }
 
     ## Colors for the rest of the log message.
     MESSAGE_COLORS = {
-            'CRITICAL': Fore.LIGHTRED_EX,
-            'ERROR': Fore.RED,
-            'WARNING': Fore.YELLOW,
-            'DEBUG': Style.DIM + Fore.LIGHTWHITE_EX,
-        }
+        "CRITICAL": Fore.LIGHTRED_EX,
+        "ERROR": Fore.RED,
+        "WARNING": Fore.YELLOW,
+        "DEBUG": Style.DIM + Fore.LIGHTWHITE_EX,
+    }
 
     ## Fixed maximum length of the log level name in log messages.
     MAX_LEVELNAME_WIDTH = 1
 
     def __init__(self, msg, use_color: bool, is_tty: bool) -> None:
-        super().__init__(msg, style='{')
+        super().__init__(msg, style="{")
         self._use_color = use_color
         self._is_tty = is_tty
 
@@ -67,10 +68,10 @@ class ColorFormatter(logging.Formatter):
 
         # Add colors to the record.
         if self._use_color:
-            record.lvlcolor = self.LEVEL_COLORS.get(record.levelname, '')
+            record.lvlcolor = self.LEVEL_COLORS.get(record.levelname, "")
 
             # Colorise the line.
-            record.msgcolor = self.MESSAGE_COLORS.get(record.levelname, '')
+            record.msgcolor = self.MESSAGE_COLORS.get(record.levelname, "")
 
             # Fixed colors.
             record.timecolor = Fore.BLUE
@@ -86,7 +87,9 @@ class ColorFormatter(logging.Formatter):
         record.message = record.getMessage()
 
         # Add levelname alignment to record.
-        record.levelname_align = " " * max(self.MAX_LEVELNAME_WIDTH - len(record.levelname), 0)
+        record.levelname_align = " " * max(
+            self.MAX_LEVELNAME_WIDTH - len(record.levelname), 0
+        )
         record.levelnamewidth = self.MAX_LEVELNAME_WIDTH
 
         # Let superclass handle formatting.
@@ -94,7 +97,9 @@ class ColorFormatter(logging.Formatter):
 
         # Append uncolored exception/stack info.
         if exc_info:
-            log_msg += "\n" + Style.DIM + self.formatException(exc_info) + Style.RESET_ALL
+            log_msg += (
+                "\n" + Style.DIM + self.formatException(exc_info) + Style.RESET_ALL
+            )
         if stack_info:
             log_msg += "\n" + Style.DIM + self.formatStack(stack_info) + Style.RESET_ALL
 
@@ -102,11 +107,11 @@ class ColorFormatter(logging.Formatter):
 
 
 def build_color_logger(
-            level: int = logging.INFO,
-            color_setting: str = 'auto',
-            stream: Optional[IO[str]] = None,
-            is_tty: Optional[bool] = None,
-        ) -> logging.Logger:
+    level: int = logging.INFO,
+    color_setting: str = "auto",
+    stream: Optional[IO[str]] = None,
+    is_tty: Optional[bool] = None,
+) -> logging.Logger:
     """@brief Sets up color logging for the root logger.
 
     @param level Log level of the root logger.
@@ -119,8 +124,8 @@ def build_color_logger(
     if stream is None:
         stream = sys.stderr
     if is_tty is None:
-        stdout_is_tty = sys.stdout.isatty() if hasattr(sys.stdout, 'isatty') else False
-        stderr_is_tty = sys.stderr.isatty() if hasattr(sys.stderr, 'isatty') else False
+        stdout_is_tty = sys.stdout.isatty() if hasattr(sys.stdout, "isatty") else False
+        stderr_is_tty = sys.stderr.isatty() if hasattr(sys.stderr, "isatty") else False
         is_tty = stdout_is_tty and stderr_is_tty
     use_color = (color_setting == "always") or (color_setting == "auto" and is_tty)
 
@@ -140,4 +145,3 @@ def build_color_logger(
     root_logger.setLevel(level)
 
     return root_logger
-

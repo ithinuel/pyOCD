@@ -22,6 +22,7 @@ from .debug_probe import DebugProbe
 ## @brief Dictionary of loaded probe plugins indexed by name.
 PROBE_CLASSES = {}
 
+
 class DebugProbeAggregator(object):
     """@brief Simple class to enable collecting probes of all supported probe types."""
 
@@ -30,7 +31,7 @@ class DebugProbeAggregator(object):
         """@brief Return probe classes to query based on the unique ID string."""
         probe_type = None
         if unique_id is not None:
-            fields = unique_id.split(':', 1)
+            fields = unique_id.split(":", 1)
             if len(fields) > 1:
                 probe_type = fields[0].lower()
                 unique_id = fields[1]
@@ -39,15 +40,21 @@ class DebugProbeAggregator(object):
             klasses = PROBE_CLASSES.values()
         else:
             # Perform a case-insensitive match.
-            klasses = [PROBE_CLASSES[k] for k in PROBE_CLASSES if k.lower() == probe_type]
+            klasses = [
+                PROBE_CLASSES[k] for k in PROBE_CLASSES if k.lower() == probe_type
+            ]
             if not klasses:
-                raise exceptions.Error("unknown debug probe type '{}'".format(probe_type))
+                raise exceptions.Error(
+                    "unknown debug probe type '{}'".format(probe_type)
+                )
 
         return klasses, unique_id, (probe_type is not None)
 
     @staticmethod
     def get_all_connected_probes(unique_id=None):
-        klasses, unique_id, is_explicit = DebugProbeAggregator._get_probe_classes(unique_id)
+        klasses, unique_id, is_explicit = DebugProbeAggregator._get_probe_classes(
+            unique_id
+        )
 
         probes = []
 
@@ -65,13 +72,17 @@ class DebugProbeAggregator(object):
         # Filter by unique ID.
         if unique_id is not None:
             unique_id = unique_id.lower()
-            probes = [probe for probe in probes if (unique_id in probe.unique_id.lower())]
+            probes = [
+                probe for probe in probes if (unique_id in probe.unique_id.lower())
+            ]
 
         return probes
 
     @classmethod
     def get_probe_with_id(cls, unique_id):
-        klasses, unique_id, is_explicit = DebugProbeAggregator._get_probe_classes(unique_id)
+        klasses, unique_id, is_explicit = DebugProbeAggregator._get_probe_classes(
+            unique_id
+        )
 
         for cls in klasses:
             probe = cls.get_probe_with_id(unique_id, is_explicit)
@@ -79,5 +90,6 @@ class DebugProbeAggregator(object):
                 return probe
         return None
 
+
 # Load plugins when this module is loaded.
-load_plugin_classes_of_type('pyocd.probe', PROBE_CLASSES, DebugProbe)
+load_plugin_classes_of_type("pyocd.probe", PROBE_CLASSES, DebugProbe)

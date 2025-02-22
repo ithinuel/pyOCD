@@ -18,6 +18,7 @@ import pytest
 
 from pyocd.utility.graph import GraphNode
 
+
 class BaseNode(GraphNode):
     def __init__(self, value):
         super(BaseNode, self).__init__()
@@ -26,31 +27,38 @@ class BaseNode(GraphNode):
     def __repr__(self):
         return "<{}@{:#010x} {}".format(self.__class__.__name__, id(self), self.value)
 
+
 class NodeA(BaseNode):
     pass
+
 
 class NodeB(BaseNode):
     pass
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def a():
     return NodeA(23)
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def b():
     return NodeB(1)
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def c():
     return NodeB(2)
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def graph(a, b, c):
     p = GraphNode()
     p.add_child(a)
     a.add_child(b)
     p.add_child(c)
     return p
+
 
 class TestGraph:
     def test_new(self):
@@ -102,10 +110,11 @@ class TestGraph:
 
     def test_find_depth(self, graph, a, b, c):
         assert graph.find_children(lambda n: n.value == 1, breadth_first=False) == [b]
-        assert graph.find_children(lambda n: n.value == 1 or n.value == 2, breadth_first=False) == [b, c]
+        assert graph.find_children(
+            lambda n: n.value == 1 or n.value == 2, breadth_first=False
+        ) == [b, c]
 
     def test_first(self, graph, a, b, c):
         assert graph.get_first_child_of_type(NodeA) == a
         assert graph.get_first_child_of_type(NodeB) == c
         assert a.get_first_child_of_type(NodeB) == b
-

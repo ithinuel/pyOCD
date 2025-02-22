@@ -33,12 +33,10 @@ def _readlink(link):
 
 
 class StlinkDetectLinuxGeneric(StlinkDetectBase):
-    """ mbed-enabled platform for Linux with udev
-    """
+    """mbed-enabled platform for Linux with udev"""
 
     def __init__(self, **kwargs):
-        """ctor
-        """
+        """ctor"""
         StlinkDetectBase.__init__(self, **kwargs)
         self.nlp = re.compile(r"(pci|usb)-[0-9a-zA-Z:_-]*_(?P<usbid>[0-9a-zA-Z]*)-.*$")
         self.mmp = re.compile(r"(?P<dev>(/[^/ ]*)+) on (?P<dir>(/[^/ ]*)+) ")

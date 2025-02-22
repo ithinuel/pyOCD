@@ -17,9 +17,10 @@
 import argparse
 import logging
 import prettytable
-from typing import (Any, Dict, List, Optional, Type)
+from typing import Any, Dict, List, Optional, Type
 
 from ..utility.cmdline import convert_frequency
+
 
 class SubcommandBase:
     """@brief Base class for pyocd command line subcommand."""
@@ -36,6 +37,8 @@ class SubcommandBase:
 
     class CommonOptions:
         """@brief Namespace with parsers for repeated option groups."""
+
+        # fmt: off
 
         # Define logging related options.
         LOGGING = argparse.ArgumentParser(description='logging', add_help=False)
@@ -91,22 +94,26 @@ class SubcommandBase:
             help="Do not wait for a probe to be connected if none are available.")
         CONNECT_GROUP.add_argument("-M", "--connect", dest="connect_mode", metavar="MODE",
             help="Select connect mode from one of (halt, pre-reset, under-reset, attach).")
+        # fmt: on
 
     @classmethod
     def add_subcommands(cls, parser: argparse.ArgumentParser) -> None:
         """@brief Add declared subcommands to the given parser."""
         if cls.SUBCOMMANDS:
-            subparsers = parser.add_subparsers(title="subcommands", metavar="", dest='cmd')
+            subparsers = parser.add_subparsers(
+                title="subcommands", metavar="", dest="cmd"
+            )
             for subcmd_class in cls.SUBCOMMANDS:
                 parsers = subcmd_class.get_args()
                 subcmd_class.parser = parsers[-1]
 
                 subparser = subparsers.add_parser(
-                                subcmd_class.NAMES[0],
-                                aliases=subcmd_class.NAMES[1:],
-                                parents=parsers,
-                                help=subcmd_class.HELP,
-                                epilog=subcmd_class.EPILOG)
+                    subcmd_class.NAMES[0],
+                    aliases=subcmd_class.NAMES[1:],
+                    parents=parsers,
+                    help=subcmd_class.HELP,
+                    epilog=subcmd_class.EPILOG,
+                )
                 subparser.set_defaults(command_class=subcmd_class)
                 subcmd_class.customize_subparser(subparser)
 
@@ -154,13 +161,15 @@ class SubcommandBase:
             for logger in loggers:
                 logging.getLogger(logger).setLevel(level)
 
-    def _get_pretty_table(self, fields: List[str], header: bool = None) -> prettytable.PrettyTable:
+    def _get_pretty_table(
+        self, fields: List[str], header: Optional[bool] = None
+    ) -> prettytable.PrettyTable:
         """@brief Returns a PrettyTable object with formatting options set."""
         pt = prettytable.PrettyTable(fields)
-        pt.align = 'l'
+        pt.align = "l"
         if header is not None:
             pt.header = header
-        elif hasattr(self._args, 'no_header'):
+        elif hasattr(self._args, "no_header"):
             pt.header = not self._args.no_header
         else:
             pt.header = True
@@ -179,7 +188,5 @@ class SubcommandBase:
         """
         return {
             # Change 'debug.traceback' default to True if debug logging is enabled.
-            'debug.traceback': logging.getLogger('pyocd').isEnabledFor(logging.DEBUG),
+            "debug.traceback": logging.getLogger("pyocd").isEnabledFor(logging.DEBUG),
         }
-
-

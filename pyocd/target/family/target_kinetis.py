@@ -28,21 +28,21 @@ from ...utility.timeout import Timeout
 
 MDM_STATUS = 0x00000000
 MDM_CTRL = 0x00000004
-MDM_IDR = 0x000000fc
+MDM_IDR = 0x000000FC
 
-MDM_STATUS_FLASH_MASS_ERASE_ACKNOWLEDGE = (1 << 0)
-MDM_STATUS_FLASH_READY = (1 << 1)
-MDM_STATUS_SYSTEM_SECURITY = (1 << 2)
-MDM_STATUS_MASS_ERASE_ENABLE = (1 << 5)
-MDM_STATUS_CORE_HALTED = (1 << 16)
+MDM_STATUS_FLASH_MASS_ERASE_ACKNOWLEDGE = 1 << 0
+MDM_STATUS_FLASH_READY = 1 << 1
+MDM_STATUS_SYSTEM_SECURITY = 1 << 2
+MDM_STATUS_MASS_ERASE_ENABLE = 1 << 5
+MDM_STATUS_CORE_HALTED = 1 << 16
 
-MDM_CTRL_FLASH_MASS_ERASE_IN_PROGRESS = (1 << 0)
-MDM_CTRL_DEBUG_REQUEST = (1 << 2)
-MDM_CTRL_SYSTEM_RESET_REQUEST = (1 << 3)
-MDM_CTRL_CORE_HOLD_RESET = (1 << 4)
+MDM_CTRL_FLASH_MASS_ERASE_IN_PROGRESS = 1 << 0
+MDM_CTRL_DEBUG_REQUEST = 1 << 2
+MDM_CTRL_SYSTEM_RESET_REQUEST = 1 << 3
+MDM_CTRL_CORE_HOLD_RESET = 1 << 4
 
-MDM_IDR_EXPECTED = 0x001c0000
-MDM_IDR_VERSION_MASK = 0xf0
+MDM_IDR_EXPECTED = 0x001C0000
+MDM_IDR_VERSION_MASK = 0xF0
 MDM_IDR_VERSION_SHIFT = 4
 
 HALT_TIMEOUT = 2.0
@@ -52,9 +52,9 @@ ACCESS_TEST_ATTEMPTS = 10
 
 LOG = logging.getLogger(__name__)
 
+
 class Kinetis(CoreSightTarget):
-    """@brief Family class for NXP Kinetis devices.
-    """
+    """@brief Family class for NXP Kinetis devices."""
 
     VENDOR = "NXP"
 
@@ -66,26 +66,33 @@ class Kinetis(CoreSightTarget):
     def create_init_sequence(self):
         seq = super(Kinetis, self).create_init_sequence()
 
-        seq.wrap_task('discovery',  lambda seq: \
-                                        seq.insert_before('find_components',
-                                            ('check_mdm_ap_idr',        self.check_mdm_ap_idr),
-                                            ('check_flash_security',    self.check_flash_security),
-                                            ))
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.insert_before(
+                "find_components",
+                ("check_mdm_ap_idr", self.check_mdm_ap_idr),
+                ("check_flash_security", self.check_flash_security),
+            ),
+        )
 
         return seq
 
     def check_mdm_ap_idr(self):
         if not self.dp.aps:
-            LOG.debug('Not found valid aps, skip MDM-AP check.')
+            LOG.debug("Not found valid aps, skip MDM-AP check.")
             return
 
         self.mdm_ap = self.dp.aps[1]
 
         # Check MDM-AP ID.
         if (self.mdm_ap.idr & ~MDM_IDR_VERSION_MASK) != MDM_IDR_EXPECTED:
-            LOG.error("%s: bad MDM-AP IDR (is 0x%08x)", self.part_number, self.mdm_ap.idr)
+            LOG.error(
+                "%s: bad MDM-AP IDR (is 0x%08x)", self.part_number, self.mdm_ap.idr
+            )
 
-        self.mdm_ap_version = (self.mdm_ap.idr & MDM_IDR_VERSION_MASK) >> MDM_IDR_VERSION_SHIFT
+        self.mdm_ap_version = (
+            self.mdm_ap.idr & MDM_IDR_VERSION_MASK
+        ) >> MDM_IDR_VERSION_SHIFT
         LOG.debug("MDM-AP version %d", self.mdm_ap_version)
 
     def check_flash_security(self):
@@ -144,14 +151,19 @@ class Kinetis(CoreSightTarget):
             isLocked = self.is_locked()
 
             # If the device isn't really locked, we have no choice but to halt on connect.
-            if not isLocked and self.session.options.get('connect_mode') == 'attach':
-                LOG.warning("Forcing halt on connect in order to gain control of device")
+            if not isLocked and self.session.options.get("connect_mode") == "attach":
+                LOG.warning(
+                    "Forcing halt on connect in order to gain control of device"
+                )
                 self._force_halt_on_connect = True
 
         # Only do a mass erase if the device is actually locked.
         if isLocked:
-            if self.session.options.get('auto_unlock'):
-                LOG.warning("%s in secure state: will try to unlock via mass erase", self.part_number)
+            if self.session.options.get("auto_unlock"):
+                LOG.warning(
+                    "%s in secure state: will try to unlock via mass erase",
+                    self.part_number,
+                )
 
                 # Do the mass erase.
                 if not self.mass_erase():
@@ -164,26 +176,37 @@ class Kinetis(CoreSightTarget):
                 # until halt on connect is executed.
                 # assert self._force_halt_on_connect
 
-#                 isLocked = False
+            #                 isLocked = False
             else:
-                LOG.warning("%s in secure state: not automatically unlocking", self.part_number)
+                LOG.warning(
+                    "%s in secure state: not automatically unlocking", self.part_number
+                )
         else:
             LOG.info("%s not in secure state", self.part_number)
 
     def perform_halt_on_connect(self):
         """This init task runs *after* cores are created."""
-        if self.session.options.get('connect_mode') == 'under-reset' or self._force_halt_on_connect:
+        if (
+            self.session.options.get("connect_mode") == "under-reset"
+            or self._force_halt_on_connect
+        ):
             if not self.mdm_ap:
                 return
             LOG.info("Configuring MDM-AP to halt when coming out of reset")
             # Prevent the target from resetting if it has invalid code
             with Timeout(HALT_TIMEOUT) as to:
                 while to.check():
-                    self.mdm_ap.write_reg(MDM_CTRL, MDM_CTRL_DEBUG_REQUEST | MDM_CTRL_CORE_HOLD_RESET)
-                    if self.mdm_ap.read_reg(MDM_CTRL) & (MDM_CTRL_DEBUG_REQUEST | MDM_CTRL_CORE_HOLD_RESET) == (MDM_CTRL_DEBUG_REQUEST | MDM_CTRL_CORE_HOLD_RESET):
+                    self.mdm_ap.write_reg(
+                        MDM_CTRL, MDM_CTRL_DEBUG_REQUEST | MDM_CTRL_CORE_HOLD_RESET
+                    )
+                    if self.mdm_ap.read_reg(MDM_CTRL) & (
+                        MDM_CTRL_DEBUG_REQUEST | MDM_CTRL_CORE_HOLD_RESET
+                    ) == (MDM_CTRL_DEBUG_REQUEST | MDM_CTRL_CORE_HOLD_RESET):
                         break
                 else:
-                    raise exceptions.TimeoutError("Timed out attempting to set DEBUG_REQUEST and CORE_HOLD_RESET in MDM-AP")
+                    raise exceptions.TimeoutError(
+                        "Timed out attempting to set DEBUG_REQUEST and CORE_HOLD_RESET in MDM-AP"
+                    )
 
             # Enable debug
             self.aps[0].write_memory(CortexM.DHCSR, CortexM.DBGKEY | CortexM.C_DEBUGEN)
@@ -192,7 +215,10 @@ class Kinetis(CoreSightTarget):
             super(Kinetis, self).perform_halt_on_connect()
 
     def post_connect(self):
-        if self.session.options.get('connect_mode') == 'under-reset' or self._force_halt_on_connect:
+        if (
+            self.session.options.get("connect_mode") == "under-reset"
+            or self._force_halt_on_connect
+        ):
             if not self.mdm_ap:
                 return
             # We can now deassert reset.
@@ -205,7 +231,10 @@ class Kinetis(CoreSightTarget):
             # Wait until the target is halted
             with Timeout(HALT_TIMEOUT) as to:
                 while to.check():
-                    if self.mdm_ap.read_reg(MDM_STATUS) & MDM_STATUS_CORE_HALTED == MDM_STATUS_CORE_HALTED:
+                    if (
+                        self.mdm_ap.read_reg(MDM_STATUS) & MDM_STATUS_CORE_HALTED
+                        == MDM_STATUS_CORE_HALTED
+                    ):
                         break
                     LOG.debug("Waiting for mdm halt")
                     sleep(0.01)
@@ -217,7 +246,9 @@ class Kinetis(CoreSightTarget):
 
             # sanity check that the target is still halted
             if self.get_state() == Target.State.RUNNING:
-                raise exceptions.DebugError("Target failed to stay halted during init sequence")
+                raise exceptions.DebugError(
+                    "Target failed to stay halted during init sequence"
+                )
 
     def is_locked(self):
         if not self.mdm_ap:
@@ -280,7 +311,7 @@ class Kinetis(CoreSightTarget):
                 if val & MDM_STATUS_FLASH_MASS_ERASE_ACKNOWLEDGE:
                     break
                 sleep(0.1)
-            else: #if to.did_time_out:
+            else:  # if to.did_time_out:
                 LOG.error("Mass erase timeout waiting for Flash Mass Erase Ack to set")
                 return False
 
@@ -288,11 +319,13 @@ class Kinetis(CoreSightTarget):
         with Timeout(MASS_ERASE_TIMEOUT) as to:
             while to.check():
                 val = self.mdm_ap.read_reg(MDM_CTRL)
-                if ((val & MDM_CTRL_FLASH_MASS_ERASE_IN_PROGRESS) == 0):
+                if (val & MDM_CTRL_FLASH_MASS_ERASE_IN_PROGRESS) == 0:
                     break
                 sleep(0.1)
-            else: #if to.did_time_out:
-                LOG.error("Mass erase timeout waiting for Flash Mass Erase in Progress to clear")
+            else:  # if to.did_time_out:
+                LOG.error(
+                    "Mass erase timeout waiting for Flash Mass Erase in Progress to clear"
+                )
                 return False
 
         # Confirm the part was unlocked
@@ -303,4 +336,3 @@ class Kinetis(CoreSightTarget):
         else:
             LOG.error("Failed to unlock. MDM status: 0x%x", val)
             return False
-

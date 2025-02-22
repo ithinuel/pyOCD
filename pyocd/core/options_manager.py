@@ -17,12 +17,13 @@
 
 import logging
 from functools import partial
-from typing import (Any, Callable, Dict, List, Mapping, NamedTuple, Optional)
+from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional
 
 from .options import OPTIONS_INFO
 from ..utility.notification import Notifier
 
 LOG = logging.getLogger(__name__)
+
 
 class OptionChangeInfo(NamedTuple):
     """@brief Data for an option value change notification.
@@ -35,8 +36,10 @@ class OptionChangeInfo(NamedTuple):
     - `new_value`: The new, current value of the option.
     - `old_value`: The previous value of the option.
     """
+
     new_value: Any
     old_value: Any
+
 
 class OptionsManager(Notifier):
     """@brief Handles session option management for a session.
@@ -58,12 +61,15 @@ class OptionsManager(Notifier):
     _layers: List[Dict[str, Any]]
 
     def __init__(self) -> None:
-        """@brief Option manager constructor.
-        """
+        """@brief Option manager constructor."""
         super().__init__()
         self._layers = []
 
-    def _update_layers(self, new_options: Optional[LayerType], update_operation: Callable[[LayerType], None]) -> None:
+    def _update_layers(
+        self,
+        new_options: Optional[LayerType],
+        update_operation: Callable[[LayerType], None],
+    ) -> None:
         """@brief Internal method to add a new layer dictionary.
 
         @param self

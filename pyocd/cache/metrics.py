@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class CacheMetrics(object):
     """@brief Holds hit ratio metrics for the caches."""
+
     def __init__(self):
         self.hits = 0
         self.misses = 0
@@ -39,4 +41,3 @@ class CacheMetrics(object):
             return self.misses * 100.0 / self.total
         else:
             return 0
-

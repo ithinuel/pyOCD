@@ -29,12 +29,16 @@ did_show_no_libusb_warning = False
 # Used to prevent spewing lots of errors for the same devices when repeatedly scanning for probes.
 libusb_error_device_set = set()
 
+
 def show_no_libusb_warning():
     """@brief Logs a warning about missing libusb library only the first time it is called."""
     global did_show_no_libusb_warning
     if not did_show_no_libusb_warning:
-        LOG.warning("STLink, CMSIS-DAPv2 and PicoProbe probes are not supported because no libusb library was found.")
+        LOG.warning(
+            "STLink, CMSIS-DAPv2 and PicoProbe probes are not supported because no libusb library was found."
+        )
         did_show_no_libusb_warning = True
+
 
 def should_show_libusb_device_error(vidpid):
     """@brief Returns whether a debug warning should be shown for the given VID/PID pair.

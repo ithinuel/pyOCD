@@ -19,6 +19,7 @@ from ..core.memory_interface import MemoryInterface
 from ..coresight.component import CoreSightCoreComponent
 from ..coresight.cortex_m_core_registers import CortexMCoreRegisterInfo
 
+
 class DebugContext(MemoryInterface):
     """@brief Viewport for inspecting the system being debugged.
 
@@ -170,4 +171,3 @@ class DebugContext(MemoryInterface):
 
     def flush(self):
         self._core.flush()
-

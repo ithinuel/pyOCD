@@ -25,9 +25,21 @@ import os
 from pathlib import Path
 import sys
 import weakref
-from inspect import (getfullargspec, signature)
+from inspect import getfullargspec, signature
 from types import SimpleNamespace
-from typing import (Any, Callable, Generator, Sequence, Union, cast, Dict, List, Mapping, Optional, TYPE_CHECKING)
+from typing import (
+    Any,
+    Callable,
+    Generator,
+    Sequence,
+    Union,
+    cast,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    TYPE_CHECKING,
+)
 from typing_extensions import Self
 
 from . import exceptions
@@ -43,23 +55,24 @@ if TYPE_CHECKING:
     from ..board.board import Board
 
 # Check whether the eval_str parameter for inspect.signature is available.
-HAS_SIGNATURE_EVAL_STR = (sys.version_info[:2] >= (3, 10))
+HAS_SIGNATURE_EVAL_STR = sys.version_info[:2] >= (3, 10)
 
 LOG = logging.getLogger(__name__)
 
 ## @brief Set of default config filenames to search for.
 _CONFIG_FILE_NAMES = [
-        "pyocd.yaml",
-        "pyocd.yml",
-        ".pyocd.yaml",
-        ".pyocd.yml",
-    ]
+    "pyocd.yaml",
+    "pyocd.yml",
+    ".pyocd.yaml",
+    ".pyocd.yml",
+]
 
 ## @brief Set of default user script names to search for.
 _USER_SCRIPT_NAMES = [
-        "pyocd_user.py",
-        ".pyocd_user.py",
-    ]
+    "pyocd_user.py",
+    ".pyocd_user.py",
+]
+
 
 class Session(Notifier):
     """@brief Top-level object for a debug session.
@@ -127,13 +140,13 @@ class Session(Notifier):
         return cls._options_session
 
     def __init__(
-            self,
-            probe: Optional[DebugProbe],
-            auto_open: bool = True,
-            options: Optional[Mapping[str, Any]] = None,
-            option_defaults: Optional[Mapping[str, Any]] = None,
-            **kwargs
-            ) -> None:
+        self,
+        probe: Optional[DebugProbe],
+        auto_open: bool = True,
+        options: Optional[Mapping[str, Any]] = None,
+        option_defaults: Optional[Mapping[str, Any]] = None,
+        **kwargs,
+    ) -> None:
         """@brief Session constructor.
 
         Creates a new session using the provided debug probe. Session options are merged from the
@@ -185,10 +198,12 @@ class Session(Notifier):
         self._options.add_back(options)
 
         # Init project directory.
-        if self.options.get('project_dir') is None:
-            self._project_dir: str = os.environ.get('PYOCD_PROJECT_DIR') or os.getcwd()
+        if self.options.get("project_dir") is None:
+            self._project_dir: str = os.environ.get("PYOCD_PROJECT_DIR") or os.getcwd()
         else:
-            self._project_dir: str = os.path.abspath(os.path.expanduser(self.options.get('project_dir')))
+            self._project_dir: str = os.path.abspath(
+                os.path.expanduser(self.options.get("project_dir"))
+            )
         LOG.debug("Project directory: %s", self.project_dir)
 
         # Switch the working dir to the project dir.
@@ -196,7 +211,7 @@ class Session(Notifier):
 
         # Load options from the config file.
         config = self._get_config()
-        probes_config = config.pop('probes', None)
+        probes_config = config.pop("probes", None)
 
         # Pick up any config file options for this probe. These have priority over global options.
         if (probe is not None) and (probes_config is not None):
@@ -204,7 +219,10 @@ class Session(Notifier):
             for uid, settings in probes_config.items():
                 if str(uid).lower() in probe.unique_id.lower():
                     if did_match_probe:
-                        LOG.warning("Multiple probe config options match probe ID %s", probe.unique_id)
+                        LOG.warning(
+                            "Multiple probe config options match probe ID %s",
+                            probe.unique_id,
+                        )
                         break
                     LOG.info("Using config options for probe %s" % (probe.unique_id))
                     self._options.add_back(settings)
@@ -232,12 +250,12 @@ class Session(Notifier):
 
     def _get_config(self) -> Dict[str, Any]:
         # Load config file if one was provided via options, and no_config option was not set.
-        if not self.options.get('no_config'):
-            configPath = self.find_user_file('config_file', _CONFIG_FILE_NAMES)
+        if not self.options.get("no_config"):
+            configPath = self.find_user_file("config_file", _CONFIG_FILE_NAMES)
 
             if configPath is not None:
                 try:
-                    with open(configPath, 'r') as configFile:
+                    with open(configPath, "r") as configFile:
                         LOG.debug("Loading config from: %s", configPath)
                         config = yaml.safe_load(configFile)
                         # Allow an empty config file.
@@ -245,15 +263,23 @@ class Session(Notifier):
                             return {}
                         # But fail if someone tries to put something other than a dict at the top.
                         elif not isinstance(config, dict):
-                            raise exceptions.Error("configuration file %s does not contain a top-level dictionary"
-                                    % configPath)
+                            raise exceptions.Error(
+                                "configuration file %s does not contain a top-level dictionary"
+                                % configPath
+                            )
                         return config
                 except IOError as err:
-                    LOG.warning("Error attempting to access config file '%s': %s", configPath, err)
+                    LOG.warning(
+                        "Error attempting to access config file '%s': %s",
+                        configPath,
+                        err,
+                    )
 
         return {}
 
-    def find_user_file(self, option_name: Optional[str], filename_list: List[str]) -> Optional[str]:
+    def find_user_file(
+        self, option_name: Optional[str], filename_list: List[str]
+    ) -> Optional[str]:
         """@brief Search the project directory for a file.
 
         @retval None No matching file was found.
@@ -285,7 +311,7 @@ class Session(Notifier):
     def _configure_logging(self) -> None:
         """@brief Load a logging config dict or file."""
         # Get logging config that could have been loaded from the config file.
-        config_value = self.options.get('logging')
+        config_value = self.options.get("logging")
 
         # Allow logging setting to refer to another file.
         if isinstance(config_value, str):
@@ -293,11 +319,15 @@ class Session(Notifier):
 
             if loggingConfigPath is not None:
                 try:
-                    with open(loggingConfigPath, 'r') as configFile:
+                    with open(loggingConfigPath, "r") as configFile:
                         config = yaml.safe_load(configFile)
                         LOG.debug("Using logging configuration from: %s", config)
                 except IOError as err:
-                    LOG.warning("Error attempting to load logging config file '%s': %s", config_value, err)
+                    LOG.warning(
+                        "Error attempting to load logging config file '%s': %s",
+                        config_value,
+                        err,
+                    )
                     return
             else:
                 LOG.warning("Logging config file '%s' does not exist", config_value)
@@ -307,14 +337,14 @@ class Session(Notifier):
 
         if config is not None:
             # Stuff a version key if it's missing, to make it easier to use.
-            if 'version' not in config:
-                config['version'] = 1
+            if "version" not in config:
+                config["version"] = 1
             # Set a different default for disabling existing loggers.
-            if 'disable_existing_loggers' not in config:
-                config['disable_existing_loggers'] = False
+            if "disable_existing_loggers" not in config:
+                config["disable_existing_loggers"] = False
             # Remove an empty 'loggers' key.
-            if ('loggers' in config) and (config['loggers'] is None):
-                del config['loggers']
+            if ("loggers" in config) and (config["loggers"] is None):
+                del config["loggers"]
 
             try:
                 logging.config.dictConfig(config)
@@ -370,9 +400,11 @@ class Session(Notifier):
         # Create a proxy if there isn't already one. This is a fallback in case there isn't a user script,
         # yet a Python $-command is executed and needs the user script namespace in which to run.
         if not self._user_script_proxy:
-            self._init_user_script_namespace('__script__', '<none>')
+            self._init_user_script_namespace("__script__", "<none>")
             self._update_user_script_namespace()
-            self._user_script_proxy = UserScriptDelegateProxy(self._user_script_namespace)
+            self._user_script_proxy = UserScriptDelegateProxy(
+                self._user_script_namespace
+            )
         return self._user_script_proxy
 
     @property
@@ -397,7 +429,7 @@ class Session(Notifier):
     @property
     def log_tracebacks(self) -> bool:
         """@brief Quick access to debug.traceback option since it is widely used."""
-        return cast(bool, self.options.get('debug.traceback'))
+        return cast(bool, self.options.get("debug.traceback"))
 
     @property
     def context_state(self) -> SimpleNamespace:
@@ -439,78 +471,81 @@ class Session(Notifier):
 
         # Duplicate builtins and override print() without our proxy.
         import builtins
-        bi = builtins.__dict__.copy()
-        bi['print'] = self._user_script_print_proxy
 
-        user_script_logger = logging.getLogger('pyocd.user_script')
+        bi = builtins.__dict__.copy()
+        bi["print"] = self._user_script_print_proxy
+
+        user_script_logger = logging.getLogger("pyocd.user_script")
 
         self._user_script_namespace = {
-            '__builtins__': bi,
+            "__builtins__": bi,
             # Modules and classes
-            'pyocd': pyocd,
-            'exceptions': exceptions,
-            'Error': exceptions.Error,
-            'TransferError': exceptions.TransferError,
-            'TransferFaultError': exceptions.TransferFaultError,
-            'Target': target.Target,
-            'State': target.Target.State,
-            'SecurityState': target.Target.SecurityState,
-            'BreakpointType': target.Target.BreakpointType,
-            'WatchpointType': target.Target.WatchpointType,
-            'VectorCatch': target.Target.VectorCatch,
-            'Event': target.Target.Event,
-            'RunType': target.Target.RunType,
-            'HaltReason': target.Target.HaltReason,
-            'ResetType': target.Target.ResetType,
-            'MemoryLoader': loader.MemoryLoader,
-            'MemoryType': memory_map.MemoryType,
-            'MemoryMap': memory_map.MemoryMap,
-            'RamRegion': memory_map.RamRegion,
-            'RomRegion': memory_map.RomRegion,
-            'FlashRegion': memory_map.FlashRegion,
-            'DeviceRegion': memory_map.DeviceRegion,
-            'FileProgrammer': file_programmer.FileProgrammer,
-            'FlashEraser': eraser.FlashEraser,
-            'FlashLoader': loader.FlashLoader, # deprecated
+            "pyocd": pyocd,
+            "exceptions": exceptions,
+            "Error": exceptions.Error,
+            "TransferError": exceptions.TransferError,
+            "TransferFaultError": exceptions.TransferFaultError,
+            "Target": target.Target,
+            "State": target.Target.State,
+            "SecurityState": target.Target.SecurityState,
+            "BreakpointType": target.Target.BreakpointType,
+            "WatchpointType": target.Target.WatchpointType,
+            "VectorCatch": target.Target.VectorCatch,
+            "Event": target.Target.Event,
+            "RunType": target.Target.RunType,
+            "HaltReason": target.Target.HaltReason,
+            "ResetType": target.Target.ResetType,
+            "MemoryLoader": loader.MemoryLoader,
+            "MemoryType": memory_map.MemoryType,
+            "MemoryMap": memory_map.MemoryMap,
+            "RamRegion": memory_map.RamRegion,
+            "RomRegion": memory_map.RomRegion,
+            "FlashRegion": memory_map.FlashRegion,
+            "DeviceRegion": memory_map.DeviceRegion,
+            "FileProgrammer": file_programmer.FileProgrammer,
+            "FlashEraser": eraser.FlashEraser,
+            "FlashLoader": loader.FlashLoader,  # deprecated
             # User script info
-            '__name__': script_name,
-            '__file__': script_path,
+            "__name__": script_name,
+            "__file__": script_path,
             # Objects
-            'session': self,
-            'options': self.options,
-            'LOG': user_script_logger,
+            "session": self,
+            "options": self.options,
+            "LOG": user_script_logger,
             # Functions
-            'command': new_command_decorator,
-            'debug': user_script_logger.debug,
-            'info': user_script_logger.info,
-            'warning': user_script_logger.warning,
-            'error': user_script_logger.error,
-            }
+            "command": new_command_decorator,
+            "debug": user_script_logger.debug,
+            "info": user_script_logger.info,
+            "warning": user_script_logger.warning,
+            "error": user_script_logger.error,
+        }
 
     def _update_user_script_namespace(self) -> None:
         """@brief Add objects available only after init to the user script namespace."""
         if self._user_script_namespace is not None:
-            self._user_script_namespace.update({
-                'probe': self.probe,
-                'board': self.board,
-                'target': self.target,
-                'dp': getattr(self.target, "dp", None),
-                'aps': getattr(self.target, "aps", None),
-                })
+            self._user_script_namespace.update(
+                {
+                    "probe": self.probe,
+                    "board": self.board,
+                    "target": self.target,
+                    "dp": getattr(self.target, "dp", None),
+                    "aps": getattr(self.target, "aps", None),
+                }
+            )
 
     def _load_user_script(self) -> None:
-        script_path = self.find_user_file('user_script', _USER_SCRIPT_NAMES)
+        script_path = self.find_user_file("user_script", _USER_SCRIPT_NAMES)
 
         if script_path is not None:
             try:
                 # Read the script source.
-                with open(script_path, 'r') as script_file:
+                with open(script_path, "r") as script_file:
                     LOG.debug("Loading user script: %s", script_path)
                     script_source = script_file.read()
 
                 self._init_user_script_namespace(Path(script_path).stem, script_path)
 
-                script_code = compile(script_source, script_path, 'exec')
+                script_code = compile(script_source, script_path, "exec")
                 # Executing the code will create definitions in the namespace for any
                 # functions or classes. A single namespace is shared for both globals and
                 # locals so that script-level definitions are available within the
@@ -519,11 +554,15 @@ class Session(Notifier):
 
                 # Create the proxy for the user script. It becomes the delegate unless
                 # another delegate was already set.
-                self._user_script_proxy = UserScriptDelegateProxy(self._user_script_namespace)
+                self._user_script_proxy = UserScriptDelegateProxy(
+                    self._user_script_namespace
+                )
                 if self._delegate is None:
                     self._delegate = self._user_script_proxy
             except IOError as err:
-                LOG.warning("Error attempting to load user script '%s': %s", script_path, err)
+                LOG.warning(
+                    "Error attempting to load user script '%s': %s", script_path, err
+                )
 
     def open(self, init_board: bool = True) -> None:
         """@brief Open the session.
@@ -548,7 +587,7 @@ class Session(Notifier):
 
             self._probe.open()
             self._closed = False
-            self._probe.set_clock(self.options.get('frequency'))
+            self._probe.set_clock(self.options.get("frequency"))
             if init_board:
                 self._board.init()
                 self._inited = True
@@ -577,11 +616,14 @@ class Session(Notifier):
             try:
                 self._probe.disconnect()
             except exceptions.Error:
-                LOG.error("Probe error during disconnect:", exc_info=self.log_tracebacks)
+                LOG.error(
+                    "Probe error during disconnect:", exc_info=self.log_tracebacks
+                )
             try:
                 self._probe.close()
             except exceptions.Error:
                 LOG.error("Probe error during close:", exc_info=self.log_tracebacks)
+
 
 class UserScriptFunctionProxy:
     """@brief Proxy for user script functions.
@@ -600,6 +642,7 @@ class UserScriptFunctionProxy:
             if arg in kwargs:
                 args[arg] = kwargs[arg]
         return self._fn(**args)
+
 
 class UserScriptDelegateProxy:
     """@brief Delegate proxy for user scripts."""
@@ -623,7 +666,10 @@ class UserScriptDelegateProxy:
         else:
             raise AttributeError(name)
 
-def new_command_decorator(name: Optional[Union[str, Sequence[str]]] = None, help: str = ""):
+
+def new_command_decorator(
+    name: Optional[Union[str, Sequence[str]]] = None, help: str = ""
+):
     """@brief User script decorator for creating new commands.
 
     Supported parameter types:
@@ -647,9 +693,10 @@ def new_command_decorator(name: Optional[Union[str, Sequence[str]]] = None, help
     """
     import types
     from ..commands.base import CommandBase
+
     def _command_decorator(fn: Callable):
         if name is None:
-            names_list: Sequence[str] = [getattr(fn, '__name__')]
+            names_list: Sequence[str] = [getattr(fn, "__name__")]
         else:
             names_list: Sequence[str] = [name] if isinstance(name, str) else name[0]
         classname = names_list[0].capitalize() + "Command"
@@ -672,13 +719,19 @@ def new_command_decorator(name: Optional[Union[str, Sequence[str]]] = None, help
                 continue
             # Disallow keyword params.
             elif parm.kind in (parm.KEYWORD_ONLY, parm.VAR_KEYWORD):
-                LOG.error("ser command function '%s' uses unsupported keyword parameters", fn.__name__)
+                LOG.error(
+                    "ser command function '%s' uses unsupported keyword parameters",
+                    fn.__name__,
+                )
                 return fn
 
             # Require type annotations.
             if typ is parm.empty:
-                LOG.error("user command function '%s' is missing type annotation for parameter '%s'",
-                        fn.__name__, parm.name)
+                LOG.error(
+                    "user command function '%s' is missing type annotation for parameter '%s'",
+                    fn.__name__,
+                    parm.name,
+                )
                 return None
 
             # If we don't have Python 3.10 or later, then we must manually un-stringize the type.
@@ -688,8 +741,11 @@ def new_command_decorator(name: Optional[Union[str, Sequence[str]]] = None, help
                 try:
                     typ = eval(typ, fn.__globals__)
                 except Exception:
-                    LOG.error("parameter '%s' of user command function '%s' has an unsupported type",
-                            parm.name, fn.__name__)
+                    LOG.error(
+                        "parameter '%s' of user command function '%s' has an unsupported type",
+                        parm.name,
+                        fn.__name__,
+                    )
                     return None
 
             # Otherwise add to param converter list.
@@ -701,12 +757,18 @@ def new_command_decorator(name: Optional[Union[str, Sequence[str]]] = None, help
                 elif issubclass(typ, int):
                     arg_converters.append(CommandBase._convert_value)
                 else:
-                    LOG.error("parameter '%s' of user command function '%s' has an unsupported type",
-                            parm.name, fn.__name__)
+                    LOG.error(
+                        "parameter '%s' of user command function '%s' has an unsupported type",
+                        parm.name,
+                        fn.__name__,
+                    )
                     return None
             except TypeError:
-                LOG.error("parameter '%s' of user command function '%s' has an unsupported type",
-                        parm.name, fn.__name__)
+                LOG.error(
+                    "parameter '%s' of user command function '%s' has an unsupported type",
+                    parm.name,
+                    fn.__name__,
+                )
                 return None
             usage_fields.append(parm.name.upper())
 
@@ -716,8 +778,8 @@ def new_command_decorator(name: Optional[Union[str, Sequence[str]]] = None, help
 
             if len(args) > len(arg_converters):
                 assert has_var_args
-                extra_args = args[len(arg_converters):]
-                args = args[:len(arg_converters)]
+                extra_args = args[len(arg_converters) :]
+                args = args[: len(arg_converters)]
             else:
                 extra_args = []
 
@@ -734,23 +796,27 @@ def new_command_decorator(name: Optional[Union[str, Sequence[str]]] = None, help
 
         # Callback to populate the new command class' namespace dict.
         def populate_command_class(ns: Dict[str, Any]) -> None:
-            ns['INFO'] = {
-                'names': names_list,
-                'group': 'user',
-                'category': 'user',
-                'nargs': "*" if has_var_args else len(sig.parameters),
-                'usage': " ".join(usage_fields),
-                'help': help,
-                }
-            ns['parse'] = parse
-            ns['execute'] = execute
+            ns["INFO"] = {
+                "names": names_list,
+                "group": "user",
+                "category": "user",
+                "nargs": "*" if has_var_args else len(sig.parameters),
+                "usage": " ".join(usage_fields),
+                "help": help,
+            }
+            ns["parse"] = parse
+            ns["execute"] = execute
 
-        types.new_class(classname, bases=(CommandBase,), exec_body=populate_command_class)
+        types.new_class(
+            classname, bases=(CommandBase,), exec_body=populate_command_class
+        )
 
         # Return original function. This makes it accessible from the rest of the user script
         # and Python expression commands.
         return fn
+
     return _command_decorator
+
 
 class PrintProxy:
     """@brief Proxy for print() that can be retargeted to different functions.
@@ -762,6 +828,7 @@ class PrintProxy:
     converted to strings and joined with spaces. The target function is then called with a single string argument
     plus any keyword arguments.
     """
+
     _target: Callable = print
 
     def set_target(self, new_target: Callable) -> None:

@@ -20,6 +20,7 @@ from ...coresight.cortex_m import CortexM
 
 LOG = logging.getLogger(__name__)
 
+
 class AMA3BFamily(CortexM):
     REG_MCU_CTRL_BOOTLOADER = 0x400201A0
     REG_MCU_CTRL_SCRATCH0 = 0x400201B0
@@ -31,7 +32,7 @@ class AMA3BFamily(CortexM):
         # primary boot.
         #
         # Refer to document A-SOCA3B-UGGA02EN for more details.
-        
+
         # Check the REG_MCU_CTRL_BOOTLOADER register to see if secure boot
         # is enabled for:
         #   bit 31:30 warm reset
@@ -39,11 +40,11 @@ class AMA3BFamily(CortexM):
         #   bit 27:26 secure boot feature enabled
         secure_boot = False
         reg_bootloader = self.read_memory(self.REG_MCU_CTRL_BOOTLOADER)
-        if (reg_bootloader & 0xFC000000):
+        if reg_bootloader & 0xFC000000:
             secure_boot = True
         LOG.debug("AMA3B Secure Boot: %x" % secure_boot)
-        
-        if(secure_boot is True):
+
+        if secure_boot is True:
             # Modify only the least significant bit and preserve the scratch
             # register as it could be used by the application firmware.
             reg_scratch0 = self.read_memory(self.REG_MCU_CTRL_SCRATCH0) | 0x01

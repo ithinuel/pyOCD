@@ -35,13 +35,12 @@ from pyocd.utility.mask import align_up
 #
 # Before running a flash algo operation, LR is set to the address of the `bkpt` instruction,
 # so when the operation function returns it will halt the CPU.
-BLOB_HEADER = '0xe7fdbe00,'
+BLOB_HEADER = "0xe7fdbe00,"
 HEADER_SIZE = 4
 
 STACK_SIZE = 0x1000
 
-PYOCD_TEMPLATE = \
-"""# pyOCD debugger
+PYOCD_TEMPLATE = """# pyOCD debugger
 # Copyright (c) {{year}} {{copyright_owner}}
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -109,8 +108,12 @@ FLASH_ALGO = {
 
 colorama.init()
 
+
 def str_to_num(val):
-    return int(val, 0)  #convert string to number and automatically handle hex conversion
+    return int(
+        val, 0
+    )  # convert string to number and automatically handle hex conversion
+
 
 class PackFlashAlgoGenerator(PackFlashAlgo):
     """
@@ -122,7 +125,7 @@ class PackFlashAlgoGenerator(PackFlashAlgo):
     """
 
     def format_algo_data(self, spaces, group_size, fmt):
-        """"
+        """ "
         Return a string representing algo_data suitable for use in a template
 
         The string is intended for use in a template.
@@ -137,7 +140,7 @@ class PackFlashAlgoGenerator(PackFlashAlgo):
             blob = binascii.b2a_hex(self.algo_data).decode()
             line_list = []
             for i in range(0, len(blob), group_size):
-                line_list.append('"' + blob[i:i + group_size] + '"')
+                line_list.append('"' + blob[i : i + group_size] + '"')
             return ("\n" + padding).join(line_list)
         elif fmt == "c":
             blob = self.algo_data[:]
@@ -146,8 +149,9 @@ class PackFlashAlgoGenerator(PackFlashAlgo):
             integer_list = struct.unpack("<" + "L" * (len(blob) // 4), blob)
             line_list = []
             for pos in range(0, len(integer_list), group_size):
-                group = ["0x%08x" % value for value in
-                         integer_list[pos:pos + group_size]]
+                group = [
+                    "0x%08x" % value for value in integer_list[pos : pos + group_size]
+                ]
                 line_list.append(", ".join(group))
             return (",\n" + padding).join(line_list)
         else:
@@ -174,8 +178,10 @@ class PackFlashAlgoGenerator(PackFlashAlgo):
         template = jinja2.Template(template_text)
         return template.render(data_dict)
 
+
 def main():
     parser = argparse.ArgumentParser(description="Blob generator")
+    # fmt: off
     parser.add_argument("elf_path", help="Elf, axf, or flm to extract flash algo from")
     parser.add_argument("--blob-start", default=0x20000000, type=str_to_num, help="Starting "
                         "address of the flash blob in target RAM. (default 0x20000000)")
@@ -187,12 +193,15 @@ def main():
                         "(default 'pyocd_blob.py').")
     parser.add_argument("-t", "--template", help="Path to Jinja template file (default is an internal "
                         "template for pyocd).")
-    parser.add_argument('-c', '--copyright', help="Set copyright owner.")
+    parser.add_argument("-c", "--copyright", help="Set copyright owner.")
+    # fmt: on
     args = parser.parse_args()
 
     if not args.copyright and not args.info_only:
-        print(f"{colorama.Fore.YELLOW}Warning! No copyright owner was specified. Defaulting to \"PyOCD Authors\". "
-            f"Please set via --copyright, or edit output.{colorama.Style.RESET_ALL}")
+        print(
+            f'{colorama.Fore.YELLOW}Warning! No copyright owner was specified. Defaulting to "PyOCD Authors". '
+            f"Please set via --copyright, or edit output.{colorama.Style.RESET_ALL}"
+        )
 
     if args.template:
         with open(args.template, "r") as tmpl_file:
@@ -206,8 +215,10 @@ def main():
         print(algo.flash_info)
 
         # Page buffer base begins after algo and its rw/zi data, rounded up to 16 bytes.
-        buffer_base = align_up(args.blob_start + HEADER_SIZE
-                        + algo.ro_size + algo.rw_size + algo.zi_size, 0x10)
+        buffer_base = align_up(
+            args.blob_start + HEADER_SIZE + algo.ro_size + algo.rw_size + algo.zi_size,
+            0x10,
+        )
 
         page_buffers = [
             buffer_base,
@@ -222,12 +233,20 @@ def main():
         print(f"load addr:   {args.blob_start:#010x}")
         print(f"data:        {HEADER_SIZE + len(algo.algo_data):#x} bytes")
         print(f"  header:    {args.blob_start:#010x} + {HEADER_SIZE:#x} bytes")
-        print(f"  ro:        {header_end + algo.ro_start:#010x} + {algo.ro_size:#x} bytes")
-        print(f"  rw:        {header_end + algo.rw_start:#010x} + {algo.rw_size:#x} bytes")
-        print(f"  zi:        {header_end + algo.zi_start:#010x} + {algo.zi_size:#x} bytes")
+        print(
+            f"  ro:        {header_end + algo.ro_start:#010x} + {algo.ro_size:#x} bytes"
+        )
+        print(
+            f"  rw:        {header_end + algo.rw_start:#010x} + {algo.rw_size:#x} bytes"
+        )
+        print(
+            f"  zi:        {header_end + algo.zi_start:#010x} + {algo.zi_size:#x} bytes"
+        )
         print(f"buffer[0]:   {page_buffers[0]:#010x}")
         print(f"buffer[1]:   {page_buffers[1]:#010x}")
-        print(f"stack:       {stack_base:#010x} .. {sp:#010x} ({sp - stack_base:#x} bytes)")
+        print(
+            f"stack:       {stack_base:#010x} .. {sp:#010x} ({sp - stack_base:#x} bytes)"
+        )
 
         print("\nSymbol offsets:")
         for n, v in algo.symbols.items():
@@ -237,18 +256,20 @@ def main():
             return
 
         if len(algo.sector_sizes) > 1:
-            print(f"{colorama.Fore.YELLOW}Warning! Flash has more than one sector size. Remember to create one flash memory region for each sector size range.{colorama.Style.RESET_ALL}")
+            print(
+                f"{colorama.Fore.YELLOW}Warning! Flash has more than one sector size. Remember to create one flash memory region for each sector size range.{colorama.Style.RESET_ALL}"
+            )
 
         data_dict = {
-            'name': os.path.splitext(os.path.split(args.elf_path)[-1])[0],
-            'prog_header': BLOB_HEADER,
-            'header_size': HEADER_SIZE,
-            'entry': args.blob_start,
-            'stack_base': stack_base,
-            'stack_pointer': sp,
-            'page_buffers': page_buffers,
-            'year': datetime.now().year,
-            'copyright_owner': args.copyright or "PyOCD Authors",
+            "name": os.path.splitext(os.path.split(args.elf_path)[-1])[0],
+            "prog_header": BLOB_HEADER,
+            "header_size": HEADER_SIZE,
+            "entry": args.blob_start,
+            "stack_base": stack_base,
+            "stack_pointer": sp,
+            "page_buffers": page_buffers,
+            "year": datetime.now().year,
+            "copyright_owner": args.copyright or "PyOCD Authors",
         }
 
         text = algo.process_template(tmpl, data_dict)
@@ -258,5 +279,6 @@ def main():
 
         print(f"Wrote flash algo dict to {args.output}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

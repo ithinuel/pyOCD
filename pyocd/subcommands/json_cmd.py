@@ -29,10 +29,11 @@ from .. import __version__
 
 LOG = logging.getLogger(__name__)
 
+
 class JsonSubcommand(SubcommandBase):
     """@brief `pyocd json` subcommand."""
 
-    NAMES = ['json']
+    NAMES = ["json"]
     HELP = "Output information as JSON."
     DEFAULT_LOG_LEVEL = logging.FATAL + 1
 
@@ -41,15 +42,17 @@ class JsonSubcommand(SubcommandBase):
         """@brief Add this subcommand to the subparsers object."""
         json_parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
-        json_options = json_parser.add_argument_group('json output')
-        json_options.add_argument('-p', '--probes', action='store_true',
+        json_options = json_parser.add_argument_group("json output")
+        # fmt: off
+        json_options.add_argument("-p", "--probes", action="store_true",
             help="List available probes.")
-        json_options.add_argument('-t', '--targets', action='store_true',
+        json_options.add_argument("-t", "--targets", action="store_true",
             help="List all known targets.")
-        json_options.add_argument('-b', '--boards', action='store_true',
+        json_options.add_argument("-b", "--boards", action="store_true",
             help="List all known boards.")
-        json_options.add_argument('-f', '--features', action='store_true',
+        json_options.add_argument("-f", "--features", action="store_true",
             help="List available features and options.")
+        # fmt: on
 
         return [cls.CommonOptions.CONFIG, json_parser]
 
@@ -68,7 +71,12 @@ class JsonSubcommand(SubcommandBase):
         """@brief Handle 'json' subcommand."""
         exit_status = 0
         try:
-            all_outputs = (self._args.probes, self._args.targets, self._args.boards, self._args.features)
+            all_outputs = (
+                self._args.probes,
+                self._args.targets,
+                self._args.boards,
+                self._args.features,
+            )
 
             # Default to listing probes.
             if not any(all_outputs):
@@ -79,26 +87,29 @@ class JsonSubcommand(SubcommandBase):
                 # Because we're outputting JSON we can't just log the error, but must report the error
                 # via the JSON format.
                 obj = {
-                    'pyocd_version' : __version__,
-                    'version' : { 'major' : 1, 'minor' : 0 },
-                    'status' : 1,
-                    'error' : "More than one output data selected.",
-                    }
+                    "pyocd_version": __version__,
+                    "version": {"major": 1, "minor": 0},
+                    "status": 1,
+                    "error": "More than one output data selected.",
+                }
                 exit_status = 1
             else:
                 # Create a session with no device so we load any config.
-                session = Session(None,
-                                    project_dir=self._args.project_dir,
-                                    config_file=self._args.config,
-                                    no_config=self._args.no_config,
-                                    pack=self._args.pack,
-                                    **convert_session_options(self._args.options)
-                                    )
+                session = Session(
+                    None,
+                    project_dir=self._args.project_dir,
+                    config_file=self._args.config,
+                    no_config=self._args.no_config,
+                    pack=self._args.pack,
+                    **convert_session_options(self._args.options),
+                )
 
                 if self._args.targets or self._args.boards:
                     # Create targets from provided CMSIS pack.
-                    if session.options['pack'] is not None:
-                        pack_target.PackTargets.populate_targets_from_pack(session.options['pack'])
+                    if session.options["pack"] is not None:
+                        pack_target.PackTargets.populate_targets_from_pack(
+                            session.options["pack"]
+                        )
 
                 if self._args.probes:
                     obj = ListGenerator.list_probes()
@@ -113,13 +124,12 @@ class JsonSubcommand(SubcommandBase):
         except Exception:
             # Report exceptions via JSON output.
             obj = {
-                'pyocd_version' : __version__,
-                'version' : { 'major' : 1, 'minor' : 0 },
-                'status' : 1,
-                'error' : "Error occurred during processing.\n" + traceback.format_exc(),
-                }
+                "pyocd_version": __version__,
+                "version": {"major": 1, "minor": 0},
+                "status": 1,
+                "error": "Error occurred during processing.\n" + traceback.format_exc(),
+            }
             exit_status = 1
 
         print(json.dumps(obj, indent=4))
         return exit_status
-

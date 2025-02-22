@@ -20,6 +20,7 @@ import six
 
 from pyocd.utility.sequencer import CallSequence
 
+
 class TestCallSequence:
     def test_empty(self):
         cs = CallSequence()
@@ -28,262 +29,277 @@ class TestCallSequence:
     def test_a(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
         cs.invoke()
-        assert results == ['a ran', 'b ran']
+        assert results == ["a ran", "b ran"]
 
     def test_append_1(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+        )
         assert cs.count == 1
 
         cs.append(
-                ('b', lambda : results.append('b ran')),
-                )
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
 
         cs.invoke()
-        assert results == ['a ran', 'b ran']
+        assert results == ["a ran", "b ran"]
 
     def test_append_2(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+        )
         assert cs.count == 1
 
         cs.append(
-                ('b', lambda : results.append('b ran')),
-                ('c', lambda : results.append('c ran')),
-                )
+            ("b", lambda: results.append("b ran")),
+            ("c", lambda: results.append("c ran")),
+        )
         assert cs.count == 3
 
         cs.invoke()
-        assert results == ['a ran', 'b ran', 'c ran']
+        assert results == ["a ran", "b ran", "c ran"]
 
     def test_remove_1(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
 
-        cs.remove_task('b')
+        cs.remove_task("b")
         assert cs.count == 1
 
         cs.invoke()
-        assert results == ['a ran']
+        assert results == ["a ran"]
 
     def test_callable(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
         cs()
-        assert results == ['a ran', 'b ran']
+        assert results == ["a ran", "b ran"]
 
     def test_nested(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
         cs2 = CallSequence(
-                ('c', cs),
-                )
+            ("c", cs),
+        )
         assert cs2.count == 1
         cs2.invoke()
-        assert results == ['a ran', 'b ran']
+        assert results == ["a ran", "b ran"]
 
     def test_clear(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
         cs.clear()
         assert cs.count == 0
 
     def test_iter(self):
         results = []
+
         def task_a():
-            results.append('a ran')
+            results.append("a ran")
+
         def task_b():
-            results.append('b ran')
+            results.append("b ran")
+
         cs = CallSequence(
-                ('a', task_a),
-                ('b', task_b),
-                )
+            ("a", task_a),
+            ("b", task_b),
+        )
         assert cs.count == 2
         it = iter(cs)
-        print("it=",repr(it),dir(it))
-        assert six.next(it) == ('a', task_a)
-        assert six.next(it) == ('b', task_b)
+        print("it=", repr(it), dir(it))
+        assert six.next(it) == ("a", task_a)
+        assert six.next(it) == ("b", task_b)
         with pytest.raises(StopIteration):
             six.next(it)
 
     def test_get(self):
         results = []
+
         def task_a():
-            results.append('a ran')
+            results.append("a ran")
+
         cs = CallSequence(
-                ('a', task_a),
-                )
+            ("a", task_a),
+        )
         assert cs.count == 1
-        assert cs.get_task('a') == task_a
+        assert cs.get_task("a") == task_a
         with pytest.raises(KeyError):
-            cs.get_task('foo')
+            cs.get_task("foo")
 
     def test_has(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+        )
         assert cs.count == 1
-        assert cs.has_task('a')
-        assert not cs.has_task('foo')
+        assert cs.has_task("a")
+        assert not cs.has_task("foo")
 
     def test_replace(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
-        cs.replace_task('b', lambda : results.append('wheee'))
+        cs.replace_task("b", lambda: results.append("wheee"))
         cs()
-        assert results == ['a ran', 'wheee']
+        assert results == ["a ran", "wheee"]
 
     def test_wrap(self):
         results = []
+
         def task_b():
-            results.append('b ran')
+            results.append("b ran")
             return "task b result"
+
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', task_b),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", task_b),
+        )
         assert cs.count == 2
+
         def wrapper(t):
             assert t == "task b result"
-            results.append('wrapper ran')
-        cs.wrap_task('b', wrapper)
+            results.append("wrapper ran")
+
+        cs.wrap_task("b", wrapper)
         cs()
-        assert results == ['a ran', 'b ran', 'wrapper ran']
+        assert results == ["a ran", "b ran", "wrapper ran"]
 
     def test_returned_seq(self):
         results = []
+
         def task_b():
-            results.append('b ran')
+            results.append("b ran")
             cs2 = CallSequence(
-                    ('x', lambda : results.append('x ran')),
-                    ('y', lambda : results.append('y ran')),
-                    )
+                ("x", lambda: results.append("x ran")),
+                ("y", lambda: results.append("y ran")),
+            )
             assert cs2.count == 2
             return cs2
+
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', task_b),
-                ('c', lambda : results.append('c ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", task_b),
+            ("c", lambda: results.append("c ran")),
+        )
         assert cs.count == 3
         cs()
-        assert results == ['a ran', 'b ran', 'x ran', 'y ran', 'c ran']
+        assert results == ["a ran", "b ran", "x ran", "y ran", "c ran"]
 
     def test_insert_before_1(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
-        cs.insert_before('b', ('c', lambda : results.append('c ran')))
+        cs.insert_before("b", ("c", lambda: results.append("c ran")))
         assert cs.count == 3
         cs()
-        assert results == ['a ran', 'c ran', 'b ran']
+        assert results == ["a ran", "c ran", "b ran"]
 
     def test_insert_before_2(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
-        cs.insert_before('a', ('c', lambda : results.append('c ran')))
+        cs.insert_before("a", ("c", lambda: results.append("c ran")))
         assert cs.count == 3
         cs()
-        assert results == ['c ran', 'a ran', 'b ran']
+        assert results == ["c ran", "a ran", "b ran"]
 
     def test_insert_before_3(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
-        cs.insert_before('a', ('c', lambda : results.append('c ran')),
-                              ('d', lambda : results.append('d ran')))
+        cs.insert_before(
+            "a",
+            ("c", lambda: results.append("c ran")),
+            ("d", lambda: results.append("d ran")),
+        )
         assert cs.count == 4
         cs()
-        assert results == ['c ran', 'd ran', 'a ran', 'b ran']
+        assert results == ["c ran", "d ran", "a ran", "b ran"]
 
     def test_insert_before_4(self):
         results = []
         cs = CallSequence()
         with pytest.raises(KeyError):
-            cs.insert_before('z', ('c', lambda : results.append('c ran')))
+            cs.insert_before("z", ("c", lambda: results.append("c ran")))
 
     def test_insert_after_1(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
-        cs.insert_after('b', ('c', lambda : results.append('c ran')))
+        cs.insert_after("b", ("c", lambda: results.append("c ran")))
         assert cs.count == 3
         cs()
-        assert results == ['a ran', 'b ran', 'c ran']
+        assert results == ["a ran", "b ran", "c ran"]
 
     def test_insert_after_2(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
-        cs.insert_after('a', ('c', lambda : results.append('c ran')))
+        cs.insert_after("a", ("c", lambda: results.append("c ran")))
         assert cs.count == 3
         cs()
-        assert results == ['a ran', 'c ran', 'b ran']
+        assert results == ["a ran", "c ran", "b ran"]
 
     def test_insert_after_3(self):
         results = []
         cs = CallSequence(
-                ('a', lambda : results.append('a ran')),
-                ('b', lambda : results.append('b ran')),
-                )
+            ("a", lambda: results.append("a ran")),
+            ("b", lambda: results.append("b ran")),
+        )
         assert cs.count == 2
-        cs.insert_after('a', ('c', lambda : results.append('c ran')),
-                             ('d', lambda : results.append('d ran')))
+        cs.insert_after(
+            "a",
+            ("c", lambda: results.append("c ran")),
+            ("d", lambda: results.append("d ran")),
+        )
         assert cs.count == 4
         cs()
-        assert results == ['a ran', 'c ran', 'd ran', 'b ran']
+        assert results == ["a ran", "c ran", "d ran", "b ran"]
 
     def test_insert_after_4(self):
         results = []
         cs = CallSequence()
         with pytest.raises(KeyError):
-            cs.insert_after('z', ('c', lambda : results.append('c ran')))
-
-
+            cs.insert_after("z", ("c", lambda: results.append("c ran")))

@@ -22,10 +22,11 @@ from typing import List
 from .base import SubcommandBase
 from ..commands.commander import PyOCDCommander
 
+
 class CommanderSubcommand(SubcommandBase):
     """@brief `pyocd commander` subcommand."""
 
-    NAMES = ['commander', 'cmd']
+    NAMES = ["commander", "cmd"]
     HELP = "Interactive command console."
     DEFAULT_LOG_LEVEL = logging.WARNING
 
@@ -42,19 +43,21 @@ class CommanderSubcommand(SubcommandBase):
         commander_parser = argparse.ArgumentParser(description=cls.HELP, add_help=False)
 
         commander_options = commander_parser.add_argument_group("commander options")
+        # fmt: off
         commander_options.add_argument("-H", "--halt", action="store_true", default=None,
             help="Halt core upon connect. (Deprecated, see --connect.)")
         commander_options.add_argument("-N", "--no-init", action="store_true",
             help="Do not init debug system.")
         commander_options.add_argument("--elf", metavar="PATH",
             help="Optionally specify ELF file being debugged.")
-        commander_options.add_argument("-c", "--command", dest="commands", metavar="CMD", action='append', nargs='+',
+        commander_options.add_argument("-c", "--command", dest="commands", metavar="CMD", action="append", nargs="+",
             help="Run commands.")
-        commander_options.add_argument("-x", "--execute", dest="commands", metavar="FILE", action='append',
-            type=argparse.FileType('r'),
+        commander_options.add_argument("-x", "--execute", dest="commands", metavar="FILE", action="append",
+            type=argparse.FileType("r"),
             help="Execute commands from file. Pass - for stdin.")
         commander_options.add_argument("-i", "--interactive", action="store_true",
             help="Stay in interactive mode after running commands specified from command line or file.")
+        # fmt: on
 
         return [cls.CommonOptions.COMMON, cls.CommonOptions.CONNECT, commander_parser]
 
@@ -75,5 +78,3 @@ class CommanderSubcommand(SubcommandBase):
         PyOCDCommander(self._args, cmds).run()
 
         return 0
-
-

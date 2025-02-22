@@ -16,7 +16,7 @@
 
 import logging
 
-from ...core.memory_map import (RamRegion, RomRegion)
+from ...core.memory_map import RamRegion, RomRegion
 from ...flash.flash import Flash
 
 LOG = logging.getLogger(__name__)

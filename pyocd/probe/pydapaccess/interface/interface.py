@@ -17,7 +17,6 @@
 
 
 class Interface:
-
     @staticmethod
     def get_all_connected_interfaces():
         raise NotImplementedError()
@@ -59,10 +58,7 @@ class Interface:
         raise NotImplementedError()
 
     def get_info(self):
-        return self.vendor_name + " " + \
-               self.product_name + " (" + \
-               str(hex(self.vid)) + ", " + \
-               str(hex(self.pid)) + ")"
+        return f"{self.vendor_name} {self.product_name} ({self.vid:x}:{self.pid:x})"
 
     def get_packet_count(self):
         return self.packet_count

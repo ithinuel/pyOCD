@@ -16,9 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Set, Tuple)
+from typing import Set, Tuple
 
 from .dap_access_api import DAPAccessIntf
+
 
 class Command:
     DAP_INFO = 0x00
@@ -31,7 +32,7 @@ class Command:
     DAP_TRANSFER_ABORT = 0x07
     DAP_WRITE_ABORT = 0x08
     DAP_DELAY = 0x09
-    DAP_RESET_TARGET = 0x0a
+    DAP_RESET_TARGET = 0x0A
     DAP_SWJ_PINS = 0x10
     DAP_SWJ_CLOCK = 0x11
     DAP_SWJ_SEQUENCE = 0x12
@@ -49,7 +50,8 @@ class Command:
     DAP_SWO_EXTENDED_STATUS = 0x1E
     DAP_QUEUE_COMMANDS = 0x7E
     DAP_EXECUTE_COMMANDS = 0x7F
-    DAP_VENDOR0 = 0x80 # Start of vendor-specific command IDs.
+    DAP_VENDOR0 = 0x80  # Start of vendor-specific command IDs.
+
 
 class Capabilities:
     SWD = 0x01
@@ -59,14 +61,16 @@ class Capabilities:
     ATOMIC_COMMANDS = 0x10
     DAP_SWD_SEQUENCE = 0x20
 
+
 class Pin:
-    NONE = 0x00 # Used to read current pin values without changing.
-    SWCLK_TCK = (1 << 0)
-    SWDIO_TMS = (1 << 1)
-    TDI = (1 << 2)
-    TDO = (1 << 3)
-    nTRST = (1 << 5)
-    nRESET = (1 << 7)
+    NONE = 0x00  # Used to read current pin values without changing.
+    SWCLK_TCK = 1 << 0
+    SWDIO_TMS = 1 << 1
+    TDI = 1 << 2
+    TDO = 1 << 3
+    nTRST = 1 << 5
+    nRESET = 1 << 7
+
 
 # Info IDs that return integer values.
 INTEGER_INFOS = [
@@ -74,8 +78,9 @@ INTEGER_INFOS = [
     DAPAccessIntf.ID.TEST_DOMAIN_TIMER,
     DAPAccessIntf.ID.SWO_BUFFER_SIZE,
     DAPAccessIntf.ID.MAX_PACKET_COUNT,
-    DAPAccessIntf.ID.MAX_PACKET_SIZE
-    ]
+    DAPAccessIntf.ID.MAX_PACKET_SIZE,
+]
+
 
 class CMSISDAPVersion:
     """@brief Known CMSIS-DAP versions.
@@ -83,6 +88,7 @@ class CMSISDAPVersion:
     The tuple fields are major, minor, patch. Generally, patch release versions are excluded from this
     list, unless there is a specific reason to know about a particular patch release.
     """
+
     V1_0_0 = (1, 0, 0)
     V1_1_0 = (1, 1, 0)
     V1_2_0 = (1, 2, 0)
@@ -93,18 +99,13 @@ class CMSISDAPVersion:
     @classmethod
     def major_versions(cls) -> Set[int]:
         """@brief Returns a set of major versions."""
-        return {
-            v[0] for k, v in cls.__dict__.items()
-            if k.startswith('V')
-            }
+        return {v[0] for k, v in cls.__dict__.items() if k.startswith("V")}
 
     @classmethod
     def minor_versions(cls) -> Set[Tuple[int, int]]:
         """@brief Returns a set of minor version tuples."""
-        return {
-            v[:2] for k, v in cls.__dict__.items()
-            if k.startswith('V')
-            }
+        return {v[:2] for k, v in cls.__dict__.items() if k.startswith("V")}
+
 
 DAP_DEFAULT_PORT = 0
 DAP_SWD_PORT = 1
@@ -113,10 +114,12 @@ DAP_JTAG_PORT = 2
 DAP_LED_CONNECT = 0
 DAP_LED_RUNNING = 1
 
+
 # Masks for DAP_SWD_SEQUENCE command.
 class DAPSWDSequence:
-    MODE_MASK = 0x80 # bit [7]: 0=output, 1=input
-    CYCLES_MASK = 0x1f # bits [5:0]: number of TCK cycles
+    MODE_MASK = 0x80  # bit [7]: 0=output, 1=input
+    CYCLES_MASK = 0x1F  # bits [5:0]: number of TCK cycles
+
 
 # Options for DAP_SWO_TRANSPORT command.
 class DAPSWOTransport:
@@ -124,16 +127,19 @@ class DAPSWOTransport:
     DAP_SWO_DATA = 1
     DAP_SWO_EP = 2
 
+
 # SWO mode options.
 class DAPSWOMode:
     OFF = 0
     UART = 1
     MANCHESTER = 2
 
+
 # SWO control actions.
 class DAPSWOControl:
     STOP = 0
     START = 1
+
 
 # SWO status masks.
 class DAPSWOStatus:
@@ -141,20 +147,24 @@ class DAPSWOStatus:
     ERROR = 0x40
     OVERRUN = 0x80
 
+
 DAP_OK = 0
-DAP_ERROR = 0xff
+DAP_ERROR = 0xFF
+
 
 class DAPTransferResponse:
     """Responses to DAP_Transfer and DAP_TransferBlock"""
-    ACK_MASK = 0x07 # Bits [2:0]
-    PROTOCOL_ERROR_MASK = 0x08 # Bit [3]
-    VALUE_MISMATCH_MASK = 0x08 # Bit [4]
+
+    ACK_MASK = 0x07  # Bits [2:0]
+    PROTOCOL_ERROR_MASK = 0x08  # Bit [3]
+    VALUE_MISMATCH_MASK = 0x08  # Bit [4]
 
     # Values for ACK bitfield.
     ACK_OK = 1
     ACK_WAIT = 2
     ACK_FAULT = 4
     ACK_NO_ACK = 7
+
 
 class CMSISDAPProtocol(object):
     """@brief This class implements the CMSIS-DAP wire protocol."""
@@ -197,14 +207,18 @@ class CMSISDAPProtocol(object):
             elif resp_len == 4:
                 return (resp[5] << 24) | (resp[4] << 16) | (resp[3] << 8) | resp[2]
             else:
-                raise DAPAccessIntf.DeviceError("invalid DAP_INFO response length for %s" % id_.name)
+                raise DAPAccessIntf.DeviceError(
+                    "invalid DAP_INFO response length for %s" % id_.name
+                )
 
         # String values. They are sent as C strings with a terminating null char, so we strip it out.
         if resp_len == 0:
             return None
         if resp_len > (len(resp) - 2):
-            raise DAPAccessIntf.DeviceError("invalid DAP_INFO response length for %s" % id_.name)
-        return bytearray(resp[2:2 + resp_len - 1]).decode('utf-8', 'replace')
+            raise DAPAccessIntf.DeviceError(
+                "invalid DAP_INFO response length for %s" % id_.name
+            )
+        return bytearray(resp[2 : 2 + resp_len - 1]).decode("utf-8", "replace")
 
     def set_led(self, type, enabled):
         cmd = []
@@ -261,10 +275,10 @@ class CMSISDAPProtocol(object):
         cmd = []
         cmd.append(Command.DAP_WRITE_ABORT)
         cmd.append(dap_index)
-        cmd.append((data >> 0) & 0xff)
-        cmd.append((data >> 8) & 0xff)
-        cmd.append((data >> 16) & 0xff)
-        cmd.append((data >> 24) & 0xff)
+        cmd.append((data >> 0) & 0xFF)
+        cmd.append((data >> 8) & 0xFF)
+        cmd.append((data >> 16) & 0xFF)
+        cmd.append((data >> 24) & 0xFF)
         self.interface.write(cmd)
 
         resp = self.interface.read()
@@ -294,13 +308,15 @@ class CMSISDAPProtocol(object):
 
         return resp[1]
 
-    def transfer_configure(self, idle_cycles=0x02, wait_retry=0x0050, match_retry=0x0000):
+    def transfer_configure(
+        self, idle_cycles=0x02, wait_retry=0x0050, match_retry=0x0000
+    ):
         cmd = []
         cmd.append(Command.DAP_TRANSFER_CONFIGURE)
         cmd.append(idle_cycles)
-        cmd.append(wait_retry & 0xff)
+        cmd.append(wait_retry & 0xFF)
         cmd.append(wait_retry >> 8)
-        cmd.append(match_retry & 0xff)
+        cmd.append(match_retry & 0xFF)
         cmd.append(match_retry >> 8)
         self.interface.write(cmd)
 
@@ -315,14 +331,13 @@ class CMSISDAPProtocol(object):
 
         return resp[1]
 
-
     def set_swj_clock(self, clock=1000000):
         cmd = []
         cmd.append(Command.DAP_SWJ_CLOCK)
-        cmd.append(clock & 0xff)
-        cmd.append((clock >> 8) & 0xff)
-        cmd.append((clock >> 16) & 0xff)
-        cmd.append((clock >> 24) & 0xff)
+        cmd.append(clock & 0xFF)
+        cmd.append((clock >> 8) & 0xFF)
+        cmd.append((clock >> 16) & 0xFF)
+        cmd.append((clock >> 24) & 0xFF)
         self.interface.write(cmd)
 
         resp = self.interface.read()
@@ -339,12 +354,12 @@ class CMSISDAPProtocol(object):
     def set_swj_pins(self, output, pins, wait=0):
         cmd = []
         cmd.append(Command.DAP_SWJ_PINS)
-        cmd.append(output & 0xff)
-        cmd.append(pins & 0xff)
-        cmd.append(wait & 0xff)
-        cmd.append((wait >> 8) & 0xff)
-        cmd.append((wait >> 16) & 0xff)
-        cmd.append((wait >> 24) & 0xff)
+        cmd.append(output & 0xFF)
+        cmd.append(pins & 0xFF)
+        cmd.append(wait & 0xFF)
+        cmd.append((wait >> 8) & 0xFF)
+        cmd.append((wait >> 16) & 0xFF)
+        cmd.append((wait >> 24) & 0xFF)
         self.interface.write(cmd)
 
         resp = self.interface.read()
@@ -402,16 +417,20 @@ class CMSISDAPProtocol(object):
         for seq in sequences:
             # Construct the control byte.
             tck_count = seq[0]
-            assert 1 <= tck_count <= 64, "SWD sequence TCK count is out of range (must be 1-64)"
+            assert 1 <= tck_count <= 64, (
+                "SWD sequence TCK count is out of range (must be 1-64)"
+            )
             is_output = len(seq) == 2
-            info = (0x00 if is_output else 0x80) | (0 if (tck_count == 64) else tck_count)
+            info = (0x00 if is_output else 0x80) | (
+                0 if (tck_count == 64) else tck_count
+            )
             cmd.append(info)
 
             # Append SWDIO output data.
             if is_output:
                 bits = seq[1]
                 for i in range((tck_count + 7) // 8):
-                    cmd.append(bits & 0xff)
+                    cmd.append(bits & 0xFF)
                     bits >>= 8
         self.interface.write(cmd)
 
@@ -445,7 +464,7 @@ class CMSISDAPProtocol(object):
         cmd.append(Command.DAP_SWJ_SEQUENCE)
         cmd.append(0 if (length == 256) else length)
         for i in range((length + 7) // 8):
-            cmd.append(bits & 0xff)
+            cmd.append(bits & 0xFF)
             bits >>= 8
         self.interface.write(cmd)
 
@@ -462,16 +481,18 @@ class CMSISDAPProtocol(object):
 
     def jtag_sequence(self, cycles, tms, read_tdo, tdi):
         assert 0 <= cycles <= 64
-        info = (((0 if (cycles == 64) else cycles) & 0x3f)
-                | ((tms & 1) << 6)
-                | (int(read_tdo) << 7))
+        info = (
+            ((0 if (cycles == 64) else cycles) & 0x3F)
+            | ((tms & 1) << 6)
+            | (int(read_tdo) << 7)
+        )
 
         cmd = []
         cmd.append(Command.DAP_JTAG_SEQUENCE)
         cmd.append(1)
         cmd.append(info)
         for i in range((cycles + 7) // 8):
-            cmd.append(tdi & 0xff)
+            cmd.append(tdi & 0xFF)
             tdi >>= 8
         self.interface.write(cmd)
 
@@ -525,10 +546,7 @@ class CMSISDAPProtocol(object):
             # Operation failed
             raise DAPAccessIntf.CommandError("DAP_JTAG_IDCODE failed")
 
-        return  (resp[2] << 0) | \
-                (resp[3] << 8) | \
-                (resp[4] << 16) | \
-                (resp[5] << 24)
+        return (resp[2] << 0) | (resp[3] << 8) | (resp[4] << 16) | (resp[5] << 24)
 
     def swo_transport(self, transport):
         cmd = []
@@ -568,10 +586,10 @@ class CMSISDAPProtocol(object):
     def swo_baudrate(self, baudrate):
         cmd = []
         cmd.append(Command.DAP_SWO_BAUDRATE)
-        cmd.append(baudrate & 0xff)
-        cmd.append((baudrate >> 8) & 0xff)
-        cmd.append((baudrate >> 16) & 0xff)
-        cmd.append((baudrate >> 24) & 0xff)
+        cmd.append(baudrate & 0xFF)
+        cmd.append((baudrate >> 8) & 0xFF)
+        cmd.append((baudrate >> 16) & 0xFF)
+        cmd.append((baudrate >> 24) & 0xFF)
         self.interface.write(cmd)
 
         resp = self.interface.read()
@@ -579,10 +597,7 @@ class CMSISDAPProtocol(object):
             # Response is to a different command
             raise DAPAccessIntf.DeviceError("expected DAP_SWO_BAUDRATE")
 
-        return  (resp[1] << 0) | \
-                (resp[2] << 8) | \
-                (resp[3] << 16) | \
-                (resp[4] << 24)
+        return (resp[1] << 0) | (resp[2] << 8) | (resp[3] << 16) | (resp[4] << 24)
 
     def swo_control(self, action):
         cmd = []
@@ -612,12 +627,10 @@ class CMSISDAPProtocol(object):
             # Response is to a different command
             raise DAPAccessIntf.DeviceError("expected DAP_SWO_STATUS")
 
-        return (resp[1],
-                    (resp[2] << 0) | \
-                    (resp[3] << 8) | \
-                    (resp[4] << 16) | \
-                    (resp[5] << 24)
-                )
+        return (
+            resp[1],
+            (resp[2] << 0) | (resp[3] << 8) | (resp[4] << 16) | (resp[5] << 24),
+        )
 
     def swo_data(self, count):
         cmd = []
@@ -625,8 +638,8 @@ class CMSISDAPProtocol(object):
 
         # Account for protocol overhead when setting the count
         count = min(self.interface.get_packet_size() - 4, count)
-        cmd.append(count & 0xff)
-        cmd.append((count >> 8) & 0xff)
+        cmd.append(count & 0xFF)
+        cmd.append((count >> 8) & 0xFF)
 
         self.interface.write(cmd)
         resp = self.interface.read()
@@ -636,8 +649,7 @@ class CMSISDAPProtocol(object):
             raise DAPAccessIntf.DeviceError("expected DAP_SWO_DATA")
 
         status = resp[1]
-        count = (resp[2] << 0) | \
-                    (resp[3] << 8)
+        count = (resp[2] << 0) | (resp[3] << 8)
         if count > 0:
             data = resp[4:]
         else:

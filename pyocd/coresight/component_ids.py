@@ -15,13 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Callable, Dict, Optional, NamedTuple, Tuple, Union, TYPE_CHECKING)
+from typing import Callable, Dict, Optional, NamedTuple, Tuple, Union, TYPE_CHECKING
 
-from .ap import (APAddressBase, AccessPort)
+from .ap import APAddressBase, AccessPort
 from .cortex_m import CortexM
 from .cortex_m_v8m import CortexM_v8M
 from .fpb import FPB
-from .dwt import (DWT, DWTv2)
+from .dwt import DWT, DWTv2
 from .itm import ITM
 from .tpiu import TPIU
 from .gpr import GPR
@@ -37,14 +37,14 @@ if TYPE_CHECKING:
 # Component classes.
 ROM_TABLE_CLASS = 0x1
 CORESIGHT_CLASS = 0x9
-GENERIC_CLASS = 0xe
-SYSTEM_CLASS = 0xf # CoreLink, PrimeCell, or other system component with no standard register layout.
+GENERIC_CLASS = 0xE
+SYSTEM_CLASS = 0xF  # CoreLink, PrimeCell, or other system component with no standard register layout.
 
 #  [11:8] continuation
 #  [6:0]  ID
-ARM_ID = 0x43b
-ARM_CHINA_ID = 0xa75
-FSL_ID = 0x00e
+ARM_ID = 0x43B
+ARM_CHINA_ID = 0xA75
+FSL_ID = 0x00E
 STM_ID = 0x020
 
 ## Map of JEP106 IDs to vendor name.
@@ -82,15 +82,23 @@ VENDOR_NAMES_MAP: Dict[int, str] = {
 
 # Two factory signatures are supported. The discovery classes ensure the right one is called by
 # filtering APs as appropriate.
-ComponentFactory = Callable[["MemoryInterface", "CoreSightComponentID", int], "CoreSightComponent"]
-APFactory = Callable[["DebugPort", APAddressBase, Optional["CoreSightComponentID"]], AccessPort]
+ComponentFactory = Callable[
+    ["MemoryInterface", "CoreSightComponentID", int], "CoreSightComponent"
+]
+APFactory = Callable[
+    ["DebugPort", APAddressBase, Optional["CoreSightComponentID"]], AccessPort
+]
+
 
 class CmpInfo(NamedTuple):
     """@brief Combines a component and product name with a factory method."""
+
     name: str
     product: Optional[str]
     factory: Optional[Union[ComponentFactory, APFactory]]
 
+
+# fmt: off
 ## Map from (designer, class, part, devtype, archid) to component name, product name, and factory.
 COMPONENT_MAP: Dict[Tuple[int, int, Optional[int], Optional[int], int], CmpInfo] = {
   # Archid-only entries
@@ -253,4 +261,4 @@ COMPONENT_MAP: Dict[Tuple[int, int, Optional[int], Optional[int], int], CmpInfo]
     (ARM_CHINA_ID, CORESIGHT_CLASS, 0x132, 0x13, 0x4a13) : CmpInfo('ETM',       'Star-MC1', None                ),
     (ARM_CHINA_ID, CORESIGHT_CLASS, 0x132, 0x11, 0)      : CmpInfo('TPIU',      'Star-MC1', TPIU.factory        ),
     }
-
+# fmt: on

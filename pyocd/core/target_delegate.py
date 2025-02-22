@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Any, Optional, TYPE_CHECKING)
+from typing import Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .session import Session
@@ -65,7 +65,9 @@ class DelegateHavingMixIn:
     def delegate_implements(self, method_name: str) -> bool:
         return (self._delegate is not None) and (hasattr(self._delegate, method_name))
 
-    def call_delegate(self, method_name: str, *args: Any, **kwargs: Any) -> Optional[bool]:
+    def call_delegate(
+        self, method_name: str, *args: Any, **kwargs: Any
+    ) -> Optional[bool]:
         if self.delegate_implements(method_name):
             return getattr(self._delegate, method_name)(*args, **kwargs)
         else:
@@ -74,7 +76,9 @@ class DelegateHavingMixIn:
 
     def has_debug_sequence(self, name: str, pname: Optional[str] = None) -> bool:
         seq_delegate = self.debug_sequence_delegate
-        return seq_delegate.has_sequence_with_name(name, pname) if seq_delegate else False
+        return (
+            seq_delegate.has_sequence_with_name(name, pname) if seq_delegate else False
+        )
 
 
 class TargetDelegateInterface:
@@ -115,7 +119,9 @@ class TargetDelegateInterface:
         """
         pass
 
-    def will_init_target(self, target: "SoCTarget", init_sequence: "CallSequence") -> None:
+    def will_init_target(
+        self, target: "SoCTarget", init_sequence: "CallSequence"
+    ) -> None:
         """@brief Hook to review and modify init call sequence prior to execution.
         @param self
         @param target An SoCTarget object about to be initialized.
@@ -209,7 +215,9 @@ class TargetDelegateInterface:
         @return Ignored."""
         pass
 
-    def will_reset(self, core: "Target", reset_type: "Target.ResetType") -> DelegateResult:
+    def will_reset(
+        self, core: "Target", reset_type: "Target.ResetType"
+    ) -> DelegateResult:
         """@brief Pre-reset hook.
         @param self
         @param core A CortexM instance.
@@ -228,7 +236,9 @@ class TargetDelegateInterface:
         """
         pass
 
-    def set_reset_catch(self, core: "CoreTarget", reset_type: "Target.ResetType") -> DelegateResult:
+    def set_reset_catch(
+        self, core: "CoreTarget", reset_type: "Target.ResetType"
+    ) -> DelegateResult:
         """@brief Hook to prepare target for halting on reset.
         @param self
         @param core A CortexM instance.
@@ -238,7 +248,9 @@ class TargetDelegateInterface:
         """
         pass
 
-    def clear_reset_catch(self, core: "CoreTarget", reset_type: "Target.ResetType") -> None:
+    def clear_reset_catch(
+        self, core: "CoreTarget", reset_type: "Target.ResetType"
+    ) -> None:
         """@brief Hook to clean up target after a reset and halt.
         @param self
         @param core A CortexM instance.
@@ -282,4 +294,3 @@ class TargetDelegateInterface:
         @param command_set The `CommandSet` object to which commands may be added.
         """
         pass
-

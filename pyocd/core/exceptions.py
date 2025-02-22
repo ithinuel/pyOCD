@@ -14,52 +14,75 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class Error(RuntimeError):
     """@brief Parent of all errors pyOCD can raise"""
+
     pass
+
 
 class InternalError(Error):
     """@brief Internal consistency or logic error.
 
     This error indicates that something has happened that shouldn't be possible.
     """
+
     pass
+
 
 class TimeoutError(Error):
     """@brief Any sort of timeout"""
+
     pass
+
 
 class TargetSupportError(Error):
     """@brief Error related to target support"""
+
     pass
+
 
 class ProbeError(Error):
     """@brief Error communicating with the debug probe"""
+
     pass
+
 
 class ProbeDisconnected(ProbeError):
     """@brief The connection to the debug probe was lost"""
+
     pass
+
 
 class TargetError(Error):
     """@brief An error that happens on the target"""
+
     pass
+
 
 class DebugError(TargetError):
     """@brief Error controlling target debug resources"""
+
     pass
+
 
 class CoreRegisterAccessError(DebugError):
     """@brief Failure to read or write a core register."""
+
     pass
+
 
 class TransferError(DebugError):
     """@brief Error ocurred with a transfer over SWD or JTAG"""
+
     pass
+
 
 class TransferTimeoutError(TransferError):
     """@brief An SWD or JTAG timeout occurred"""
+
     pass
+
 
 class TransferFaultError(TransferError):
     """@brief A memory fault occurred.
@@ -74,10 +97,11 @@ class TransferFaultError(TransferError):
     start address and length. Alternatively, the corresponding property setters can be used after
     the exception is created.
     """
+
     def __init__(self, *args, **kwargs):
         super(TransferFaultError, self).__init__(*args)
-        self._address = kwargs.get('fault_address', None)
-        self._length = kwargs.get('length', None)
+        self._address = kwargs.get("fault_address", None)
+        self._length = kwargs.get("length", None)
 
     @property
     def fault_address(self):
@@ -89,7 +113,11 @@ class TransferFaultError(TransferError):
 
     @property
     def fault_end_address(self):
-        return (self._address + self._length - 1) if (self._length is not None) else self._address
+        return (
+            (self._address + self._length - 1)
+            if (self._length is not None)
+            else self._address
+        )
 
     @property
     def fault_length(self):
@@ -112,6 +140,7 @@ class TransferFaultError(TransferError):
                 desc += "-0x%08x" % self.fault_end_address
         return desc
 
+
 class FlashFailure(TargetError):
     """@brief Exception raised when flashing fails for some reason.
 
@@ -120,10 +149,11 @@ class FlashFailure(TargetError):
     failed and/or result code from the algorithm can optionally be recorded in the exception, if
     passed to the constructor as 'address' and 'result_code' keyword arguments.
     """
+
     def __init__(self, *args, **kwargs):
         super(FlashFailure, self).__init__(*args)
-        self._address = kwargs.get('address', None)
-        self._result_code = kwargs.get('result_code', None)
+        self._address = kwargs.get("address", None)
+        self._result_code = kwargs.get("result_code", None)
 
     @property
     def address(self):
@@ -146,19 +176,26 @@ class FlashFailure(TargetError):
             desc += "(%s)" % ("; ".join(parts))
         return desc
 
+
 class FlashEraseFailure(FlashFailure):
-    """@brief An attempt to erase flash failed. """
+    """@brief An attempt to erase flash failed."""
+
     pass
 
+
 class FlashProgramFailure(FlashFailure):
-    """@brief An attempt to program flash failed. """
+    """@brief An attempt to program flash failed."""
+
     pass
+
 
 class CommandError(Error):
     """@brief Raised when a command encounters an error."""
+
     pass
+
 
 class RTTError(Error):
     """@brief Error encountered when transfering data through RTT."""
-    pass
 
+    pass

@@ -22,6 +22,7 @@ from pyocd.probe.pydapaccess import DAPAccess
 
 from test_util import run_in_parallel
 
+
 def run_in_processes(function, args_list):
     """Create and run a processes in parallel for each element in args_list
 
@@ -52,8 +53,10 @@ def list_boards(id_list):
         device_list = DAPAccess.get_connected_devices()
         found_id_list = [device.get_unique_id() for device in device_list]
         found_id_list.sort()
-        assert id_list == found_id_list, "Expected %s, got %s" % \
-            (id_list, found_id_list)
+        assert id_list == found_id_list, "Expected %s, got %s" % (
+            id_list,
+            found_id_list,
+        )
 
 
 def search_and_lock(board_id):
@@ -127,5 +130,5 @@ def parallel_test():
 
 
 if __name__ == "__main__":
-    multiprocessing.set_start_method('spawn')
+    multiprocessing.set_start_method("spawn")
     parallel_test()

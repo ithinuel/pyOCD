@@ -19,9 +19,11 @@ import pytest
 from pyocd.cache.memory import MemoryCache
 from pyocd.debug.context import DebugContext
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def memcache(mockcore):
     return MemoryCache(DebugContext(mockcore), mockcore)
+
 
 class TestMemoryCache:
     def test_1(self, mockcore, memcache):
@@ -31,24 +33,24 @@ class TestMemoryCache:
     def test_2(self, mockcore, memcache):
         memcache.write_memory_block8(0, [0x10, 0x12, 0x14, 0x16])
         assert memcache.read_memory_block8(0, 4) == [0x10, 0x12, 0x14, 0x16]
-        assert memcache.read_memory_block8(2, 4) == [0x14, 0x16, 0xff, 0xff]
+        assert memcache.read_memory_block8(2, 4) == [0x14, 0x16, 0xFF, 0xFF]
 
     def test_3(self, mockcore, memcache):
         memcache.write_memory_block32(0, [0x10121416])
         assert memcache.read_memory_block32(0, 1) == [0x10121416]
-        assert memcache.read_memory_block8(2, 4) == [0x12, 0x10, 0xff, 0xff]
+        assert memcache.read_memory_block8(2, 4) == [0x12, 0x10, 0xFF, 0xFF]
 
     def test_4(self, mockcore, memcache):
         mockcore.write_memory_block8(0, [1, 2, 3, 4])
-        assert memcache.read_memory_block8(0, 8) == [1, 2, 3, 4, 0xff, 0xff, 0xff, 0xff]
-        assert memcache.read_memory_block8(4, 4) == [0xff] * 4
+        assert memcache.read_memory_block8(0, 8) == [1, 2, 3, 4, 0xFF, 0xFF, 0xFF, 0xFF]
+        assert memcache.read_memory_block8(4, 4) == [0xFF] * 4
         mockcore.write_memory_block8(10, [50, 51])
-        assert memcache.read_memory_block8(6, 6) == [0xff, 0xff, 0xff, 0xff, 50, 51]
+        assert memcache.read_memory_block8(6, 6) == [0xFF, 0xFF, 0xFF, 0xFF, 50, 51]
 
     def test_5(self, mockcore, memcache):
         memcache.write_memory_block8(0, [1, 2])
         memcache.write_memory_block8(4, [3, 4])
-        assert memcache.read_memory_block8(0, 8) == [1, 2, 0xff, 0xff, 3, 4, 0xff, 0xff]
+        assert memcache.read_memory_block8(0, 8) == [1, 2, 0xFF, 0xFF, 3, 4, 0xFF, 0xFF]
 
     def test_6_middle_cached(self, mockcore, memcache):
         mockcore.write_memory_block8(0, [50, 51, 52, 53, 54, 55, 56, 57])
@@ -65,15 +67,15 @@ class TestMemoryCache:
 
     def test_8_no_overlap(self, mockcore, memcache):
         memcache.write_memory_block8(0, [1, 2, 3, 4])
-        assert memcache.read_memory_block8(8, 4) == [0xff] * 4
+        assert memcache.read_memory_block8(8, 4) == [0xFF] * 4
 
     def test_9_begin_overlap(self, mockcore, memcache):
         memcache.write_memory_block8(4, range(8))
-        assert memcache.read_memory_block8(0, 8) == [0xff, 0xff, 0xff, 0xff, 0, 1, 2, 3]
+        assert memcache.read_memory_block8(0, 8) == [0xFF, 0xFF, 0xFF, 0xFF, 0, 1, 2, 3]
 
     def test_10_end_overlap(self, mockcore, memcache):
         memcache.write_memory_block8(0, range(8))
-        assert memcache.read_memory_block8(4, 8) == [4, 5, 6, 7, 0xff, 0xff, 0xff, 0xff]
+        assert memcache.read_memory_block8(4, 8) == [4, 5, 6, 7, 0xFF, 0xFF, 0xFF, 0xFF]
 
     def test_11_full_overlap(self, mockcore, memcache):
         memcache.write_memory_block8(0, range(8))
@@ -81,13 +83,13 @@ class TestMemoryCache:
 
     def test_12_begin(self, mockcore, memcache):
         memcache.write_memory_block8(8, [1, 2, 3, 4])
-        assert memcache.read_memory_block8(7, 1) == [0xff]
+        assert memcache.read_memory_block8(7, 1) == [0xFF]
         assert memcache.read_memory_block8(8, 1) == [1]
 
     def test_13_end(self, mockcore, memcache):
         memcache.write_memory_block8(0, [1, 2, 3, 4])
         assert memcache.read_memory_block8(3, 1) == [4]
-        assert memcache.read_memory_block8(4, 1) == [0xff]
+        assert memcache.read_memory_block8(4, 1) == [0xFF]
 
     def test_14_write_begin_ragged_cached(self, mockcore, memcache):
         memcache.write_memory_block8(4, [1, 2, 3, 4])
@@ -173,10 +175,8 @@ class TestMemoryCache:
     def test_26_read_subrange(self, memcache):
         data = list((n % 256) for n in range(320))
         memcache.write_memory_block8(0x20000000, data)
-        block = memcache.read_memory_block8(0x2000007e, 4)
-        assert block == data[0x7e:0x82]
-
+        block = memcache.read_memory_block8(0x2000007E, 4)
+        assert block == data[0x7E:0x82]
 
 
 # TODO test read32/16/8 with and without callbacks
-

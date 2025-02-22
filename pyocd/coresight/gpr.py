@@ -19,6 +19,7 @@ from ..utility.timeout import Timeout
 
 ACK_TIMEOUT = 5.0
 
+
 class GPR(CoreSightComponent):
     """@brief Granular Power Requestor.
 
@@ -28,7 +29,7 @@ class GPR(CoreSightComponent):
     CPWRUPREQ = 0x0
     CPWRUPACK = 0x0
 
-    CPWRUPM_COUNT_MASK = 0x3f
+    CPWRUPM_COUNT_MASK = 0x3F
 
     @classmethod
     def factory(cls, ap, cmpid, address):
@@ -89,6 +90,3 @@ class GPR(CoreSightComponent):
 
     def __repr__(self):
         return "<GPR @ %x: count=%d>" % (id(self), self.domain_count)
-
-
-

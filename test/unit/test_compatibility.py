@@ -19,6 +19,7 @@ from pyocd.utility.compatibility import (
     to_str_safe,
 )
 
+
 class TestCompatibility(object):
     def test_to_bytes_safe(self):
         assert to_bytes_safe(b"hello") == b"hello"
@@ -27,4 +28,7 @@ class TestCompatibility(object):
     def test_to_str_safe(self):
         assert to_str_safe(b"bytes") == "bytes"
         assert to_str_safe("string") == "string"
-        assert to_str_safe('System Administrator\u2019s Mouse') == 'System Administrator\u2019s Mouse'
+        assert (
+            to_str_safe("System Administrator\u2019s Mouse")
+            == "System Administrator\u2019s Mouse"
+        )

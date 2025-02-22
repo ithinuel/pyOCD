@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import argparse
-from typing import (List, cast, TYPE_CHECKING)
+from typing import List, cast, TYPE_CHECKING
 import logging
 import sys
 
@@ -26,36 +26,52 @@ from ..utility.cmdline import (
     convert_session_options,
     convert_reset_type,
     int_base_0,
-    )
+)
 
 if TYPE_CHECKING:
     from ..coresight.cortex_m import CortexM
 
 LOG = logging.getLogger(__name__)
 
+
 class ResetSubcommand(SubcommandBase):
     """@brief `pyocd reset` subcommand."""
 
-    NAMES = ['reset']
+    NAMES = ["reset"]
     HELP = "Reset a target device."
     DEFAULT_LOG_LEVEL = logging.WARNING
 
     @classmethod
     def get_args(cls) -> List[argparse.ArgumentParser]:
         """@brief Add this subcommand to the subparsers object."""
-        reset_parser = argparse.ArgumentParser(description='reset', add_help=False)
+        reset_parser = argparse.ArgumentParser(description="reset", add_help=False)
 
         reset_options = reset_parser.add_argument_group("reset options")
-        reset_options.add_argument("-m", "--method", default=None, dest='reset_type', metavar="METHOD",
+        reset_options.add_argument(
+            "-m",
+            "--method",
+            default=None,
+            dest="reset_type",
+            metavar="METHOD",
             help="Reset method to use (default, hw, sw, sysresetreq, vectreset, emulated). Takes precedence "
-                 "over the 'reset_type' session option if set. If neither are set, the default reset type "
-                 "from the core chosen with --core will be used (usually 'sw' but can be differ based "
-                 "on the target type).")
-        reset_options.add_argument("-c", "--core", default=0, type=int_base_0,
+            "over the 'reset_type' session option if set. If neither are set, the default reset type "
+            "from the core chosen with --core will be used (usually 'sw' but can be differ based "
+            "on the target type).",
+        )
+        reset_options.add_argument(
+            "-c",
+            "--core",
+            default=0,
+            type=int_base_0,
             help="Core number used to perform software reset. Only applies to software reset methods."
-                 "Default is core 0.")
-        reset_options.add_argument("-l", "--halt", action="store_true",
-            help="Halt the core on the first instruction after reset. Defaults to disabled.")
+            "Default is core 0.",
+        )
+        reset_options.add_argument(
+            "-l",
+            "--halt",
+            action="store_true",
+            help="Halt the core on the first instruction after reset. Defaults to disabled.",
+        )
 
         return [cls.CommonOptions.COMMON, cls.CommonOptions.CONNECT, reset_parser]
 
@@ -72,36 +88,38 @@ class ResetSubcommand(SubcommandBase):
         # Note that resume_on_disconnect is set to the inverse of the --halt argument. Obviously if
         # the target is resumed, halt won't stay in effect.
         session = ConnectHelper.session_with_chosen_probe(
-                            project_dir=self._args.project_dir,
-                            config_file=self._args.config,
-                            user_script=self._args.script,
-                            no_config=self._args.no_config,
-                            pack=self._args.pack,
-                            unique_id=self._args.unique_id,
-                            target_override=self._args.target_override,
-                            frequency=self._args.frequency,
-                            blocking=(not self._args.no_wait),
-                            connect_mode=self._args.connect_mode,
-                            resume_on_disconnect=not self._args.halt,
-                            reset_type=self._args.reset_type,
-                            options=convert_session_options(self._args.options),
-                            option_defaults=self._modified_option_defaults(),
-                            )
+            project_dir=self._args.project_dir,
+            config_file=self._args.config,
+            user_script=self._args.script,
+            no_config=self._args.no_config,
+            pack=self._args.pack,
+            unique_id=self._args.unique_id,
+            target_override=self._args.target_override,
+            frequency=self._args.frequency,
+            blocking=(not self._args.no_wait),
+            connect_mode=self._args.connect_mode,
+            resume_on_disconnect=not self._args.halt,
+            reset_type=self._args.reset_type,
+            options=convert_session_options(self._args.options),
+            option_defaults=self._modified_option_defaults(),
+        )
         if session is None:
             LOG.error("No target device available to reset")
             sys.exit(1)
         try:
             # Get the reset type from the session option.
             try:
-                the_reset_type = convert_reset_type(session.options.get('reset_type'))
+                the_reset_type = convert_reset_type(session.options.get("reset_type"))
             except ValueError:
-                LOG.error("Invalid reset method: %s", session.options.get('reset_type'))
+                LOG.error("Invalid reset method: %s", session.options.get("reset_type"))
                 return
 
             # Handle hw reset more efficiently using the probe directly, so we don't need can skip
             # discovery. However, if halting was requested we need full init even if performing a
             # hardware reset.
-            is_hw_reset = (the_reset_type == Target.ResetType.HW) and not self._args.halt
+            is_hw_reset = (
+                the_reset_type == Target.ResetType.HW
+            ) and not self._args.halt
 
             # Only init the board if performing a sw reset.
             session.open(init_board=(not is_hw_reset))
@@ -114,7 +132,9 @@ class ResetSubcommand(SubcommandBase):
 
                 # TODO This only works right now because all cores are CortexM. The default
                 # reset type should really be moved to CoreTarget.
-                the_reset_type = cast("CortexM", session.target.selected_core).default_reset_type
+                the_reset_type = cast(
+                    "CortexM", session.target.selected_core
+                ).default_reset_type
 
             LOG.info("Performing %s reset...", the_reset_type.name)
             if is_hw_reset:
@@ -130,4 +150,3 @@ class ResetSubcommand(SubcommandBase):
             LOG.info("Done.")
         finally:
             session.close()
-

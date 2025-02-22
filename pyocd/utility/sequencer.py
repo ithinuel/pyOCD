@@ -20,6 +20,7 @@ from collections.abc import Callable
 
 LOG = logging.getLogger(__name__)
 
+
 class CallSequence(object):
     """@brief Call sequence manager.
 
@@ -128,7 +129,7 @@ class CallSequence(object):
 
         # OrderedDict preserves the order when changing the value of a key
         # that is already in the dict.
-        self._calls[name] = lambda : wrapper(orig())
+        self._calls[name] = lambda: wrapper(orig())
         return self
 
     def append(self, *args):
@@ -209,7 +210,7 @@ class CallSequence(object):
 
             # Invoke returned call sequence.
             if resultSequence is not None and isinstance(resultSequence, CallSequence):
-#                 LOG.debug("Invoking returned call sequence: %s", resultSequence)
+                #                 LOG.debug("Invoking returned call sequence: %s", resultSequence)
                 resultSequence.invoke()
 
     def __call__(self, *args, **kwargs):

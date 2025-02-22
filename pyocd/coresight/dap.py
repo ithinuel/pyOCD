@@ -21,10 +21,22 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
-from typing import (cast, Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple, TYPE_CHECKING, Union, overload)
+from typing import (
+    cast,
+    Callable,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    TYPE_CHECKING,
+    Union,
+    overload,
+)
 from typing_extensions import Literal
 
-from ..core import (exceptions, memory_interface)
+from ..core import exceptions, memory_interface
 from ..core.target import Target
 from ..core.target_delegate import DelegateHavingMixIn
 from ..probe.debug_probe import DebugProbe
@@ -34,7 +46,7 @@ from ..utility.sequencer import CallSequence
 from ..utility.timeout import Timeout
 
 if TYPE_CHECKING:
-    from .ap import (APAddressBase, AccessPort)
+    from .ap import APAddressBase, AccessPort
     from ..core.session import Session
     from ..utility.notification import Notification
 
@@ -44,31 +56,31 @@ TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.CRITICAL)
 
 # DP register addresses. The DPBANKSEL value is encoded in bits [7:4].
-DP_IDR = 0x00 # read-only
-DP_IDR1 = 0x10 # read-only
-DP_BASEPTR0 = 0x20 # read-only
-DP_BASEPTR1 = 0x30 # read-only
-DP_ABORT = 0x00 # write-only
-DP_CTRL_STAT = 0x04 # read-write
-DP_DLCR = 0x14 # read-write
-DP_TARGETID = 0x24 # read-only
-DP_DLPIDR = 0x34 # read-only
-DP_EVENTSTAT = 0x44 # read-only
-DP_SELECT1 = 0x54 # write-only
-DP_SELECT = 0x8 # write-only
-DP_RDBUFF = 0xC # read-only
+DP_IDR = 0x00  # read-only
+DP_IDR1 = 0x10  # read-only
+DP_BASEPTR0 = 0x20  # read-only
+DP_BASEPTR1 = 0x30  # read-only
+DP_ABORT = 0x00  # write-only
+DP_CTRL_STAT = 0x04  # read-write
+DP_DLCR = 0x14  # read-write
+DP_TARGETID = 0x24  # read-only
+DP_DLPIDR = 0x34  # read-only
+DP_EVENTSTAT = 0x44  # read-only
+DP_SELECT1 = 0x54  # write-only
+DP_SELECT = 0x8  # write-only
+DP_RDBUFF = 0xC  # read-only
 
 # Mask and shift for extracting DPBANKSEL from our DP register address constants. These are not
 # related to the SELECT.DPBANKSEL bitfield.
-DPADDR_MASK = 0x0f
-DPADDR_DPBANKSEL_MASK = 0xf0
+DPADDR_MASK = 0x0F
+DPADDR_DPBANKSEL_MASK = 0xF0
 DPADDR_DPBANKSEL_SHIFT = 4
 
-DPIDR1_ASIZE_MASK = 0x00000007f
+DPIDR1_ASIZE_MASK = 0x00000007F
 DPIDR1_ERRMODE_MASK = 0x00000080
 
 BASEPTR0_VALID_MASK = 0x00000001
-BASEPTR0_PTR_MASK = 0xfffff000
+BASEPTR0_PTR_MASK = 0xFFFFF000
 BASEPTR0_PTR_SHIFT = 12
 
 ABORT_DAPABORT = 0x00000001
@@ -86,15 +98,15 @@ CTRLSTAT_READOK = 0x00000040
 CTRLSTAT_WDATAERR = 0x00000080
 
 # DP SELECT register fields.
-SELECT_DPBANKSEL_MASK = 0x0000000f
-SELECT_APADDR_MASK = 0xfffffff0
+SELECT_DPBANKSEL_MASK = 0x0000000F
+SELECT_APADDR_MASK = 0xFFFFFFF0
 
-DPIDR_REVISION_MASK = 0xf0000000
+DPIDR_REVISION_MASK = 0xF0000000
 DPIDR_REVISION_SHIFT = 28
-DPIDR_PARTNO_MASK = 0x0ff00000
+DPIDR_PARTNO_MASK = 0x0FF00000
 DPIDR_PARTNO_SHIFT = 20
 DPIDR_MIN_MASK = 0x00010000
-DPIDR_VERSION_MASK = 0x0000f000
+DPIDR_VERSION_MASK = 0x0000F000
 DPIDR_VERSION_SHIFT = 12
 
 CSYSPWRUPACK = 0x80000000
@@ -103,10 +115,11 @@ CSYSPWRUPREQ = 0x40000000
 CDBGPWRUPREQ = 0x10000000
 
 TRNNORMAL = 0x00000000
-MASKLANE = 0x00000f00
+MASKLANE = 0x00000F00
 
 ## Arbitrary 5 second timeout for DP power up/down requests.
 DP_POWER_REQUEST_TIMEOUT = 5.0
+
 
 ## @brief Class to hold fields from DP IDR register.
 class DPIDR(NamedTuple):
@@ -116,10 +129,13 @@ class DPIDR(NamedTuple):
     revision: int
     mindp: int
 
+
 class ADIVersion(Enum):
     """@brief Supported versions of the Arm Debug Interface."""
+
     ADIv5 = 5
     ADIv6 = 6
+
 
 class ProbeConnector:
     """@brief Configures the debug probe for a given wire protocol.
@@ -137,16 +153,23 @@ class ProbeConnector:
 
         # Make sure we have a session, since we get the session from the probe and probes have their session set
         # after creation.
-        assert probe.session is not None, "ProbeConnector requires the probe to have a session"
+        assert probe.session is not None, (
+            "ProbeConnector requires the probe to have a session"
+        )
         self._session = probe.session
 
-    def _get_protocol(self, protocol: Optional[DebugProbe.Protocol]) -> DebugProbe.Protocol:
+    def _get_protocol(
+        self, protocol: Optional[DebugProbe.Protocol]
+    ) -> DebugProbe.Protocol:
         # Convert protocol from setting if not passed as parameter.
         if protocol is None:
-            protocol_name = self._session.options.get('dap_protocol').strip().lower()
+            protocol_name = self._session.options.get("dap_protocol").strip().lower()
             protocol = DebugProbe.PROTOCOL_NAME_MAP[protocol_name]
             if protocol not in self._probe.supported_wire_protocols:
-                raise exceptions.DebugError("requested wire protocol %s not supported by the debug probe" % protocol.name)
+                raise exceptions.DebugError(
+                    "requested wire protocol %s not supported by the debug probe"
+                    % protocol.name
+                )
         return protocol
 
     def connect(self, protocol: Optional[DebugProbe.Protocol] = None) -> None:
@@ -176,10 +199,18 @@ class ProbeConnector:
         finally:
             self._probe.unlock()
 
-    def _check_protocol(self, current_wire_protocol: DebugProbe.Protocol, protocol: DebugProbe.Protocol) -> None:
+    def _check_protocol(
+        self, current_wire_protocol: DebugProbe.Protocol, protocol: DebugProbe.Protocol
+    ) -> None:
         # Warn about mismatched current and requested wire protocols.
-        if (protocol is not current_wire_protocol) and (protocol is not DebugProbe.Protocol.DEFAULT):
-            LOG.warning("Cannot use %s; already connected with %s", protocol.name, current_wire_protocol.name)
+        if (protocol is not current_wire_protocol) and (
+            protocol is not DebugProbe.Protocol.DEFAULT
+        ):
+            LOG.warning(
+                "Cannot use %s; already connected with %s",
+                protocol.name,
+                current_wire_protocol.name,
+            )
         else:
             LOG.debug("Already connected with %s", current_wire_protocol.name)
 
@@ -197,6 +228,7 @@ class ProbeConnector:
             assert actual_protocol
             LOG.debug("Default wire protocol selected; using %s", actual_protocol.name)
 
+
 class DPConnector:
     """@brief Establishes a connection to the DP for a given wire protocol.
 
@@ -210,7 +242,9 @@ class DPConnector:
 
         # Make sure we have a session, since we get the session from the probe and probes have their session set
         # after creation.
-        assert probe.session is not None, "DPConnector requires the probe to have a session"
+        assert probe.session is not None, (
+            "DPConnector requires the probe to have a session"
+        )
         self._session = probe.session
 
     @property
@@ -227,19 +261,22 @@ class DPConnector:
             assert protocol is not None, "the probe must already be connected"
 
             # Get SWJ settings.
-            use_dormant = self._session.options.get('dap_swj_use_dormant')
-            send_swj = self._session.options.get('dap_swj_enable') \
-                    and (DebugProbe.Capability.SWJ_SEQUENCE in self._probe.capabilities)
+            use_dormant = self._session.options.get("dap_swj_use_dormant")
+            send_swj = self._session.options.get("dap_swj_enable") and (
+                DebugProbe.Capability.SWJ_SEQUENCE in self._probe.capabilities
+            )
 
             # Create object to send SWJ sequences.
             swj = SWJSequenceSender(self._probe, use_dormant)
 
             def jtag_enter_run_test_idle():
-                self._probe.jtag_sequence(6, 1, False, 0x3f)
+                self._probe.jtag_sequence(6, 1, False, 0x3F)
                 self._probe.jtag_sequence(1, 0, False, 0x1)
 
-            if protocol == DebugProbe.Protocol.JTAG \
-               and DebugProbe.Capability.JTAG_SEQUENCE in self._probe.capabilities:
+            if (
+                protocol == DebugProbe.Protocol.JTAG
+                and DebugProbe.Capability.JTAG_SEQUENCE in self._probe.capabilities
+            ):
                 use_jtag_enter_run_test_idle = True
             else:
                 use_jtag_enter_run_test_idle = False
@@ -266,7 +303,10 @@ class DPConnector:
                     # If the read of the DP IDCODE fails, retry SWJ sequence. The DP may have been
                     # in a state where it thought the SWJ sequence was an invalid transfer. We also
                     # try enabling use of dormant state if it wasn't already enabled.
-                    LOG.debug("DP IDCODE read failed; resending SWJ sequence (use dormant=%s)", use_dormant)
+                    LOG.debug(
+                        "DP IDCODE read failed; resending SWJ sequence (use dormant=%s)",
+                        use_dormant,
+                    )
 
                     if attempt == 1:
                         # If already using dormant mode, just raise, we don't need to retry the same mode.
@@ -290,6 +330,7 @@ class DPConnector:
         dp_revision = (dpidr & DPIDR_REVISION_MASK) >> DPIDR_REVISION_SHIFT
         is_mindp = (dpidr & DPIDR_MIN_MASK) != 0
         return DPIDR(dpidr, dp_partno, dp_version, dp_revision, is_mindp)
+
 
 class DebugPort(DelegateHavingMixIn):
     """@brief Represents the Arm Debug Interface (ADI) Debug Port (DP)."""
@@ -335,7 +376,9 @@ class DebugPort(DelegateHavingMixIn):
         self._apacc_mem_interface: Optional[APAccessMemoryInterface] = None
 
         # Subscribe to reset events.
-        self._session.subscribe(self._reset_did_occur, (Target.Event.PRE_RESET, Target.Event.POST_RESET))
+        self._session.subscribe(
+            self._reset_did_occur, (Target.Event.PRE_RESET, Target.Event.POST_RESET)
+        )
 
     @property
     def probe(self) -> DebugProbe:
@@ -410,51 +453,60 @@ class DebugPort(DelegateHavingMixIn):
         @return @ref pyocd.utility.sequence.CallSequence CallSequence
         """
         seq: List[Tuple[str, Callable]] = [
-            ('lock_probe',          self.probe.lock),
-            ]
+            ("lock_probe", self.probe.lock),
+        ]
         if not self._have_probe_capabilities:
             seq += [
-                ('get_probe_capabilities', self._get_probe_capabilities),
-                ]
-        seq += [
-            ('connect',             self._connect),
-            ('clear_sticky_err',    self.clear_sticky_err),
-            ('power_up_debug',      self.power_up_debug),
+                ("get_probe_capabilities", self._get_probe_capabilities),
             ]
+        seq += [
+            ("connect", self._connect),
+            ("clear_sticky_err", self.clear_sticky_err),
+            ("power_up_debug", self.power_up_debug),
+        ]
         if not self._did_check_version:
             seq += [
-                ('check_version',       self._check_version),
-                ]
-        seq += [
-            ('unlock_probe',        self.probe.unlock),
+                ("check_version", self._check_version),
             ]
+        seq += [
+            ("unlock_probe", self.probe.unlock),
+        ]
         return CallSequence(*seq)
 
     def _get_probe_capabilities(self) -> None:
         """@brief Examine the probe's capabilities."""
         caps = self._probe.capabilities
-        self._probe_managed_ap_select = (DebugProbe.Capability.MANAGED_AP_SELECTION in caps)
-        self._probe_managed_dpbanksel = (DebugProbe.Capability.MANAGED_DPBANKSEL in caps)
-        self._probe_supports_dpbanksel = (DebugProbe.Capability.BANKED_DP_REGISTERS in caps)
-        self._probe_supports_apv2_addresses = (DebugProbe.Capability.APv2_ADDRESSES in caps)
+        self._probe_managed_ap_select = (
+            DebugProbe.Capability.MANAGED_AP_SELECTION in caps
+        )
+        self._probe_managed_dpbanksel = DebugProbe.Capability.MANAGED_DPBANKSEL in caps
+        self._probe_supports_dpbanksel = (
+            DebugProbe.Capability.BANKED_DP_REGISTERS in caps
+        )
+        self._probe_supports_apv2_addresses = (
+            DebugProbe.Capability.APv2_ADDRESSES in caps
+        )
         self._have_probe_capabilities = True
 
     # Usually when we call a debug sequence, we first check if the sequence exists. For the below
     # methods, we rely on .call_pre_discovery_debug_sequence() to do this for us.
     def connect_debug_port_hook(self) -> Optional[bool]:
         from .coresight_target import CoreSightTarget
+
         cst = cast(CoreSightTarget, self.session.target)
-        return cst.call_pre_discovery_debug_sequence('DebugPortSetup')
+        return cst.call_pre_discovery_debug_sequence("DebugPortSetup")
 
     def enable_debug_port_hook(self) -> Optional[bool]:
         from .coresight_target import CoreSightTarget
+
         cst = cast(CoreSightTarget, self.session.target)
-        return cst.call_pre_discovery_debug_sequence('DebugPortStart')
+        return cst.call_pre_discovery_debug_sequence("DebugPortStart")
 
     def disable_debug_port_hook(self) -> Optional[bool]:
         from .coresight_target import CoreSightTarget
+
         cst = cast(CoreSightTarget, self.session.target)
-        return cst.call_pre_discovery_debug_sequence('DebugPortStop')
+        return cst.call_pre_discovery_debug_sequence("DebugPortStop")
 
     def _connect(self) -> None:
         # Connect the probe.
@@ -472,16 +524,26 @@ class DebugPort(DelegateHavingMixIn):
         assert self.dpidr
 
         # Report on DP version.
-        LOG.log(logging.INFO if self._log_dp_info else logging.DEBUG,
-            "DP IDR = 0x%08x (v%d%s rev%d)", self.dpidr.idr, self.dpidr.version,
-            " MINDP" if self.dpidr.mindp else "", self.dpidr.revision)
+        LOG.log(
+            logging.INFO if self._log_dp_info else logging.DEBUG,
+            "DP IDR = 0x%08x (v%d%s rev%d)",
+            self.dpidr.idr,
+            self.dpidr.version,
+            " MINDP" if self.dpidr.mindp else "",
+            self.dpidr.revision,
+        )
 
     def _check_version(self) -> None:
-        self._is_dpv3 = (self.dpidr.version == 3)
+        self._is_dpv3 = self.dpidr.version == 3
         if self._is_dpv3:
             # Check that the probe will be able to access ADIv6 APs.
-            if self._probe_managed_ap_select and not self._probe_supports_apv2_addresses:
-                raise exceptions.ProbeError("connected to ADIv6 target with probe that does not support APv2 addresses")
+            if (
+                self._probe_managed_ap_select
+                and not self._probe_supports_apv2_addresses
+            ):
+                raise exceptions.ProbeError(
+                    "connected to ADIv6 target with probe that does not support APv2 addresses"
+                )
 
             idr1 = self.read_reg(DP_IDR1)
 
@@ -489,7 +551,12 @@ class DebugPort(DelegateHavingMixIn):
             self._addr_mask = (1 << self._addr_size) - 1
             self._errmode_supported = (idr1 & DPIDR1_ERRMODE_MASK) != 0
 
-            LOG.debug("DP IDR1 = 0x%08x (addr size=%d, errmode=%d)", idr1, self._addr_size, self._errmode_supported)
+            LOG.debug(
+                "DP IDR1 = 0x%08x (addr size=%d, errmode=%d)",
+                idr1,
+                self._addr_size,
+                self._errmode_supported,
+            )
 
             # Read base system address.
             baseptr0 = self.read_reg(DP_BASEPTR0)
@@ -517,20 +584,16 @@ class DebugPort(DelegateHavingMixIn):
             raise
 
     @overload
-    def read_reg(self, addr: int) -> int:
-        ...
+    def read_reg(self, addr: int) -> int: ...
 
     @overload
-    def read_reg(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_reg(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_reg(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_reg(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_reg(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_reg(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     def read_reg(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
         return self.read_dp(addr, now)
@@ -587,7 +650,7 @@ class DebugPort(DelegateHavingMixIn):
                 return False
 
         # Now power down debug.
-        self.write_reg(DP_CTRL_STAT,  MASKLANE | TRNNORMAL)
+        self.write_reg(DP_CTRL_STAT, MASKLANE | TRNNORMAL)
 
         with Timeout(DP_POWER_REQUEST_TIMEOUT) as time_out:
             while time_out.check():
@@ -614,15 +677,19 @@ class DebugPort(DelegateHavingMixIn):
     def post_reset_recovery(self) -> None:
         """@brief Wait for the target to recover from reset, with auto-reconnect if needed."""
         # Check if we can access DP registers. If this times out, then reconnect the DP and retry.
-        with Timeout(self.session.options.get('reset.dap_recover.timeout'),
-                self._RESET_RECOVERY_SLEEP_INTERVAL) as time_out:
+        with Timeout(
+            self.session.options.get("reset.dap_recover.timeout"),
+            self._RESET_RECOVERY_SLEEP_INTERVAL,
+        ) as time_out:
             attempt = 0
             while time_out.check():
                 try:
                     # Try to read CTRL/STAT. If the power-up bits request are reset, then the DP
                     # connection was not lost and we can just return.
                     value = self.read_reg(DP_CTRL_STAT)
-                    if (value & (CSYSPWRUPREQ | CDBGPWRUPREQ)) == (CSYSPWRUPREQ | CDBGPWRUPREQ):
+                    if (value & (CSYSPWRUPREQ | CDBGPWRUPREQ)) == (
+                        CSYSPWRUPREQ | CDBGPWRUPREQ
+                    ):
                         return
                 except exceptions.TransferError:
                     # Ignore errors caused by flushing.
@@ -643,7 +710,9 @@ class DebugPort(DelegateHavingMixIn):
 
                 attempt += 1
             else:
-                LOG.error("DAP is not accessible after reset followed by attempted reconnect")
+                LOG.error(
+                    "DAP is not accessible after reset followed by attempted reconnect"
+                )
 
     def reset(self, *, send_notifications: bool = True) -> None:
         """@brief Hardware reset.
@@ -758,7 +827,9 @@ class DebugPort(DelegateHavingMixIn):
                 # If there is a nonzero DPBANKSEL and the probe doesn't support this,
                 # then report an error.
                 if dpbanksel and not self._probe_supports_dpbanksel:
-                    raise exceptions.ProbeError("probe does not support banked DP registers")
+                    raise exceptions.ProbeError(
+                        "probe does not support banked DP registers"
+                    )
                 else:
                     return False
 
@@ -770,20 +841,16 @@ class DebugPort(DelegateHavingMixIn):
             return False
 
     @overload
-    def read_dp(self, addr: int) -> int:
-        ...
+    def read_dp(self, addr: int) -> int: ...
 
     @overload
-    def read_dp(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_dp(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_dp(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_dp(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_dp(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_dp(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     def read_dp(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
         if (addr & DPADDR_MASK) % 4 != 0:
@@ -809,10 +876,22 @@ class DebugPort(DelegateHavingMixIn):
         def read_dp_cb() -> int:
             try:
                 result = result_cb()
-                TRACE.debug("read_dp:%06d %s(addr=0x%08x) -> 0x%08x", num, "" if now else "...", addr, result)
+                TRACE.debug(
+                    "read_dp:%06d %s(addr=0x%08x) -> 0x%08x",
+                    num,
+                    "" if now else "...",
+                    addr,
+                    result,
+                )
                 return result
             except exceptions.TargetError as error:
-                TRACE.debug("read_dp:%06d %s(addr=0x%08x) -> error (%s)", num, "" if now else "...", addr, error)
+                TRACE.debug(
+                    "read_dp:%06d %s(addr=0x%08x) -> error (%s)",
+                    num,
+                    "" if now else "...",
+                    addr,
+                    error,
+                )
                 self._handle_error(error, num)
                 raise
             finally:
@@ -884,20 +963,16 @@ class DebugPort(DelegateHavingMixIn):
                 self.unlock()
 
     @overload
-    def read_ap(self, addr: int) -> int:
-        ...
+    def read_ap(self, addr: int) -> int: ...
 
     @overload
-    def read_ap(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_ap(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_ap(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_ap(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_ap(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_ap(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     def read_ap(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
         assert isinstance(addr, int)
@@ -921,10 +996,22 @@ class DebugPort(DelegateHavingMixIn):
         def read_ap_cb() -> int:
             try:
                 result = result_cb()
-                TRACE.debug("read_ap:%06d %s(addr=0x%08x) -> 0x%08x", num, "" if now else "...", addr, result)
+                TRACE.debug(
+                    "read_ap:%06d %s(addr=0x%08x) -> 0x%08x",
+                    num,
+                    "" if now else "...",
+                    addr,
+                    result,
+                )
                 return result
             except exceptions.TargetError as error:
-                TRACE.debug("read_ap:%06d %s(addr=0x%08x) -> error (%s)", num, "" if now else "...", addr, error)
+                TRACE.debug(
+                    "read_ap:%06d %s(addr=0x%08x) -> error (%s)",
+                    num,
+                    "" if now else "...",
+                    addr,
+                    error,
+                )
                 self._handle_error(error, num)
                 raise
             finally:
@@ -944,7 +1031,12 @@ class DebugPort(DelegateHavingMixIn):
 
         try:
             did_lock = self._select_ap(addr)
-            TRACE.debug("write_ap_multiple:%06d (addr=0x%08x) = (%i values)", num, addr, len(values))
+            TRACE.debug(
+                "write_ap_multiple:%06d (addr=0x%08x) = (%i values)",
+                num,
+                addr,
+                len(values),
+            )
             return self.probe.write_ap_multiple(addr, values)
         except exceptions.TargetError as error:
             self._handle_error(error, num)
@@ -954,30 +1046,35 @@ class DebugPort(DelegateHavingMixIn):
                 self.unlock()
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int = 1) -> Sequence[int]:
-        ...
+    def read_ap_multiple(self, addr: int, count: int = 1) -> Sequence[int]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: Literal[True] = True) -> Sequence[int]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: Literal[True] = True
+    ) -> Sequence[int]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: Literal[False]) -> Callable[[], Sequence[int]]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: Literal[False]
+    ) -> Callable[[], Sequence[int]]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: bool) -> Union[Sequence[int], Callable[[], Sequence[int]]]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: bool
+    ) -> Union[Sequence[int], Callable[[], Sequence[int]]]: ...
 
-    def read_ap_multiple(self, addr: int, count: int = 1, now: bool = True) \
-             -> Union[Sequence[int], Callable[[], Sequence[int]]]:
+    def read_ap_multiple(
+        self, addr: int, count: int = 1, now: bool = True
+    ) -> Union[Sequence[int], Callable[[], Sequence[int]]]:
         assert isinstance(addr, int)
         num = self.next_access_number
         did_lock = False
 
         try:
             did_lock = self._select_ap(addr)
-            TRACE.debug("read_ap_multiple:%06d (addr=0x%08x, count=%i)", num, addr, count)
+            TRACE.debug(
+                "read_ap_multiple:%06d (addr=0x%08x, count=%i)", num, addr, count
+            )
             result_cb = self.probe.read_ap_multiple(addr, count, now=False)
         except exceptions.TargetError as error:
             self._handle_error(error, num)
@@ -994,7 +1091,13 @@ class DebugPort(DelegateHavingMixIn):
             try:
                 return result_cb()
             except exceptions.TargetError as error:
-                TRACE.debug("read_ap_multiple:%06d %s(addr=0x%08x) -> error (%s)", num, "" if now else "...", addr, error)
+                TRACE.debug(
+                    "read_ap_multiple:%06d %s(addr=0x%08x) -> error (%s)",
+                    num,
+                    "" if now else "...",
+                    addr,
+                    error,
+                )
                 self._handle_error(error, num)
                 raise
             finally:
@@ -1021,12 +1124,24 @@ class DebugPort(DelegateHavingMixIn):
         self._invalidate_cache()
         mode = self.probe.wire_protocol
         if mode == DebugProbe.Protocol.SWD:
-            self.write_reg(DP_ABORT, ABORT_ORUNERRCLR | ABORT_WDERRCLR | ABORT_STKERRCLR | ABORT_STKCMPCLR)
+            self.write_reg(
+                DP_ABORT,
+                ABORT_ORUNERRCLR | ABORT_WDERRCLR | ABORT_STKERRCLR | ABORT_STKCMPCLR,
+            )
         elif mode == DebugProbe.Protocol.JTAG:
-            self.write_reg(DP_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ | TRNNORMAL | MASKLANE
-                    | CTRLSTAT_STICKYERR | CTRLSTAT_STICKYCMP | CTRLSTAT_STICKYORUN)
+            self.write_reg(
+                DP_CTRL_STAT,
+                CSYSPWRUPREQ
+                | CDBGPWRUPREQ
+                | TRNNORMAL
+                | MASKLANE
+                | CTRLSTAT_STICKYERR
+                | CTRLSTAT_STICKYCMP
+                | CTRLSTAT_STICKYORUN,
+            )
         else:
             assert False
+
 
 class APAccessMemoryInterface(memory_interface.MemoryInterface):
     """@brief Memory interface for performing simple APACC transactions.
@@ -1041,7 +1156,9 @@ class APAccessMemoryInterface(memory_interface.MemoryInterface):
     Only 32-bit transfers are supported.
     """
 
-    def __init__(self, dp: DebugPort, ap_address: Optional[APAddressBase] = None) -> None:
+    def __init__(
+        self, dp: DebugPort, ap_address: Optional[APAddressBase] = None
+    ) -> None:
         """@brief Constructor.
 
         @param self
@@ -1077,22 +1194,26 @@ class APAccessMemoryInterface(memory_interface.MemoryInterface):
         return self._dp.write_ap(self._offset + addr, data)
 
     @overload
-    def read_memory(self, addr: int, transfer_size: int) -> int:
-        ...
+    def read_memory(self, addr: int, transfer_size: int) -> int: ...
 
     @overload
-    def read_memory(self, addr: int, transfer_size: int, now: Literal[True] = True) -> int:
-        ...
+    def read_memory(
+        self, addr: int, transfer_size: int, now: Literal[True] = True
+    ) -> int: ...
 
     @overload
-    def read_memory(self, addr: int, transfer_size: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_memory(
+        self, addr: int, transfer_size: int, now: Literal[False]
+    ) -> Callable[[], int]: ...
 
     @overload
-    def read_memory(self, addr: int, transfer_size: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_memory(
+        self, addr: int, transfer_size: int, now: bool
+    ) -> Union[int, Callable[[], int]]: ...
 
-    def read_memory(self, addr: int, transfer_size: int = 32, now: bool = True) -> Union[int, Callable[[], int]]:
+    def read_memory(
+        self, addr: int, transfer_size: int = 32, now: bool = True
+    ) -> Union[int, Callable[[], int]]:
         """@brief Read a memory location.
 
         By default, a word will be read."""
@@ -1114,4 +1235,3 @@ class APAccessMemoryInterface(memory_interface.MemoryInterface):
         result_cbs = [self._dp.read_ap(addr + i * 4, now=False) for i in range(size)]
         result = [cb() for cb in result_cbs]
         return result
-

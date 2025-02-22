@@ -18,7 +18,7 @@
 import logging
 import json
 import threading
-from typing import (Any, Optional, Tuple)
+from typing import Any, Optional, Tuple
 
 from .debug_probe import DebugProbe
 from ..core import exceptions
@@ -30,6 +30,7 @@ LOG = logging.getLogger(__name__)
 
 TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.CRITICAL)
+
 
 class TCPClientProbe(DebugProbe):
     """@brief Probe class that connects to a debug probe server.
@@ -64,6 +65,7 @@ class TCPClientProbe(DebugProbe):
 
     class StatusCode:
         """@brief Constants for errors reported from the server."""
+
         GENERAL_ERROR = 1
         PROBE_DISCONNECTED = 2
         PROBE_ERROR = 3
@@ -79,11 +81,11 @@ class TCPClientProbe(DebugProbe):
         StatusCode.TRANSFER_ERROR: exceptions.TransferError,
         StatusCode.TRANSFER_TIMEOUT: exceptions.TransferTimeoutError,
         StatusCode.TRANSFER_FAULT: exceptions.TransferFaultError,
-        }
+    }
 
     @classmethod
     def _extract_address(cls, unique_id):
-        parts = unique_id.split(':', 1)
+        parts = unique_id.split(":", 1)
         if len(parts) == 1:
             port = cls.DEFAULT_PORT
         else:
@@ -114,15 +116,15 @@ class TCPClientProbe(DebugProbe):
 
     @property
     def vendor_name(self):
-        return self._read_property('vendor_name', "vendor")
+        return self._read_property("vendor_name", "vendor")
 
     @property
     def product_name(self):
-        return self._read_property('product_name', "product")
+        return self._read_property("product_name", "product")
 
     @property
     def supported_wire_protocols(self):
-        return self._read_property('supported_wire_protocols')
+        return self._read_property("supported_wire_protocols")
 
     @property
     def unique_id(self):
@@ -130,7 +132,7 @@ class TCPClientProbe(DebugProbe):
 
     @property
     def wire_protocol(self):
-        return self._read_property('wire_protocol')
+        return self._read_property("wire_protocol")
 
     @property
     def is_open(self):
@@ -138,7 +140,7 @@ class TCPClientProbe(DebugProbe):
 
     @property
     def capabilities(self):
-        return self._read_property('capabilities')
+        return self._read_property("capabilities")
 
     @property
     def request_id(self):
@@ -147,7 +149,9 @@ class TCPClientProbe(DebugProbe):
         self._request_id += 1
         return rid
 
-    def _perform_request_without_raise(self, request: str, *args: Any) -> Tuple[Any, Optional[BaseException]]:
+    def _perform_request_without_raise(
+        self, request: str, *args: Any
+    ) -> Tuple[Any, Optional[BaseException]]:
         """Execute a request-reply transaction with the server.
 
         The return value is a 2-tuple consisting of the optional result from the request and an optional
@@ -157,42 +161,49 @@ class TCPClientProbe(DebugProbe):
         # Protect requests with the local lock.
         with self._lock:
             rq = {
-                    "id": self.request_id,
-                    "request": request,
-                }
+                "id": self.request_id,
+                "request": request,
+            }
             if len(args):
                 rq["arguments"] = args
             formatted_request = json.dumps(rq)
             TRACE.debug("Request: %s", formatted_request)
 
             # Send request to server.
-            self._socket.write(formatted_request.encode('utf-8') + b"\n")
+            self._socket.write(formatted_request.encode("utf-8") + b"\n")
 
             # Read response.
-            response_data = self._socket.readline().decode('utf-8').strip()
+            response_data = self._socket.readline().decode("utf-8").strip()
             decoded_response = json.loads(response_data)
             TRACE.debug("decoded_response = %s", decoded_response)
 
             # Check for required keys.
-            if ('id' not in decoded_response) or ('status' not in decoded_response):
-                raise exceptions.ProbeError("malformed response from server; missing required field")
+            if ("id" not in decoded_response) or ("status" not in decoded_response):
+                raise exceptions.ProbeError(
+                    "malformed response from server; missing required field"
+                )
 
             # Check response status.
             exc = None
-            status = decoded_response['status']
+            status = decoded_response["status"]
             if status != 0:
                 # Get the error message.
-                error = decoded_response.get('error', "(missing error message key)")
-                LOG.debug("error received from server for command %s (status code %i): %s",
-                        request, status, error)
+                error = decoded_response.get("error", "(missing error message key)")
+                LOG.debug(
+                    "error received from server for command %s (status code %i): %s",
+                    request,
+                    status,
+                    error,
+                )
 
                 # Create an appropriate local exception based on the status code.
                 exc = self.STATUS_CODE_CLASS_MAP.get(status, exceptions.ProbeError)(
-                        "error received from server for command %s (status code %i): %s"
-                        % (request, status, error))
+                    "error received from server for command %s (status code %i): %s"
+                    % (request, status, error)
+                )
 
             # Get response value. If not present then there was no return value from the command
-            result = decoded_response.get('result', None)
+            result = decoded_response.get("result", None)
 
             return result, exc
 
@@ -204,15 +215,19 @@ class TCPClientProbe(DebugProbe):
         return result
 
     _PROPERTY_CONVERTERS = {
-            'capabilities':                 lambda value: [DebugProbe.Capability[v] for v in value],
-            'supported_wire_protocols':     lambda value: [DebugProbe.Protocol[v] for v in value],
-            'wire_protocol':                lambda value: DebugProbe.Protocol[value] if (value is not None) else None,
-        }
+        "capabilities": lambda value: [DebugProbe.Capability[v] for v in value],
+        "supported_wire_protocols": lambda value: [
+            DebugProbe.Protocol[v] for v in value
+        ],
+        "wire_protocol": lambda value: DebugProbe.Protocol[value]
+        if (value is not None)
+        else None,
+    }
 
     def _read_property(self, name, default=None):
         if not self.is_open:
             return default
-        result = self._perform_request('readprop', name)
+        result = self._perform_request("readprop", name)
         if name in self._PROPERTY_CONVERTERS:
             result = self._PROPERTY_CONVERTERS[name](result)
         return result
@@ -224,13 +239,13 @@ class TCPClientProbe(DebugProbe):
             self._socket.set_timeout(0.1)
 
         # Send hello message.
-        self._perform_request('hello', self.PROTOCOL_VERSION)
+        self._perform_request("hello", self.PROTOCOL_VERSION)
 
-        self._perform_request('open')
+        self._perform_request("open")
 
     def close(self):
         if self._is_open:
-            self._perform_request('close')
+            self._perform_request("close")
             self._socket.close()
             self._is_open = False
 
@@ -238,7 +253,7 @@ class TCPClientProbe(DebugProbe):
         # The lock count is then used to only send the remote lock request once.
         with self._lock_count_lock:
             if self._lock_count == 0:
-                self._perform_request('lock')
+                self._perform_request("lock")
             self._lock_count += 1
 
     def unlock(self):
@@ -247,7 +262,7 @@ class TCPClientProbe(DebugProbe):
             assert self._lock_count > 0
             self._lock_count -= 1
             if self._lock_count == 0:
-                self._perform_request('unlock')
+                self._perform_request("unlock")
 
     ## @name Target control
     ##@{
@@ -255,34 +270,34 @@ class TCPClientProbe(DebugProbe):
     def connect(self, protocol=None):
         if protocol is None:
             protocol = DebugProbe.Protocol.DEFAULT
-        self._perform_request('connect', protocol.name)
+        self._perform_request("connect", protocol.name)
 
     def disconnect(self):
-        self._perform_request('disconnect')
+        self._perform_request("disconnect")
 
     def swj_sequence(self, length, bits):
-        self._perform_request('swj_sequence', length, bits)
+        self._perform_request("swj_sequence", length, bits)
 
     def swd_sequence(self, sequences):
-        return self._perform_request('swd_sequence', sequences)
+        return self._perform_request("swd_sequence", sequences)
 
     def jtag_sequence(self, cycles, tms, read_tdo, tdi):
-        return self._perform_request('jtag_sequence', cycles, tms, read_tdo, tdi)
+        return self._perform_request("jtag_sequence", cycles, tms, read_tdo, tdi)
 
     def set_clock(self, frequency):
-        self._perform_request('set_clock', frequency)
+        self._perform_request("set_clock", frequency)
 
     def reset(self):
-        self._perform_request('reset')
+        self._perform_request("reset")
 
     def assert_reset(self, asserted):
-        self._perform_request('assert_reset', asserted)
+        self._perform_request("assert_reset", asserted)
 
     def is_reset_asserted(self):
-        return self._perform_request('is_reset_asserted')
+        return self._perform_request("is_reset_asserted")
 
     def flush(self):
-        self._perform_request('flush')
+        self._perform_request("flush")
 
     ##@}
 
@@ -290,7 +305,7 @@ class TCPClientProbe(DebugProbe):
     ##@{
 
     def read_dp(self, addr, now=True):
-        result, exc = self._perform_request_without_raise('read_dp', addr)
+        result, exc = self._perform_request_without_raise("read_dp", addr)
 
         def read_dp_cb():
             # Raise any exception here so the traceback includes the actual caller.
@@ -301,10 +316,10 @@ class TCPClientProbe(DebugProbe):
         return read_dp_cb() if now else read_dp_cb
 
     def write_dp(self, addr, data):
-        self._perform_request('write_dp', addr, data)
+        self._perform_request("write_dp", addr, data)
 
     def read_ap(self, addr, now=True):
-        result, exc = self._perform_request_without_raise('read_ap', addr)
+        result, exc = self._perform_request_without_raise("read_ap", addr)
 
         def read_ap_cb():
             # Raise any exception here so the traceback includes the actual caller.
@@ -315,10 +330,12 @@ class TCPClientProbe(DebugProbe):
         return read_ap_cb() if now else read_ap_cb
 
     def write_ap(self, addr, data):
-        self._perform_request('write_ap', addr, data)
+        self._perform_request("write_ap", addr, data)
 
     def read_ap_multiple(self, addr, count=1, now=True):
-        results, exc = self._perform_request_without_raise('read_ap_multiple', addr, count)
+        results, exc = self._perform_request_without_raise(
+            "read_ap_multiple", addr, count
+        )
 
         def read_ap_multiple_cb():
             # Raise any exception here so the traceback includes the actual caller.
@@ -329,11 +346,14 @@ class TCPClientProbe(DebugProbe):
         return read_ap_multiple_cb() if now else read_ap_multiple_cb
 
     def write_ap_multiple(self, addr, values):
-        self._perform_request('write_ap_multiple', addr, values)
+        self._perform_request("write_ap_multiple", addr, values)
 
     def get_memory_interface_for_ap(self, ap_address):
-        handle = self._perform_request('get_memory_interface_for_ap',
-                ap_address.ap_version.value, ap_address.nominal_address)
+        handle = self._perform_request(
+            "get_memory_interface_for_ap",
+            ap_address.ap_version.value,
+            ap_address.nominal_address,
+        )
         if handle is None:
             return None
         return RemoteMemoryInterface(self, handle)
@@ -344,18 +364,19 @@ class TCPClientProbe(DebugProbe):
     ##@{
 
     def has_swo(self):
-        return self._perform_request('has_swo')
+        return self._perform_request("has_swo")
 
     def swo_start(self, baudrate):
-        self._perform_request('swo_start', baudrate)
+        self._perform_request("swo_start", baudrate)
 
     def swo_stop(self):
-        self._perform_request('swo_stop')
+        self._perform_request("swo_stop")
 
     def swo_read(self):
-        return self._perform_request('swo_read')
+        return self._perform_request("swo_read")
 
     ##@}
+
 
 class RemoteMemoryInterface(MemoryInterface):
     """@brief Local proxy for a remote memory interface."""
@@ -366,30 +387,40 @@ class RemoteMemoryInterface(MemoryInterface):
 
     def write_memory(self, addr, data, transfer_size=32, **attrs):
         assert transfer_size in (8, 16, 32)
-        self._remote_probe._perform_request('write_mem', self._handle, addr, data, transfer_size)
+        self._remote_probe._perform_request(
+            "write_mem", self._handle, addr, data, transfer_size
+        )
 
     def read_memory(self, addr, transfer_size=32, now=True, **attrs):
         assert transfer_size in (8, 16, 32)
-        result, exc = self._remote_probe._perform_request_without_raise('read_mem', self._handle, addr, transfer_size)
+        result, exc = self._remote_probe._perform_request_without_raise(
+            "read_mem", self._handle, addr, transfer_size
+        )
 
         def read_callback():
             # Raise any exception here so the traceback includes the actual caller.
             if exc is not None:
                 raise exc
             return result
+
         return read_callback() if now else read_callback
 
     def write_memory_block32(self, addr, data, **attrs):
-        self._remote_probe._perform_request('write_block32', self._handle, addr, data)
+        self._remote_probe._perform_request("write_block32", self._handle, addr, data)
 
     def read_memory_block32(self, addr, size, **attrs):
-        return self._remote_probe._perform_request('read_block32', self._handle, addr, size)
+        return self._remote_probe._perform_request(
+            "read_block32", self._handle, addr, size
+        )
 
     def write_memory_block8(self, addr, data, **attrs):
-        self._remote_probe._perform_request('write_block8', self._handle, addr, data)
+        self._remote_probe._perform_request("write_block8", self._handle, addr, data)
 
     def read_memory_block8(self, addr, size, **attrs):
-        return self._remote_probe._perform_request('read_block8', self._handle, addr, size)
+        return self._remote_probe._perform_request(
+            "read_block8", self._handle, addr, size
+        )
+
 
 class TCPClientProbePlugin(Plugin):
     """@brief Plugin class for TCPClientProbePlugin."""
@@ -404,4 +435,3 @@ class TCPClientProbePlugin(Plugin):
     @property
     def description(self):
         return "Client for the pyOCD debug probe server"
-

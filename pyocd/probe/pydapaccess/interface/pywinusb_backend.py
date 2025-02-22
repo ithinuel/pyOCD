@@ -24,7 +24,7 @@ from .common import (
     filter_device_by_usage_page,
     generate_device_unique_id,
     is_known_cmsis_dap_vid_pid,
-    )
+)
 from ..dap_access_api import DAPAccessIntf
 from ....utility.timeout import Timeout
 
@@ -41,6 +41,7 @@ except ImportError:
 else:
     IS_AVAILABLE = True
 
+
 class PyWinUSB(Interface):
     """@brief CMSIS-DAP USB interface class using pyWinUSB for the backend."""
 
@@ -55,8 +56,9 @@ class PyWinUSB(Interface):
         self.packet_size = len(self.report.get_raw_data()) - 1
         self.vendor_name = dev.vendor_name or f"{dev.vendor_id:#06x}"
         self.product_name = dev.product_name or f"{dev.product_id:#06x}"
-        self.serial_number = dev.serial_number \
-                or generate_device_unique_id(dev.vendor_id, dev.product_id, dev.device_path)
+        self.serial_number = dev.serial_number or generate_device_unique_id(
+            dev.vendor_id, dev.product_id, dev.device_path
+        )
         self.vid = dev.vendor_id
         self.pid = dev.product_id
         self.device = dev
@@ -69,7 +71,11 @@ class PyWinUSB(Interface):
     def rx_handler(self, data):
         if TRACE.isEnabledFor(logging.DEBUG):
             # Strip off trailing zero bytes to reduce clutter.
-            TRACE.debug("  USB IN < (%d) %s", len(data), ' '.join([f'{i:02x}' for i in bytes(data).rstrip(b'\x00')]))
+            TRACE.debug(
+                "  USB IN < (%d) %s",
+                len(data),
+                " ".join([f"{i:02x}" for i in bytes(data).rstrip(b"\x00")]),
+            )
 
         self.rcv_data.append(data[1:])
 
@@ -98,13 +104,17 @@ class PyWinUSB(Interface):
                     # If the device could not be opened in read only mode
                     # Then it either has been disconnected or is in use
                     # by another thread/process
-                    raise DAPAccessIntf.DeviceError(f"Unable to open device {self.serial_number}") from exc
+                    raise DAPAccessIntf.DeviceError(
+                        f"Unable to open device {self.serial_number}"
+                    ) from exc
 
             else:
                 # If this timeout has elapsed then another process
                 # has locked this device in shared mode. This should
                 # not happen.
-                raise DAPAccessIntf.DeviceError(f"Timed out attempting to open device {self.serial_number}")
+                raise DAPAccessIntf.DeviceError(
+                    f"Timed out attempting to open device {self.serial_number}"
+                )
 
     @staticmethod
     def get_all_connected_interfaces():
@@ -124,7 +134,9 @@ class PyWinUSB(Interface):
                 dev.open(shared=True)
 
                 # Perform device-specific filtering.
-                if filter_device_by_usage_page(dev.vendor_id, dev.product_id, dev.hid_caps.usage_page):
+                if filter_device_by_usage_page(
+                    dev.vendor_id, dev.product_id, dev.hid_caps.usage_page
+                ):
                     dev.close()
                     continue
 
@@ -135,7 +147,7 @@ class PyWinUSB(Interface):
                 new_board = PyWinUSB(dev)
                 boards.append(new_board)
             except Exception as e:
-                if (str(e) != "Failure to get HID pre parsed data"):
+                if str(e) != "Failure to get HID pre parsed data":
                     LOG.error("Receiving Exception: %s", e)
             finally:
                 dev.close()
@@ -145,7 +157,9 @@ class PyWinUSB(Interface):
     def write(self, data):
         """@brief Write data on the OUT endpoint associated to the HID interface"""
         if TRACE.isEnabledFor(logging.DEBUG):
-            TRACE.debug("  USB OUT> (%d) %s", len(data), ' '.join([f'{i:02x}' for i in data]))
+            TRACE.debug(
+                "  USB OUT> (%d) %s", len(data), " ".join([f"{i:02x}" for i in data])
+            )
 
         data.extend([0] * (self.packet_size - len(data)))
         self.report.send([0] + data)
@@ -165,13 +179,18 @@ class PyWinUSB(Interface):
                 # 2. CMSIS-DAP firmware problem cause a dropped read or write
                 # 3. CMSIS-DAP is performing a long operation or is being
                 #    halted in a debugger
-                raise DAPAccessIntf.DeviceError(f"Timeout reading from device {self.serial_number}")
+                raise DAPAccessIntf.DeviceError(
+                    f"Timeout reading from device {self.serial_number}"
+                )
 
         # Trace when the higher layer actually gets a packet previously read.
         if TRACE.isEnabledFor(logging.DEBUG):
             # Strip off trailing zero bytes to reduce clutter.
-            TRACE.debug("  USB RD < (%d) %s", len(self.rcv_data[0]),
-                    ' '.join([f'{i:02x}' for i in bytes(self.rcv_data[0]).rstrip(b'\x00')]))
+            TRACE.debug(
+                "  USB RD < (%d) %s",
+                len(self.rcv_data[0]),
+                " ".join([f"{i:02x}" for i in bytes(self.rcv_data[0]).rstrip(b"\x00")]),
+            )
 
         return self.rcv_data.popleft()
 

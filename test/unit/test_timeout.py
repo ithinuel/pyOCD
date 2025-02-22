@@ -14,28 +14,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from time import (time)
+from time import time
 import pytest
 from unittest.mock import Mock
 
 from pyocd.utility.timeout import Timeout
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def mock_time(monkeypatch):
     mtime = Mock()
     mtime.return_value = 0
-    monkeypatch.setattr('pyocd.utility.timeout.time', mtime)
+    monkeypatch.setattr("pyocd.utility.timeout.time", mtime)
     return mtime
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def mock_sleep(monkeypatch, mock_time):
     def inc_time(offset):
         mock_time.return_value += offset
+
     msleep = Mock()
     msleep.side_effect = inc_time
     msleep.return_value = None
-    monkeypatch.setattr('pyocd.utility.timeout.sleep', msleep)
+    monkeypatch.setattr("pyocd.utility.timeout.sleep", msleep)
     return msleep
+
 
 class TestTimeout:
     def test_no_timeout(self, mock_time, mock_sleep):
@@ -99,4 +103,3 @@ class TestTimeout:
                 cnta += 1
         assert cnta == 3 and cnt == 0
         assert not to.did_time_out
-

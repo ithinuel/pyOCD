@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .provider import (TargetThread, ThreadProvider)
-from .common import (read_c_string, HandlerModeThread, EXC_RETURN_EXT_FRAME_MASK)
+from .provider import TargetThread, ThreadProvider
+from .common import read_c_string, HandlerModeThread, EXC_RETURN_EXT_FRAME_MASK
 from ..core import exceptions
 from ..core.target import Target
 from ..core.plugin import Plugin
@@ -25,7 +25,7 @@ from ..trace import events
 from ..trace.sink import TraceEventFilter
 import logging
 
-KERNEL_FLAGS_OFFSET = 0x1c
+KERNEL_FLAGS_OFFSET = 0x1C
 IS_RUNNING_MASK = 0x1
 
 ALL_OBJECTS_THREADS_OFFSET = 0
@@ -39,10 +39,11 @@ THREAD_STATE_OFFSET = 17
 THREAD_CREATED_NODE_OFFSET = 36
 
 LIST_NODE_NEXT_OFFSET = 0
-LIST_NODE_OBJ_OFFSET= 8
+LIST_NODE_OBJ_OFFSET = 8
 
 # Create a logger for this module.
 LOG = logging.getLogger(__name__)
+
 
 class TargetList(object):
     def __init__(self, context, ptr):
@@ -64,8 +65,13 @@ class TargetList(object):
                 next = self._context.read32(node + LIST_NODE_NEXT_OFFSET)
                 node = next
             except exceptions.TransferError:
-                LOG.warning("TransferError while reading list elements (list=0x%08x, node=0x%08x), terminating list", self._list, node)
+                LOG.warning(
+                    "TransferError while reading list elements (list=0x%08x, node=0x%08x), terminating list",
+                    self._list,
+                    node,
+                )
                 is_valid = False
+
 
 class ArgonThreadContext(DebugContext):
     """@brief Thread context for Argon."""
@@ -73,80 +79,80 @@ class ArgonThreadContext(DebugContext):
     # SP is handled specially, so it is not in these dicts.
 
     CORE_REGISTER_OFFSETS = {
-                # Software stacked
-                 4: 0, # r4
-                 5: 4, # r5
-                 6: 8, # r6
-                 7: 12, # r7
-                 8: 16, # r8
-                 9: 20, # r9
-                 10: 24, # r10
-                 11: 28, # r11
-                # Hardware stacked
-                 0: 32, # r0
-                 1: 36, # r1
-                 2: 40, # r2
-                 3: 44, # r3
-                 12: 48, # r12
-                 14: 52, # lr
-                 15: 56, # pc
-                 16: 60, # xpsr
-            }
+        # Software stacked
+        4: 0,  # r4
+        5: 4,  # r5
+        6: 8,  # r6
+        7: 12,  # r7
+        8: 16,  # r8
+        9: 20,  # r9
+        10: 24,  # r10
+        11: 28,  # r11
+        # Hardware stacked
+        0: 32,  # r0
+        1: 36,  # r1
+        2: 40,  # r2
+        3: 44,  # r3
+        12: 48,  # r12
+        14: 52,  # lr
+        15: 56,  # pc
+        16: 60,  # xpsr
+    }
 
     FPU_EXTENDED_REGISTER_OFFSETS = {
-                # Software stacked
-                 4: 0, # r4
-                 5: 4, # r5
-                 6: 8, # r6
-                 7: 12, # r7
-                 8: 16, # r8
-                 9: 20, # r9
-                 10: 24, # r10
-                 11: 28, # r11
-                 0x50: 32, # s16
-                 0x51: 36, # s17
-                 0x52: 40, # s18
-                 0x53: 44, # s19
-                 0x54: 48, # s20
-                 0x55: 52, # s21
-                 0x56: 56, # s22
-                 0x57: 60, # s23
-                 0x58: 64, # s24
-                 0x59: 68, # s25
-                 0x5a: 72, # s26
-                 0x5b: 76, # s27
-                 0x5c: 80, # s28
-                 0x5d: 84, # s29
-                 0x5e: 88, # s30
-                 0x5f: 92, # s31
-                # Hardware stacked
-                 0: 96, # r0
-                 1: 100, # r1
-                 2: 104, # r2
-                 3: 108, # r3
-                 12: 112, # r12
-                 14: 116, # lr
-                 15: 120, # pc
-                 16: 124, # xpsr
-                 0x40: 128, # s0
-                 0x41: 132, # s1
-                 0x42: 136, # s2
-                 0x43: 140, # s3
-                 0x44: 144, # s4
-                 0x45: 148, # s5
-                 0x46: 152, # s6
-                 0x47: 156, # s7
-                 0x48: 160, # s8
-                 0x49: 164, # s9
-                 0x4a: 168, # s10
-                 0x4b: 172, # s11
-                 0x4c: 176, # s12
-                 0x4d: 180, # s13
-                 0x4e: 184, # s14
-                 0x4f: 188, # s15
-                 33: 192, # fpscr
-                 # (reserved word: 196)
-            }
+        # Software stacked
+        4: 0,  # r4
+        5: 4,  # r5
+        6: 8,  # r6
+        7: 12,  # r7
+        8: 16,  # r8
+        9: 20,  # r9
+        10: 24,  # r10
+        11: 28,  # r11
+        0x50: 32,  # s16
+        0x51: 36,  # s17
+        0x52: 40,  # s18
+        0x53: 44,  # s19
+        0x54: 48,  # s20
+        0x55: 52,  # s21
+        0x56: 56,  # s22
+        0x57: 60,  # s23
+        0x58: 64,  # s24
+        0x59: 68,  # s25
+        0x5A: 72,  # s26
+        0x5B: 76,  # s27
+        0x5C: 80,  # s28
+        0x5D: 84,  # s29
+        0x5E: 88,  # s30
+        0x5F: 92,  # s31
+        # Hardware stacked
+        0: 96,  # r0
+        1: 100,  # r1
+        2: 104,  # r2
+        3: 108,  # r3
+        12: 112,  # r12
+        14: 116,  # lr
+        15: 120,  # pc
+        16: 124,  # xpsr
+        0x40: 128,  # s0
+        0x41: 132,  # s1
+        0x42: 136,  # s2
+        0x43: 140,  # s3
+        0x44: 144,  # s4
+        0x45: 148,  # s5
+        0x46: 152,  # s6
+        0x47: 156,  # s7
+        0x48: 160,  # s8
+        0x49: 164,  # s9
+        0x4A: 168,  # s10
+        0x4B: 172,  # s11
+        0x4C: 176,  # s12
+        0x4D: 180,  # s13
+        0x4E: 184,  # s14
+        0x4F: 188,  # s15
+        33: 192,  # fpscr
+        # (reserved word: 196)
+    }
 
     def __init__(self, parent, thread):
         super(ArgonThreadContext, self).__init__(parent)
@@ -158,7 +164,7 @@ class ArgonThreadContext(DebugContext):
         reg_vals = []
 
         isCurrent = self._thread.is_current
-        inException = isCurrent and self._parent.read_core_register('ipsr') > 0
+        inException = isCurrent and self._parent.read_core_register("ipsr") > 0
 
         # If this is the current thread and we're not in an exception, just read the live registers.
         if isCurrent and not inException:
@@ -170,7 +176,7 @@ class ArgonThreadContext(DebugContext):
         # by HandlerModeThread
         if inException:
             # Reasonable to assume PSP is still valid
-            sp = self._parent.read_core_register('psp')
+            sp = self._parent.read_core_register("psp")
         else:
             sp = self._thread.get_stack_pointer()
 
@@ -181,7 +187,7 @@ class ArgonThreadContext(DebugContext):
         if self._has_fpu:
             if inException and self.core.is_vector_catch():
                 # Vector catch has just occurred, take live LR
-                exceptionLR = self._parent.read_core_register('lr')
+                exceptionLR = self._parent.read_core_register("lr")
 
                 # Check bit 4 of the exception LR to determine if FPU registers were stacked.
                 hasExtendedFrame = (exceptionLR & EXC_RETURN_EXT_FRAME_MASK) == 0
@@ -224,6 +230,7 @@ class ArgonThreadContext(DebugContext):
 
         return reg_vals
 
+
 class ArgonThread(TargetThread):
     """@brief Base class representing a thread on the target."""
 
@@ -236,14 +243,14 @@ class ArgonThread(TargetThread):
     DONE = 6
 
     STATE_NAMES = {
-            UNKNOWN : "Unknown",
-            SUSPENDED : "Suspended",
-            READY : "Ready",
-            RUNNING : "Running",
-            BLOCKED : "Blocked",
-            SLEEPING : "Sleeping",
-            DONE : "Done",
-        }
+        UNKNOWN: "Unknown",
+        SUSPENDED: "Suspended",
+        READY: "Ready",
+        RUNNING: "Running",
+        BLOCKED: "Blocked",
+        SLEEPING: "Sleeping",
+        DONE: "Done",
+    }
 
     def __init__(self, targetContext, provider, base):
         super(ArgonThread, self).__init__()
@@ -270,12 +277,17 @@ class ArgonThread(TargetThread):
         try:
             return self._target_context.read32(self._base + THREAD_STACK_POINTER_OFFSET)
         except exceptions.TransferError:
-            LOG.debug("Transfer error while reading thread's stack pointer @ 0x%08x", self._base + THREAD_STACK_POINTER_OFFSET)
+            LOG.debug(
+                "Transfer error while reading thread's stack pointer @ 0x%08x",
+                self._base + THREAD_STACK_POINTER_OFFSET,
+            )
             return 0
 
     def update_info(self):
         try:
-            self._priority = self._target_context.read8(self._base + THREAD_PRIORITY_OFFSET)
+            self._priority = self._target_context.read8(
+                self._base + THREAD_PRIORITY_OFFSET
+            )
 
             self._state = self._target_context.read8(self._base + THREAD_STATE_OFFSET)
             if self._state > self.DONE:
@@ -319,14 +331,22 @@ class ArgonThread(TargetThread):
             flag = self._target_context.read8(self._base + THREAD_EXTENDED_FRAME_OFFSET)
             return flag != 0
         except exceptions.TransferError:
-            LOG.debug("Transfer error while reading thread's extended frame flag @ 0x%08x", self._base + THREAD_EXTENDED_FRAME_OFFSET)
+            LOG.debug(
+                "Transfer error while reading thread's extended frame flag @ 0x%08x",
+                self._base + THREAD_EXTENDED_FRAME_OFFSET,
+            )
             return False
 
     def __str__(self):
-        return "<ArgonThread@0x%08x id=%x name=%s>" % (id(self), self.unique_id, self.name)
+        return "<ArgonThread@0x%08x id=%x name=%s>" % (
+            id(self),
+            self.unique_id,
+            self.name,
+        )
 
     def __repr__(self):
         return str(self)
+
 
 class ArgonThreadProvider(ThreadProvider):
     """@brief Base class for RTOS support plugins."""
@@ -351,7 +371,9 @@ class ArgonThreadProvider(ThreadProvider):
 
         self._all_threads = self.g_ar_objects + ALL_OBJECTS_THREADS_OFFSET
 
-        self._target.session.subscribe(self.event_handler, Target.Event.POST_FLASH_PROGRAM)
+        self._target.session.subscribe(
+            self.event_handler, Target.Event.POST_FLASH_PROGRAM
+        )
         self._target.session.subscribe(self.event_handler, Target.Event.POST_RESET)
 
         return True
@@ -383,7 +405,7 @@ class ArgonThreadProvider(ThreadProvider):
                 LOG.debug("TransferError while examining thread 0x%08x", threadBase)
 
         # Create fake handler mode thread.
-        if self._target_context.read_core_register('ipsr') > 0:
+        if self._target_context.read_core_register("ipsr") > 0:
             LOG.debug("creating handler mode thread")
             t = HandlerModeThread(self._target_context, self)
             newThreads[t.unique_id] = t
@@ -415,8 +437,11 @@ class ArgonThreadProvider(ThreadProvider):
         try:
             return self._threads[id]
         except KeyError:
-            LOG.debug("key error getting current thread id=%s; self._threads = %s",
-                ("%x" % id) if (id is not None) else id, repr(self._threads))
+            LOG.debug(
+                "key error getting current thread id=%s; self._threads = %s",
+                ("%x" % id) if (id is not None) else id,
+                repr(self._threads),
+            )
             return None
 
     def is_valid_thread_id(self, threadId):
@@ -428,7 +453,7 @@ class ArgonThreadProvider(ThreadProvider):
     def get_current_thread_id(self):
         if not self.is_enabled:
             return None
-        if self._target_context.read_core_register('ipsr') > 0:
+        if self._target_context.read_core_register("ipsr") > 0:
             return HandlerModeThread.UNIQUE_ID
         return self.get_actual_current_thread_id()
 
@@ -444,15 +469,18 @@ class ArgonThreadProvider(ThreadProvider):
             flags = self._target_context.read32(self.g_ar + KERNEL_FLAGS_OFFSET)
             return (flags & IS_RUNNING_MASK) != 0
         except exceptions.TransferFaultError:
-            LOG.warn("Argon: read kernel flags failed, target memory might not be initialized yet.")
+            LOG.warn(
+                "Argon: read kernel flags failed, target memory might not be initialized yet."
+            )
             return False
+
 
 class ArgonTraceEvent(events.TraceEvent):
     """@brief Argon kernel trace event."""
 
-    kArTraceThreadSwitch = 1 # 2 value: 0=previous thread's new state, 1=new thread id
-    kArTraceThreadCreated = 2 # 1 value
-    kArTraceThreadDeleted = 3 # 1 value
+    kArTraceThreadSwitch = 1  # 2 value: 0=previous thread's new state, 1=new thread id
+    kArTraceThreadCreated = 2  # 1 value
+    kArTraceThreadDeleted = 3  # 1 value
 
     def __init__(self, eventID, threadID, name, state, ts=0):
         super(ArgonTraceEvent, self).__init__("argon", ts)
@@ -479,8 +507,12 @@ class ArgonTraceEvent(events.TraceEvent):
 
     def __str__(self):
         if self.event_id == ArgonTraceEvent.kArTraceThreadSwitch:
-            stateName = ArgonThread.STATE_NAMES.get(self.prev_thread_state, "<invalid state>")
-            desc = "New thread = {}; old thread state = {}".format(self.thread_name, stateName)
+            stateName = ArgonThread.STATE_NAMES.get(
+                self.prev_thread_state, "<invalid state>"
+            )
+            desc = "New thread = {}; old thread state = {}".format(
+                self.thread_name, stateName
+            )
         elif self.event_id == ArgonTraceEvent.kArTraceThreadCreated:
             desc = "Created thread {}".format(self.thread_id)
         elif self.event_id == ArgonTraceEvent.kArTraceThreadDeleted:
@@ -489,12 +521,14 @@ class ArgonTraceEvent(events.TraceEvent):
             desc = "Unknown kernel event #{}".format(self.event_id)
         return "[{}] Argon: {}".format(self.timestamp, desc)
 
+
 class ArgonTraceEventFilter(TraceEventFilter):
     """@brief Trace event filter to identify Argon kernel trace events sent via ITM.
 
     As Argon kernel trace events are identified, the ITM trace events are replaced with instances
     of ArgonTraceEvent.
     """
+
     def __init__(self, threads):
         super(ArgonTraceEventFilter, self).__init__()
         self._threads = threads
@@ -505,7 +539,11 @@ class ArgonTraceEventFilter(TraceEventFilter):
         if isinstance(event, events.TraceITMEvent):
             if event.port == 31:
                 eventID = event.data >> 24
-                if eventID in (ArgonTraceEvent.kArTraceThreadSwitch, ArgonTraceEvent.kArTraceThreadCreated, ArgonTraceEvent.kArTraceThreadDeleted):
+                if eventID in (
+                    ArgonTraceEvent.kArTraceThreadSwitch,
+                    ArgonTraceEvent.kArTraceThreadCreated,
+                    ArgonTraceEvent.kArTraceThreadDeleted,
+                ):
                     self._is_thread_event_pending = True
                     self._pending_event = event
                     # Swallow the event.
@@ -514,15 +552,18 @@ class ArgonTraceEventFilter(TraceEventFilter):
                 eventID = self._pending_event.data >> 24
                 threadID = event.data
                 name = self._threads.get(threadID, "<unknown thread>")
-                state = self._pending_event.data & 0x00ffffff
+                state = self._pending_event.data & 0x00FFFFFF
 
                 # Create the Argon event.
-                event = ArgonTraceEvent(eventID, threadID, name, state, self._pending_event.timestamp)
+                event = ArgonTraceEvent(
+                    eventID, threadID, name, state, self._pending_event.timestamp
+                )
 
                 self._is_thread_event_pending = False
                 self._pending_event = None
 
         return event
+
 
 class ArgonPlugin(Plugin):
     """@brief Plugin class for the Argon RTOS."""
@@ -537,4 +578,3 @@ class ArgonPlugin(Plugin):
     @property
     def description(self):
         return "Argon RTOS"
-

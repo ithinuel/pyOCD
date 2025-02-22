@@ -28,7 +28,8 @@ TARGET = BUILTIN_TARGETS.copy()
 ## @brief Legal characters in target type names.
 #
 # Basically, C language identifier characters.
-_TARGET_TYPE_NAME_CHARS = string.ascii_letters + string.digits + '_'
+_TARGET_TYPE_NAME_CHARS = string.ascii_letters + string.digits + "_"
+
 
 def normalise_target_type_name(target_type: str) -> str:
     """@brief Normalise a target type name.
@@ -44,6 +45,6 @@ def normalise_target_type_name(target_type: str) -> str:
             result += c.lower()
             in_replace = False
         elif not in_replace:
-            result += '_'
+            result += "_"
             in_replace = True
     return result

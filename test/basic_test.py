@@ -35,18 +35,20 @@ from test_util import (
 
 # Simple code sequence used to test range stepping.
 # The important part is that it has no branches.
-RANGE_STEP_CODE = u16le_list_to_byte_list([
-    0x3001,  # adds    r0, #1
-    0x43C1,  # mvns    r1, r0
-    0x3101,  # adds    r1, #1
-    0x0102,  # movs    r2, r0, lsl #4
-    0x0013,  # movs    r3, r2
-    0x404B,  # eors    r3, r1
-    0x1840,  # adds    r0, r1
-    0x1880,  # adds    r0, r2
-    0x1AC0,  # subs    r0, r3
-    0xBE00,  # bkpt    #0
-])
+RANGE_STEP_CODE = u16le_list_to_byte_list(
+    [
+        0x3001,  # adds    r0, #1
+        0x43C1,  # mvns    r1, r0
+        0x3101,  # adds    r1, #1
+        0x0102,  # movs    r2, r0, lsl #4
+        0x0013,  # movs    r3, r2
+        0x404B,  # eors    r3, r1
+        0x1840,  # adds    r0, r1
+        0x1880,  # adds    r0, r2
+        0x1AC0,  # subs    r0, r3
+        0xBE00,  # bkpt    #0
+    ]
+)
 
 
 class BasicTest(Test):

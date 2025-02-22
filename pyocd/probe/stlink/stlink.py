@@ -19,10 +19,10 @@ import logging
 import struct
 import threading
 from enum import Enum
-from typing import (List, Optional, Sequence, Tuple, Union)
+from typing import List, Optional, Sequence, Tuple, Union
 import usb.core
 
-from .constants import (Commands, Status, SWD_FREQ_MAP, JTAG_FREQ_MAP)
+from .constants import Commands, Status, SWD_FREQ_MAP, JTAG_FREQ_MAP
 from ...core import exceptions
 from ...coresight import dap
 from ...utility import conversion
@@ -30,12 +30,13 @@ from ...utility.mask import bfx
 
 LOG = logging.getLogger(__name__)
 
+
 class STLink(object):
-    """@brief STLink V2 and V3 command-level interface.
-    """
+    """@brief STLink V2 and V3 command-level interface."""
+
     class Protocol(Enum):
-        """@brief Protocol options to pass to STLink.enter_debug() method.
-        """
+        """@brief Protocol options to pass to STLink.enter_debug() method."""
+
         SWD = 1
         JTAG = 2
 
@@ -69,7 +70,7 @@ class STLink(object):
     MIN_JTAG_VERSION_MEM_CSW = {2: 32, 3: 2}
 
     ## Port number to use to indicate DP registers.
-    DP_PORT = 0xffff
+    DP_PORT = 0xFFFF
 
     ## Map to convert from STLink error response codes to exception classes.
     _ERROR_CLASSES = {
@@ -78,27 +79,25 @@ class STLink(object):
         Status.SWD_AP_FAULT: exceptions.TransferFaultError,
         Status.SWD_AP_ERROR: exceptions.TransferError,
         Status.SWD_AP_PARITY_ERROR: exceptions.TransferError,
-
         # DP protocol errors
         Status.SWD_DP_WAIT: exceptions.TransferTimeoutError,
         Status.SWD_DP_FAULT: exceptions.TransferFaultError,
         Status.SWD_DP_ERROR: exceptions.TransferError,
         Status.SWD_DP_PARITY_ERROR: exceptions.TransferError,
-
         # High level transaction errors
         Status.SWD_AP_WDATA_ERROR: exceptions.TransferFaultError,
         Status.SWD_AP_STICKY_ERROR: exceptions.TransferError,
         Status.SWD_AP_STICKYORUN_ERROR: exceptions.TransferError,
-        }
+    }
 
     ## These errors indicate a memory fault.
     _MEM_FAULT_ERRORS = (
-        Status.JTAG_UNKNOWN_ERROR, # Returned in some cases by older STLink firmware.
+        Status.JTAG_UNKNOWN_ERROR,  # Returned in some cases by older STLink firmware.
         Status.SWD_AP_FAULT,
         Status.SWD_DP_FAULT,
         Status.SWD_AP_WDATA_ERROR,
         Status.SWD_AP_STICKY_ERROR,
-        )
+    )
 
     def __init__(self, device):
         self._device = device
@@ -135,18 +134,23 @@ class STLink(object):
                 if not self._device.is_open:
                     self.open()
                     did_open = True
-                if self._jtag_version < self.MIN_JTAG_VERSION_GET_BOARD_IDS[self._hw_version]:
+                if (
+                    self._jtag_version
+                    < self.MIN_JTAG_VERSION_GET_BOARD_IDS[self._hw_version]
+                ):
                     return None
-                response = self._device.transfer([Commands.JTAG_COMMAND, Commands.JTAG_GET_BOARD_IDENTIFIERS],
-                        readSize=128)
+                response = self._device.transfer(
+                    [Commands.JTAG_COMMAND, Commands.JTAG_GET_BOARD_IDENTIFIERS],
+                    readSize=128,
+                )
                 self._check_status(response[:2])
 
                 # Extract and return the board ID. If the ID field consists of all 0 bytes then we didn't
                 # get a valid ID, so return None instead.
                 board_id = response[2:6]
-                if board_id == b'\x00\x00\x00\x00':
+                if board_id == b"\x00\x00\x00\x00":
                     return None
-                return board_id.decode('ascii')
+                return board_id.decode("ascii")
             except usb.core.USBError:
                 return None
             finally:
@@ -162,7 +166,7 @@ class STLink(object):
         #   Byte 2-3: ST_VID
         #   Byte 4-5: STLINK_PID
         response = self._device.transfer([Commands.GET_VERSION], readSize=6)
-        ver, = struct.unpack('>H', response[:2])
+        (ver,) = struct.unpack(">H", response[:2])
         # TODO create version bitfield constants
         self._hw_version = bfx(ver, 15, 12)
         self._jtag_version = bfx(ver, 11, 6)
@@ -180,19 +184,33 @@ class STLink(object):
             #   8-9: ST_VID
             #   10-11: STLINK_PID
             response = self._device.transfer([Commands.GET_VERSION_EXT], readSize=12)
-            hw_vers, _, self._jtag_version, self._msc_version = struct.unpack('<4B', response[0:4])
+            hw_vers, _, self._jtag_version, self._msc_version = struct.unpack(
+                "<4B", response[0:4]
+            )
 
-        self._version_str = "V%dJ%dM%d" % (self._hw_version, self._jtag_version, self._msc_version)
-        LOG.debug("STLink probe %s firmware version: %s", self.serial_number, self._version_str)
+        self._version_str = "V%dJ%dM%d" % (
+            self._hw_version,
+            self._jtag_version,
+            self._msc_version,
+        )
+        LOG.debug(
+            "STLink probe %s firmware version: %s",
+            self.serial_number,
+            self._version_str,
+        )
 
         # Check versions.
         if self._jtag_version == 0:
-            raise exceptions.ProbeError(f"{self._version_str} firmware does not support JTAG/SWD. Please update"
-                "to a firmware version that supports JTAG/SWD.")
+            raise exceptions.ProbeError(
+                f"{self._version_str} firmware does not support JTAG/SWD. Please update"
+                "to a firmware version that supports JTAG/SWD."
+            )
         if not self._check_version(self.MIN_JTAG_VERSION):
-            raise exceptions.ProbeError(f"STLink {self.serial_number} is using an unsupported, older firmware version. "
+            raise exceptions.ProbeError(
+                f"STLink {self.serial_number} is using an unsupported, older firmware version. "
                 f"Please update to the latest STLink firmware. Current version is {self._version_str}, must be at "
-                f"least version v2J{self.MIN_JTAG_VERSION}.")
+                f"least version v2J{self.MIN_JTAG_VERSION}."
+            )
 
     def _check_version(self, min_version):
         return (self._hw_version >= 3) or (self._jtag_version >= min_version)
@@ -235,7 +253,7 @@ class STLink(object):
 
     def get_target_voltage(self):
         response = self._device.transfer([Commands.GET_TARGET_VOLTAGE], readSize=8)
-        a0, a1 = struct.unpack('<II', response[:8])
+        a0, a1 = struct.unpack("<II", response[:8])
         self._target_voltage = 2 * a1 * 1.2 / a0 if a0 != 0 else None
 
     def enter_idle(self):
@@ -269,7 +287,10 @@ class STLink(object):
             else:
                 for f, d in SWD_FREQ_MAP.items():
                     if freq >= f:
-                        response = self._device.transfer([Commands.JTAG_COMMAND, Commands.SWD_SET_FREQ, d], readSize=2)
+                        response = self._device.transfer(
+                            [Commands.JTAG_COMMAND, Commands.SWD_SET_FREQ, d],
+                            readSize=2,
+                        )
                         self._check_status(response)
                         return
                 raise exceptions.ProbeError("Selected SWD frequency is too low")
@@ -281,7 +302,10 @@ class STLink(object):
             else:
                 for f, d in JTAG_FREQ_MAP.items():
                     if freq >= f:
-                        response = self._device.transfer([Commands.JTAG_COMMAND, Commands.JTAG_SET_FREQ, d], readSize=2)
+                        response = self._device.transfer(
+                            [Commands.JTAG_COMMAND, Commands.JTAG_SET_FREQ, d],
+                            readSize=2,
+                        )
                         self._check_status(response)
                         return
                 raise exceptions.ProbeError("Selected JTAG frequency is too low")
@@ -323,7 +347,10 @@ class STLink(object):
                 protocolParam = Commands.JTAG_ENTER_JTAG_NO_CORE_RESET
             else:
                 raise ValueError(protocol)
-            response = self._device.transfer([Commands.JTAG_COMMAND, Commands.JTAG_ENTER2, protocolParam, 0], readSize=2)
+            response = self._device.transfer(
+                [Commands.JTAG_COMMAND, Commands.JTAG_ENTER2, protocolParam, 0],
+                readSize=2,
+            )
             self._check_status(response)
             self._protocol = protocol
 
@@ -331,7 +358,12 @@ class STLink(object):
         with self._lock:
             if not self._check_version(self.MIN_JTAG_VERSION_MULTI_AP):
                 return
-            cmd = [Commands.JTAG_COMMAND, Commands.JTAG_INIT_AP, apsel, Commands.JTAG_AP_NO_CORE]
+            cmd = [
+                Commands.JTAG_COMMAND,
+                Commands.JTAG_INIT_AP,
+                apsel,
+                Commands.JTAG_AP_NO_CORE,
+            ]
             response = self._device.transfer(cmd, readSize=2)
             self._check_status(response)
 
@@ -345,17 +377,30 @@ class STLink(object):
 
     def target_reset(self):
         with self._lock:
-            response = self._device.transfer([Commands.JTAG_COMMAND, Commands.JTAG_DRIVE_NRST, Commands.JTAG_DRIVE_NRST_PULSE], readSize=2)
+            response = self._device.transfer(
+                [
+                    Commands.JTAG_COMMAND,
+                    Commands.JTAG_DRIVE_NRST,
+                    Commands.JTAG_DRIVE_NRST_PULSE,
+                ],
+                readSize=2,
+            )
             self._check_status(response)
 
     def drive_nreset(self, isAsserted):
         with self._lock:
-            value = Commands.JTAG_DRIVE_NRST_LOW if isAsserted else Commands.JTAG_DRIVE_NRST_HIGH
-            response = self._device.transfer([Commands.JTAG_COMMAND, Commands.JTAG_DRIVE_NRST, value], readSize=2)
+            value = (
+                Commands.JTAG_DRIVE_NRST_LOW
+                if isAsserted
+                else Commands.JTAG_DRIVE_NRST_HIGH
+            )
+            response = self._device.transfer(
+                [Commands.JTAG_COMMAND, Commands.JTAG_DRIVE_NRST, value], readSize=2
+            )
             self._check_status(response)
 
     def _check_status(self, response):
-        status, = struct.unpack('<H', response)
+        (status,) = struct.unpack("<H", response)
 
         if status != Status.JTAG_OK:
             error_message = Status.get_error_message(status)
@@ -367,25 +412,38 @@ class STLink(object):
     def _clear_sticky_error(self):
         with self._lock:
             if self._protocol == self.Protocol.SWD:
-                self.write_dap_register(self.DP_PORT, dap.DP_ABORT,
-                    dap.ABORT_ORUNERRCLR | dap.ABORT_WDERRCLR | dap.ABORT_STKERRCLR | dap.ABORT_STKCMPCLR)
+                self.write_dap_register(
+                    self.DP_PORT,
+                    dap.DP_ABORT,
+                    dap.ABORT_ORUNERRCLR
+                    | dap.ABORT_WDERRCLR
+                    | dap.ABORT_STKERRCLR
+                    | dap.ABORT_STKCMPCLR,
+                )
             elif self._protocol == self.Protocol.JTAG:
-                self.write_dap_register(self.DP_PORT, dap.DP_CTRL_STAT,
-                    dap.CTRLSTAT_STICKYERR | dap.CTRLSTAT_STICKYCMP | dap.CTRLSTAT_STICKYORUN)
+                self.write_dap_register(
+                    self.DP_PORT,
+                    dap.DP_CTRL_STAT,
+                    dap.CTRLSTAT_STICKYERR
+                    | dap.CTRLSTAT_STICKYCMP
+                    | dap.CTRLSTAT_STICKYORUN,
+                )
 
     def _get_csw_bytes(self, csw: int) -> Tuple[int, int, int]:
         """@brief Return the 3 bytes in little endian order for CSW[31:8] sent in the mem command.
         @param csw CSW to use for the MEM-AP. Only the top 24 bits are used.
         """
         if self._check_version(self.MIN_JTAG_VERSION_MEM_CSW[self._hw_version]):
-            return ((csw >> 8) & 0xff), ((csw >> 16) & 0xff), ((csw >> 24) & 0xff)
+            return ((csw >> 8) & 0xFF), ((csw >> 16) & 0xFF), ((csw >> 24) & 0xFF)
         else:
             # This version of STLink firmware doesn't support nonstandard CSW.
             # TODO should we log a warning here or elsewhere if csw is set to other than
             # Secure,Priv,Noncacheable,Nonbufferable,Data?
             return 0, 0, 0
 
-    def _read_mem(self, addr: int, size: int, memcmd: int, maxrx: int, apsel: int, csw: int) -> List[int]:
+    def _read_mem(
+        self, addr: int, size: int, memcmd: int, maxrx: int, apsel: int, csw: int
+    ) -> List[int]:
         with self._lock:
             result = []
             while size:
@@ -400,15 +458,25 @@ class STLink(object):
                 #   9-11:   CSW[31:8]
                 #   12-15:  TCP unique ID (not used by pyocd)
                 cmd = [Commands.JTAG_COMMAND, memcmd]
-                cmd.extend(struct.pack('<IHBBBB', addr, thisTransferSize, apsel, *self._get_csw_bytes(csw)))
+                cmd.extend(
+                    struct.pack(
+                        "<IHBBBB",
+                        addr,
+                        thisTransferSize,
+                        apsel,
+                        *self._get_csw_bytes(csw),
+                    )
+                )
                 result += self._device.transfer(cmd, readSize=thisTransferSize)
 
                 addr += thisTransferSize
                 size -= thisTransferSize
 
                 # Check status of this read.
-                response = self._device.transfer([Commands.JTAG_COMMAND, Commands.JTAG_GETLASTRWSTATUS2], readSize=12)
-                status, _, faultAddr = struct.unpack('<HHI', response[0:8])
+                response = self._device.transfer(
+                    [Commands.JTAG_COMMAND, Commands.JTAG_GETLASTRWSTATUS2], readSize=12
+                )
+                status, _, faultAddr = struct.unpack("<HHI", response[0:8])
 
                 # Handle transfer faults specially so we can assign the address info.
                 if status != Status.JTAG_OK:
@@ -427,7 +495,15 @@ class STLink(object):
                         raise exceptions.ProbeError(error_message)
             return result
 
-    def _write_mem(self, addr: int, data: Sequence[int], memcmd: int, maxtx: int, apsel: int, csw: int) -> None:
+    def _write_mem(
+        self,
+        addr: int,
+        data: Sequence[int],
+        memcmd: int,
+        maxtx: int,
+        apsel: int,
+        csw: int,
+    ) -> None:
         with self._lock:
             while len(data):
                 thisTransferSize = min(len(data), maxtx)
@@ -442,15 +518,25 @@ class STLink(object):
                 #   9-11:   CSW[31:8]
                 #   12-15:  TCP unique ID (not used by pyocd)
                 cmd = [Commands.JTAG_COMMAND, memcmd]
-                cmd.extend(struct.pack('<IHBBBB', addr, thisTransferSize, apsel, *self._get_csw_bytes(csw)))
+                cmd.extend(
+                    struct.pack(
+                        "<IHBBBB",
+                        addr,
+                        thisTransferSize,
+                        apsel,
+                        *self._get_csw_bytes(csw),
+                    )
+                )
                 self._device.transfer(cmd, writeData=thisTransferData)
 
                 addr += thisTransferSize
                 data = data[thisTransferSize:]
 
                 # Check status of this write.
-                response = self._device.transfer([Commands.JTAG_COMMAND, Commands.JTAG_GETLASTRWSTATUS2], readSize=12)
-                status, _, faultAddr = struct.unpack('<HHI', response[0:8])
+                response = self._device.transfer(
+                    [Commands.JTAG_COMMAND, Commands.JTAG_GETLASTRWSTATUS2], readSize=12
+                )
+                status, _, faultAddr = struct.unpack("<HHI", response[0:8])
 
                 # Handle transfer faults specially so we can assign the address info.
                 if status != Status.JTAG_OK:
@@ -469,45 +555,101 @@ class STLink(object):
                         raise exceptions.ProbeError(error_message)
 
     def read_mem32(self, addr: int, size: int, apsel: int, csw: int):
-        assert (addr & 0x3) == 0 and (size & 0x3) == 0, "address and size must be word aligned"
-        return self._read_mem(addr, size, Commands.JTAG_READMEM_32BIT, self.MAXIMUM_TRANSFER_SIZE, apsel, csw)
+        assert (addr & 0x3) == 0 and (size & 0x3) == 0, (
+            "address and size must be word aligned"
+        )
+        return self._read_mem(
+            addr,
+            size,
+            Commands.JTAG_READMEM_32BIT,
+            self.MAXIMUM_TRANSFER_SIZE,
+            apsel,
+            csw,
+        )
 
     def write_mem32(self, addr: int, data: Sequence[int], apsel: int, csw: int):
-        assert (addr & 0x3) == 0 and (len(data) & 3) == 0, "address and size must be word aligned"
-        self._write_mem(addr, data, Commands.JTAG_WRITEMEM_32BIT, self.MAXIMUM_TRANSFER_SIZE, apsel, csw)
+        assert (addr & 0x3) == 0 and (len(data) & 3) == 0, (
+            "address and size must be word aligned"
+        )
+        self._write_mem(
+            addr,
+            data,
+            Commands.JTAG_WRITEMEM_32BIT,
+            self.MAXIMUM_TRANSFER_SIZE,
+            apsel,
+            csw,
+        )
 
     def read_mem16(self, addr: int, size: int, apsel: int, csw: int):
-        assert (addr & 0x1) == 0 and (size & 0x1) == 0, "address and size must be half-word aligned"
+        assert (addr & 0x1) == 0 and (size & 0x1) == 0, (
+            "address and size must be half-word aligned"
+        )
 
         if not self._check_version(self.MIN_JTAG_VERSION_16BIT_XFER):
             # 16-bit r/w is only available from J26, so revert to 8-bit accesses.
             return self.read_mem8(addr, size, apsel, csw)
 
-        return self._read_mem(addr, size, Commands.JTAG_READMEM_16BIT, self.MAXIMUM_TRANSFER_SIZE, apsel, csw)
+        return self._read_mem(
+            addr,
+            size,
+            Commands.JTAG_READMEM_16BIT,
+            self.MAXIMUM_TRANSFER_SIZE,
+            apsel,
+            csw,
+        )
 
     def write_mem16(self, addr: int, data: Sequence[int], apsel: int, csw: int):
-        assert (addr & 0x1) == 0 and (len(data) & 1) == 0, "address and size must be half-word aligned"
+        assert (addr & 0x1) == 0 and (len(data) & 1) == 0, (
+            "address and size must be half-word aligned"
+        )
 
         if not self._check_version(self.MIN_JTAG_VERSION_16BIT_XFER):
             # 16-bit r/w is only available from J26, so revert to 8-bit accesses.
             self.write_mem8(addr, data, apsel, csw)
             return
 
-        self._write_mem(addr, data, Commands.JTAG_WRITEMEM_16BIT, self.MAXIMUM_TRANSFER_SIZE, apsel, csw)
+        self._write_mem(
+            addr,
+            data,
+            Commands.JTAG_WRITEMEM_16BIT,
+            self.MAXIMUM_TRANSFER_SIZE,
+            apsel,
+            csw,
+        )
 
     def read_mem8(self, addr: int, size: int, apsel: int, csw: int):
-        return self._read_mem(addr, size, Commands.JTAG_READMEM_8BIT, self._device.max_packet_size, apsel, csw)
+        return self._read_mem(
+            addr,
+            size,
+            Commands.JTAG_READMEM_8BIT,
+            self._device.max_packet_size,
+            apsel,
+            csw,
+        )
 
     def write_mem8(self, addr: int, data: Sequence[int], apsel: int, csw: int):
-        self._write_mem(addr, data, Commands.JTAG_WRITEMEM_8BIT, self._device.max_packet_size, apsel, csw)
+        self._write_mem(
+            addr,
+            data,
+            Commands.JTAG_WRITEMEM_8BIT,
+            self._device.max_packet_size,
+            apsel,
+            csw,
+        )
 
     def _check_dp_bank(self, port, addr):
         """@brief Check if attempting to access a banked DP register with a firmware version that
-                doesn't support that.
+        doesn't support that.
         """
-        if ((port == self.DP_PORT) and ((addr & 0xf0) != 0) and not self.supports_banked_dp):
-            raise exceptions.ProbeError(f"this STLinkV{self._hw_version} firmware version does not support accessing"
-                    f" banked DP registers; please upgrade to the latest STLinkV{self._hw_version} firmware release")
+        if (
+            (port == self.DP_PORT)
+            and ((addr & 0xF0) != 0)
+            and not self.supports_banked_dp
+        ):
+            raise exceptions.ProbeError(
+                f"this STLinkV{self._hw_version} firmware version does not support accessing"
+                f" banked DP registers; please upgrade to the latest STLinkV{self._hw_version} firmware release"
+            )
 
     def read_dap_register(self, port, addr):
         assert (addr >> 16) == 0, "register address must be 16-bit"
@@ -516,10 +658,10 @@ class STLink(object):
 
         with self._lock:
             cmd = [Commands.JTAG_COMMAND, Commands.JTAG_READ_DAP_REG]
-            cmd.extend(struct.pack('<HH', port, addr))
+            cmd.extend(struct.pack("<HH", port, addr))
             response = self._device.transfer(cmd, readSize=8)
             self._check_status(response[:2])
-            value, = struct.unpack('<I', response[4:8])
+            (value,) = struct.unpack("<I", response[4:8])
             return value
 
     def write_dap_register(self, port, addr, value):
@@ -529,7 +671,7 @@ class STLink(object):
 
         with self._lock:
             cmd = [Commands.JTAG_COMMAND, Commands.JTAG_WRITE_DAP_REG]
-            cmd.extend(struct.pack('<HHI', port, addr, value))
+            cmd.extend(struct.pack("<HHI", port, addr, value))
             response = self._device.transfer(cmd, readSize=2)
             self._check_status(response)
 
@@ -537,7 +679,7 @@ class STLink(object):
         with self._lock:
             bufferSize = 4096
             cmd = [Commands.JTAG_COMMAND, Commands.SWV_START_TRACE_RECEPTION]
-            cmd.extend(struct.pack('<HI', bufferSize, baudrate))
+            cmd.extend(struct.pack("<HI", bufferSize, baudrate))
             response = self._device.transfer(cmd, readSize=2)
             self._check_status(response)
 
@@ -554,7 +696,7 @@ class STLink(object):
             try:
                 cmd = [Commands.JTAG_COMMAND, Commands.SWV_GET_TRACE_NEW_RECORD_NB]
                 response = self._device.transfer(cmd, readSize=2)
-                bytesAvailable, = struct.unpack('<H', response)
+                (bytesAvailable,) = struct.unpack("<H", response)
                 if bytesAvailable:
                     return self._device.read_swv(bytesAvailable)
                 else:
@@ -564,6 +706,6 @@ class STLink(object):
                 # we have to read the queued SWV data before any other commands can be sent.
                 if response is not None:
                     if bytesAvailable is None:
-                        bytesAvailable, = struct.unpack('<H', response)
+                        (bytesAvailable,) = struct.unpack("<H", response)
                     if bytesAvailable:
                         self._device.read_swv(bytesAvailable)

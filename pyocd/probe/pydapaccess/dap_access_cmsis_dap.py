@@ -20,12 +20,12 @@ import re
 import logging
 import collections
 import threading
-from typing import (Any, Dict, Optional, Tuple, Union)
+from typing import Any, Dict, Optional, Tuple, Union
 
 from .dap_settings import DAPSettings
 from .dap_access_api import DAPAccessIntf
 from .cmsis_dap_core import CMSISDAPProtocol
-from .interface import (INTERFACE, USB_BACKEND, USB_BACKEND_V2)
+from .interface import INTERFACE, USB_BACKEND, USB_BACKEND_V2
 from .interface.common import ARM_DAPLINK_ID
 from .cmsis_dap_core import (
     Command,
@@ -36,7 +36,7 @@ from .cmsis_dap_core import (
     DAPSWOControl,
     DAPTransferResponse,
     CMSISDAPVersion,
-    )
+)
 from ...core import session
 from ...utility.concurrency import locked
 
@@ -53,6 +53,7 @@ WRITE = 0 << 1
 VALUE_MATCH = 1 << 4
 MATCH_MASK = 1 << 5
 
+
 # SWO statuses.
 class SWOStatus:
     DISABLED = 1
@@ -60,14 +61,17 @@ class SWOStatus:
     RUNNING = 3
     ERROR = 4
 
+
 class DAP_LED:
     DAP_DEBUGGER_CONNECTED = 0
     DAP_TARGET_RUNNING = 1
+
 
 LOG = logging.getLogger(__name__)
 
 TRACE = LOG.getChild("trace")
 TRACE.setLevel(logging.CRITICAL)
+
 
 def _get_interfaces():
     """@brief Get the connected USB devices"""
@@ -78,15 +82,23 @@ def _get_interfaces():
     v2_interfaces = INTERFACE[USB_BACKEND_V2].get_all_connected_interfaces()
 
     # Prefer v2 over v1 if a device provides both, unless the 'cmsis_dap.prefer_v1' option is set.
-    prefer_v1 = session.Session.get_current().options.get('cmsis_dap.prefer_v1')
+    prefer_v1 = session.Session.get_current().options.get("cmsis_dap.prefer_v1")
     if prefer_v1:
-        devices_in_both = [v2 for v2 in v2_interfaces for v1 in v1_interfaces
-                            if _get_unique_id(v1) == _get_unique_id(v2)]
+        devices_in_both = [
+            v2
+            for v2 in v2_interfaces
+            for v1 in v1_interfaces
+            if _get_unique_id(v1) == _get_unique_id(v2)
+        ]
         for dev in devices_in_both:
             v2_interfaces.remove(dev)
     else:
-        devices_in_both = [v1 for v1 in v1_interfaces for v2 in v2_interfaces
-                            if _get_unique_id(v1) == _get_unique_id(v2)]
+        devices_in_both = [
+            v1
+            for v1 in v1_interfaces
+            for v2 in v2_interfaces
+            if _get_unique_id(v1) == _get_unique_id(v2)
+        ]
         for dev in devices_in_both:
             v1_interfaces.remove(dev)
 
@@ -106,8 +118,9 @@ class _Transfer(object):
     of reads to the same register.
     """
 
-    def __init__(self, daplink, dap_index, transfer_count,
-                 transfer_request, transfer_data):
+    def __init__(
+        self, daplink, dap_index, transfer_count, transfer_request, transfer_data
+    ):
         # Writes should not need a transfer object
         # since they don't have any response data
         assert isinstance(dap_index, int)
@@ -126,8 +139,7 @@ class _Transfer(object):
         self._error = None
 
     def get_data_size(self):
-        """@brief Get the size in bytes of the return value of this transfer
-        """
+        """@brief Get the size in bytes of the return value of this transfer"""
         return self._size_bytes
 
     def add_response(self, data):
@@ -139,20 +151,22 @@ class _Transfer(object):
         assert len(data) == self._size_bytes
         result = []
         for i in range(0, self._size_bytes, 4):
-            word = ((data[0 + i] << 0) | (data[1 + i] << 8) |
-                    (data[2 + i] << 16) | (data[3 + i] << 24))
+            word = (
+                (data[0 + i] << 0)
+                | (data[1 + i] << 8)
+                | (data[2 + i] << 16)
+                | (data[3 + i] << 24)
+            )
             result.append(word)
         self._result = result
 
     def add_error(self, error):
-        """@brief Attach an exception to this transfer rather than data.
-        """
+        """@brief Attach an exception to this transfer rather than data."""
         assert isinstance(error, Exception)
         self._error = error
 
     def get_result(self):
-        """@brief Get the result of this transfer.
-        """
+        """@brief Get the result of this transfer."""
         while self._result is None:
             if len(self.daplink._commands_to_read) > 0:
                 self.daplink._read_packet()
@@ -169,6 +183,7 @@ class _Transfer(object):
 
         assert self._result is not None
         return self._result
+
 
 class _Command(object):
     """@brief Wrapper object representing a command sent to the layer below (ex. USB).
@@ -204,8 +219,7 @@ class _Command(object):
         return self._id
 
     def _get_free_transfers(self, blockAllowed, isRead):
-        """@brief Return the number of available read or write transfers.
-        """
+        """@brief Return the number of available read or write transfers."""
         if blockAllowed:
             # DAP_TransferBlock request packet:
             #   BYTE | BYTE *****| SHORT**********| BYTE *************| WORD *********|
@@ -265,13 +279,34 @@ class _Command(object):
             max_count = self._write_count + self._read_count + size
             delta = max_count - 255
             size = min(size - delta, size)
-            TRACE.debug("[cmd:%d] get_request_space(%d, %02x:%s)[wc=%d, rc=%d, ba=%d->%d] -> (sz=%d, free=%d, delta=%d)",
-                    self.uid, count, request, 'r' if is_read else 'w', self._write_count, self._read_count,
-                    self._block_allowed, blockAllowed, size, free, delta)
+            TRACE.debug(
+                "[cmd:%d] get_request_space(%d, %02x:%s)[wc=%d, rc=%d, ba=%d->%d] -> (sz=%d, free=%d, delta=%d)",
+                self.uid,
+                count,
+                request,
+                "r" if is_read else "w",
+                self._write_count,
+                self._read_count,
+                self._block_allowed,
+                blockAllowed,
+                size,
+                free,
+                delta,
+            )
         else:
-            TRACE.debug("[cmd:%d] get_request_space(%d, %02x:%s)[wc=%d, rc=%d, ba=%d->%d] -> (sz=%d, free=%d)",
-                    self.uid, count, request, 'r' if is_read else 'w', self._write_count, self._read_count,
-                    self._block_allowed, blockAllowed, size, free)
+            TRACE.debug(
+                "[cmd:%d] get_request_space(%d, %02x:%s)[wc=%d, rc=%d, ba=%d->%d] -> (sz=%d, free=%d)",
+                self.uid,
+                count,
+                request,
+                "r" if is_read else "w",
+                self._write_count,
+                self._read_count,
+                self._block_allowed,
+                blockAllowed,
+                size,
+                free,
+            )
 
         # We can get a negative free count if the packet already contains more data than can be
         # sent by a DAP_Transfer command, but the new request forces DAP_Transfer. In this case,
@@ -279,17 +314,16 @@ class _Command(object):
         return max(size, 0)
 
     def get_full(self):
-        return (self._get_free_transfers(self._block_allowed, True) == 0) or \
-            (self._get_free_transfers(self._block_allowed, False) == 0)
+        return (self._get_free_transfers(self._block_allowed, True) == 0) or (
+            self._get_free_transfers(self._block_allowed, False) == 0
+        )
 
     def get_empty(self):
-        """@brief Return True if no transfers have been added to this packet
-        """
+        """@brief Return True if no transfers have been added to this packet"""
         return len(self._data) == 0
 
     def add(self, count, request, data, dap_index):
-        """@brief Add a single or block register transfer operation to this command
-        """
+        """@brief Add a single or block register transfer operation to this command"""
         assert self._data_encoded is False
         if self._dap_index == self._UNSET_DAP_INDEX:
             self._dap_index = dap_index
@@ -307,9 +341,16 @@ class _Command(object):
             self._write_count += count
         self._data.append((count, request, data))
 
-        TRACE.debug("[cmd:%d] add(%d, %02x:%s) -> [wc=%d, rc=%d, ba=%d]",
-                self.uid, count, request, 'r' if (request & READ) else 'w', self._write_count, self._read_count,
-                self._block_allowed)
+        TRACE.debug(
+            "[cmd:%d] add(%d, %02x:%s) -> [wc=%d, rc=%d, ba=%d]",
+            self.uid,
+            count,
+            request,
+            "r" if (request & READ) else "w",
+            self._write_count,
+            self._read_count,
+            self._block_allowed,
+        )
 
     def _encode_transfer_data(self):
         """@brief Encode this command into a byte array that can be sent
@@ -334,13 +375,13 @@ class _Command(object):
                 buf[pos] = request
                 pos += 1
                 if not request & READ:
-                    buf[pos] = (write_list[write_pos] >> (8 * 0)) & 0xff
+                    buf[pos] = (write_list[write_pos] >> (8 * 0)) & 0xFF
                     pos += 1
-                    buf[pos] = (write_list[write_pos] >> (8 * 1)) & 0xff
+                    buf[pos] = (write_list[write_pos] >> (8 * 1)) & 0xFF
                     pos += 1
-                    buf[pos] = (write_list[write_pos] >> (8 * 2)) & 0xff
+                    buf[pos] = (write_list[write_pos] >> (8 * 2)) & 0xFF
                     pos += 1
-                    buf[pos] = (write_list[write_pos] >> (8 * 3)) & 0xff
+                    buf[pos] = (write_list[write_pos] >> (8 * 3)) & 0xFF
                     pos += 1
                     write_pos += 1
         return buf[:pos]
@@ -371,7 +412,9 @@ class _Command(object):
             elif ack == DAPTransferResponse.ACK_NO_ACK:
                 raise DAPAccessIntf.TransferError("No ACK received")
             else:
-                raise DAPAccessIntf.TransferError("Unexpected ACK value (%d) returned by probe" % ack)
+                raise DAPAccessIntf.TransferError(
+                    "Unexpected ACK value (%d) returned by probe" % ack
+                )
         elif (response & DAPTransferResponse.PROTOCOL_ERROR_MASK) != 0:
             raise DAPAccessIntf.TransferError("SWD protocol error")
 
@@ -384,7 +427,9 @@ class _Command(object):
         assert self.get_empty() is False
         if data[0] != Command.DAP_TRANSFER:
             TRACE.debug("[cmd:%d] response not DAP_TRANSFER", self.uid)
-            raise DAPAccessIntf.TransferError(f'DAP_TRANSFER response error: response is for command {data[0]:02x}')
+            raise DAPAccessIntf.TransferError(
+                f"DAP_TRANSFER response error: response is for command {data[0]:02x}"
+            )
 
         # Check response and raise an exception on errors.
         self._check_response(data[2])
@@ -395,7 +440,7 @@ class _Command(object):
         if data[1] != self._read_count + self._write_count:
             raise DAPAccessIntf.TransferError()
 
-        return data[3:3 + 4 * self._read_count]
+        return data[3 : 3 + 4 * self._read_count]
 
     def _encode_transfer_block_data(self):
         """@brief Encode this command into a byte array that can be sent
@@ -413,9 +458,9 @@ class _Command(object):
         pos += 1
         buf[pos] = self._dap_index
         pos += 1
-        buf[pos] = transfer_count & 0xff
+        buf[pos] = transfer_count & 0xFF
         pos += 1
-        buf[pos] = (transfer_count >> 8) & 0xff
+        buf[pos] = (transfer_count >> 8) & 0xFF
         pos += 1
         buf[pos] = self._block_request
         pos += 1
@@ -425,13 +470,13 @@ class _Command(object):
             write_pos = 0
             if not request & READ:
                 for _ in range(count):
-                    buf[pos] = (write_list[write_pos] >> (8 * 0)) & 0xff
+                    buf[pos] = (write_list[write_pos] >> (8 * 0)) & 0xFF
                     pos += 1
-                    buf[pos] = (write_list[write_pos] >> (8 * 1)) & 0xff
+                    buf[pos] = (write_list[write_pos] >> (8 * 1)) & 0xFF
                     pos += 1
-                    buf[pos] = (write_list[write_pos] >> (8 * 2)) & 0xff
+                    buf[pos] = (write_list[write_pos] >> (8 * 2)) & 0xFF
                     pos += 1
-                    buf[pos] = (write_list[write_pos] >> (8 * 3)) & 0xff
+                    buf[pos] = (write_list[write_pos] >> (8 * 3)) & 0xFF
                     pos += 1
                     write_pos += 1
         return buf[:pos]
@@ -445,7 +490,9 @@ class _Command(object):
         assert self.get_empty() is False
         if data[0] != Command.DAP_TRANSFER_BLOCK:
             TRACE.debug("[cmd:%d] response not DAP_TRANSFER_BLOCK", self.uid)
-            raise DAPAccessIntf.TransferError(f'DAP_TRANSFER_BLOCK response error: response is for command {data[0]:02x}')
+            raise DAPAccessIntf.TransferError(
+                f"DAP_TRANSFER_BLOCK response error: response is for command {data[0]:02x}"
+            )
 
         # Check response and raise an exception on errors.
         self._check_response(data[3])
@@ -457,7 +504,7 @@ class _Command(object):
         if transfer_count != self._read_count + self._write_count:
             raise DAPAccessIntf.TransferError()
 
-        return data[4:4 + 4 * self._read_count]
+        return data[4 : 4 + 4 * self._read_count]
 
     def encode_data(self):
         """@brief Encode this command into a byte array that can be sent
@@ -474,8 +521,7 @@ class _Command(object):
         return data
 
     def decode_data(self, data):
-        """@brief Decode the response data
-        """
+        """@brief Decode the response data"""
         assert self.get_empty() is False
         assert self._data_encoded is True
         if self._block_allowed:
@@ -483,6 +529,7 @@ class _Command(object):
         else:
             data = self._decode_transfer_data(data)
         return data
+
 
 class DAPAccessCMSISDAP(DAPAccessIntf):
     """@brief An implementation of the DAPAccessIntf layer for DAPLink boards
@@ -497,8 +544,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
     # ------------------------------------------- #
     @staticmethod
     def get_connected_devices():
-        """@brief Return an array of all mbed boards connected
-        """
+        """@brief Return an array of all mbed boards connected"""
         all_daplinks = []
         all_interfaces = _get_interfaces()
         for interface in all_interfaces:
@@ -506,7 +552,10 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
                 new_daplink = DAPAccessCMSISDAP(None, interface=interface)
                 all_daplinks.append(new_daplink)
             except DAPAccessIntf.TransferError:
-                LOG.error('Failed to get unique id', exc_info=session.Session.get_current().log_tracebacks)
+                LOG.error(
+                    "Failed to get unique id",
+                    exc_info=session.Session.get_current().log_tracebacks,
+                )
         return all_daplinks
 
     @staticmethod
@@ -548,17 +597,24 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
                 if _get_unique_id(interface) == unique_id:
                     # This assert could indicate that two boards
                     # had the same ID
-                    assert result_interface is None, "More than one probes with ID {}".format(unique_id)
+                    assert result_interface is None, (
+                        "More than one probes with ID {}".format(unique_id)
+                    )
                     result_interface = interface
             except Exception:
-                LOG.error('Failed to get unique id for open', exc_info=session.Session.get_current().log_tracebacks)
+                LOG.error(
+                    "Failed to get unique id for open",
+                    exc_info=session.Session.get_current().log_tracebacks,
+                )
         return result_interface
 
     # ------------------------------------------- #
     #          CMSIS-DAP and Other Functions
     # ------------------------------------------- #
     def __init__(self, unique_id, interface=None):
-        assert isinstance(unique_id, str) or (unique_id is None and interface is not None)
+        assert isinstance(unique_id, str) or (
+            unique_id is None and interface is not None
+        )
         super(DAPAccessCMSISDAP, self).__init__()
 
         # Search for a matching interface if one wasn't provided.
@@ -664,9 +720,10 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
     @property
     def supports_board_and_target_names(self) -> bool:
         """@brief Boolean of whether board_names and target_names are supported."""
-        return ((self._cmsis_dap_version >= CMSISDAPVersion.V2_1_0)
-                or ((self._cmsis_dap_version >= CMSISDAPVersion.V1_3_0)
-                    and (self._cmsis_dap_version < CMSISDAPVersion.V2_0_0)))
+        return (self._cmsis_dap_version >= CMSISDAPVersion.V2_1_0) or (
+            (self._cmsis_dap_version >= CMSISDAPVersion.V1_3_0)
+            and (self._cmsis_dap_version < CMSISDAPVersion.V2_0_0)
+        )
 
     def lock(self):
         """@brief Lock the interface."""
@@ -680,7 +737,9 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         """Determine the CMSIS-DAP protocol version."""
         # The fallback version to use when version parsing fails depends on whether v2 bulk endpoints are used
         # (unfortunately conflating transport with protocol).
-        fallback_protocol_version = (CMSISDAPVersion.V1_0_0, CMSISDAPVersion.V2_0_0)[self._interface.is_bulk]
+        fallback_protocol_version = (CMSISDAPVersion.V1_0_0, CMSISDAPVersion.V2_0_0)[
+            self._interface.is_bulk
+        ]
 
         protocol_version_str = self.identify(self.ID.CMSIS_DAP_PROTOCOL_VERSION)
         assert isinstance(protocol_version_str, (str, NoneType))
@@ -691,7 +750,9 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         # Deal with DAPLink broken version number, where these versions of the firmware reported the DAPLink
         # version number for DAP_INFO_FW_VER instead of the CMSIS-DAP version, due to a misunderstanding
         # based on unclear documentation.
-        elif (self._vidpid == ARM_DAPLINK_ID) and (protocol_version_str in ("0254", "0255")):
+        elif (self._vidpid == ARM_DAPLINK_ID) and (
+            protocol_version_str in ("0254", "0255")
+        ):
             self._cmsis_dap_version = CMSISDAPVersion.V2_0_0
         else:
             # Convert the version to a 3-tuple for easy comparison.
@@ -709,7 +770,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             # this code (so far at least). There are also DAP_Info Capability bits for availability of certain
             # commands that should be used instead of checking the version.
             try:
-                fw_version = protocol_version_str.split('.')
+                fw_version = protocol_version_str.split(".")
                 major = int(fw_version[0])
                 # Handle version of the form "1.10" by treating the two digits after the dot as minor and patch.
                 if (len(fw_version) == 2) and len(fw_version[1]) == 2:
@@ -723,7 +784,10 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             except ValueError:
                 # One of the protocol version fields had a non-numeric character, indicating it is not a valid
                 # CMSIS-DAP version number. Default to the lowest version.
-                LOG.debug("Error parsing CMSIS-DAP protocol version '%s'", protocol_version_str)
+                LOG.debug(
+                    "Error parsing CMSIS-DAP protocol version '%s'",
+                    protocol_version_str,
+                )
                 self._cmsis_dap_version = fallback_protocol_version
 
             # Catch the beta release versions of CMSIS-DAP, 0.01 and 0.02, and raise them to 1.0.0.
@@ -731,8 +795,10 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
                 self._cmsis_dap_version = CMSISDAPVersion.V1_0_0
             # Validate the version against known CMSIS-DAP major versions.
             elif self._cmsis_dap_version[0] not in CMSISDAPVersion.major_versions():
-                LOG.debug("Unrecognised major version of CMSIS-DAP: protocol version %i.%i.%i",
-                        *self._cmsis_dap_version)
+                LOG.debug(
+                    "Unrecognised major version of CMSIS-DAP: protocol version %i.%i.%i",
+                    *self._cmsis_dap_version,
+                )
                 self._cmsis_dap_version = fallback_protocol_version
 
     @property
@@ -758,7 +824,10 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             self._is_open = True
             return
 
-        if session.Session.get_current().options['cmsis_dap.limit_packets'] or DAPSettings.limit_packets:
+        if (
+            session.Session.get_current().options["cmsis_dap.limit_packets"]
+            or DAPSettings.limit_packets
+        ):
             self._packet_count = 1
             LOG.debug("Limiting packet count to %d", self._packet_count)
         else:
@@ -770,22 +839,33 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
 
         # Read the firmware version if the protocol supports it.
         # THe PRODUCT_FW_VERSION ID was added in versions 1.3.0 (HID) and 2.1.0 (bulk).
-        if (self._cmsis_dap_version >= CMSISDAPVersion.V2_1_0) or (self._cmsis_dap_version >= CMSISDAPVersion.V1_3_0
-                and self._cmsis_dap_version < CMSISDAPVersion.V2_0_0):
+        if (self._cmsis_dap_version >= CMSISDAPVersion.V2_1_0) or (
+            self._cmsis_dap_version >= CMSISDAPVersion.V1_3_0
+            and self._cmsis_dap_version < CMSISDAPVersion.V2_0_0
+        ):
             fw_version_value = self.identify(self.ID.PRODUCT_FW_VERSION)
             assert isinstance(fw_version_value, (str, NoneType))
             self._fw_version = fw_version_value
 
         # Major protocol version based on use of bulk endpoints.
-        proto_major = (2 if self._interface.is_bulk else 1)
+        proto_major = 2 if self._interface.is_bulk else 1
 
         # Log probe's firmware version.
         if self._fw_version:
-            LOG.debug("CMSIS-DAP v%d probe %s: firmware version %s, protocol version %i.%i.%i",
-                    proto_major, self._unique_id, self._fw_version, *self._cmsis_dap_version)
+            LOG.debug(
+                "CMSIS-DAP v%d probe %s: firmware version %s, protocol version %i.%i.%i",
+                proto_major,
+                self._unique_id,
+                self._fw_version,
+                *self._cmsis_dap_version,
+            )
         else:
-            LOG.debug("CMSIS-DAP v%d probe %s: protocol version %i.%i.%i",
-                    proto_major, self._unique_id, *self._cmsis_dap_version)
+            LOG.debug(
+                "CMSIS-DAP v%d probe %s: protocol version %i.%i.%i",
+                proto_major,
+                self._unique_id,
+                *self._cmsis_dap_version,
+            )
 
         self._interface.set_packet_count(self._packet_count)
         self._packet_size = self.identify(self.ID.MAX_PACKET_SIZE)
@@ -799,8 +879,11 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             if isinstance(swo_buffer_size_value, int) and swo_buffer_size_value > 0:
                 self._swo_buffer_size = swo_buffer_size_value
             else:
-                LOG.debug("CMSIS-DAP probe %s reported invalid SWO_BUFFER_SIZE (%d)",
-                        self._unique_id, swo_buffer_size_value)
+                LOG.debug(
+                    "CMSIS-DAP probe %s reported invalid SWO_BUFFER_SIZE (%d)",
+                    self._unique_id,
+                    swo_buffer_size_value,
+                )
                 self._has_swo_uart = False
         else:
             self._swo_buffer_size = 0
@@ -873,10 +956,17 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
     def flush(self):
         if TRACE.isEnabledFor(logging.DEBUG):
             if self._crnt_cmd.get_empty() and len(self._commands_to_read):
-                TRACE.debug("flush: reading %d outstanding (cmd:%d is empty)",
-                        len(self._commands_to_read), self._crnt_cmd.uid)
+                TRACE.debug(
+                    "flush: reading %d outstanding (cmd:%d is empty)",
+                    len(self._commands_to_read),
+                    self._crnt_cmd.uid,
+                )
             elif not self._crnt_cmd.get_empty():
-                TRACE.debug("flush: sending cmd:%d; reading %d outstanding", self._crnt_cmd.uid, len(self._commands_to_read))
+                TRACE.debug(
+                    "flush: sending cmd:%d; reading %d outstanding",
+                    self._crnt_cmd.uid,
+                    len(self._commands_to_read),
+                )
 
         # Send current packet
         self._send_packet()
@@ -1101,8 +1191,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         request |= (reg_id.value % 4) * 4
         self._write(dap_index, num_repeats, request, data_array)
 
-    def reg_read_repeat(self, num_repeats, reg_id, dap_index=0,
-                        now=True):
+    def reg_read_repeat(self, num_repeats, reg_id, dap_index=0, now=True):
         assert isinstance(num_repeats, int)
         assert reg_id in self.REG
         assert isinstance(dap_index, int)
@@ -1126,6 +1215,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             return reg_read_repeat_cb()
         else:
             return reg_read_repeat_cb
+
     # ------------------------------------------- #
     #          Private functions
     # ------------------------------------------- #
@@ -1165,7 +1255,11 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             raw_data = bytearray(raw_data)
             decoded_data = cmd.decode_data(raw_data)
         except Exception as exception:
-            TRACE.debug("[cmd:%d] _read_packet: got exception %r; aborting all transfers!", cmd.uid, exception)
+            TRACE.debug(
+                "[cmd:%d] _read_packet: got exception %r; aborting all transfers!",
+                cmd.uid,
+                exception,
+            )
             self._abort_all_transfers(exception)
             raise
 
@@ -1186,7 +1280,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
                 break
 
             self._transfer_list.popleft()
-            data = self._command_response_buf[pos:pos + size]
+            data = self._command_response_buf[pos : pos + size]
             pos += size
             transfer.add_response(data)
 
@@ -1209,8 +1303,12 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
 
         max_packets = self._interface.get_packet_count()
         if len(self._commands_to_read) >= max_packets:
-            TRACE.debug("[cmd:%d] _send_packet: reading packet; outstanding=%d >= max=%d",
-                    cmd.uid, len(self._commands_to_read), max_packets)
+            TRACE.debug(
+                "[cmd:%d] _send_packet: reading packet; outstanding=%d >= max=%d",
+                cmd.uid,
+                len(self._commands_to_read),
+                max_packets,
+            )
             self._read_packet()
         TRACE.debug("[cmd:%d] _send_packet: sending", cmd.uid)
         data = cmd.encode_data()
@@ -1223,10 +1321,8 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         self._crnt_cmd = _Command(self._packet_size)
 
     @locked
-    def _write(self, dap_index, transfer_count,
-               transfer_request, transfer_data):
-        """@brief Write one or more commands
-        """
+    def _write(self, dap_index, transfer_count, transfer_request, transfer_data):
+        """@brief Write one or more commands"""
         assert dap_index == 0  # dap index currently unsupported
         assert isinstance(transfer_count, int)
         assert isinstance(transfer_request, int)
@@ -1235,8 +1331,9 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         # Create transfer and add to transfer list
         transfer = None
         if transfer_request & READ:
-            transfer = _Transfer(self, dap_index, transfer_count,
-                                 transfer_request, transfer_data)
+            transfer = _Transfer(
+                self, dap_index, transfer_count, transfer_request, transfer_data
+            )
             self._transfer_list.append(transfer)
 
         # Build physical packet by adding it to command
@@ -1258,7 +1355,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             if transfer_data is None:
                 data = None
             else:
-                data = transfer_data[trans_data_pos:trans_data_pos + size]
+                data = transfer_data[trans_data_pos : trans_data_pos + size]
             cmd.add(size, transfer_request, data, dap_index)
             size_to_transfer -= size
             trans_data_pos += size
@@ -1276,10 +1373,11 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
 
     @locked
     def _abort_all_transfers(self, exception):
-        """@brief Abort any ongoing transfers and clear all buffers
-        """
+        """@brief Abort any ongoing transfers and clear all buffers"""
         pending_reads = len(self._commands_to_read)
-        TRACE.debug("aborting %d pending reads after exception %r", pending_reads, exception)
+        TRACE.debug(
+            "aborting %d pending reads after exception %r", pending_reads, exception
+        )
         # invalidate _transfer_list
         for transfer in self._transfer_list:
             transfer.add_error(exception)

@@ -24,14 +24,15 @@ from ...coresight.cortex_m import CortexM
 
 LOG = logging.getLogger(__name__)
 
+
 class IMXRT(CoreSightTarget):
     VENDOR = "NXP"
 
     def create_init_sequence(self):
         seq = super().create_init_sequence()
-        seq.wrap_task('discovery',
-            lambda seq: seq.replace_task('create_cores', self.create_cores)
-            )
+        seq.wrap_task(
+            "discovery", lambda seq: seq.replace_task("create_cores", self.create_cores)
+        )
         return seq
 
     def create_cores(self):
@@ -45,9 +46,7 @@ class IMXRT(CoreSightTarget):
             LOG.error("No core-0 were discovered")
 
 
-
 class CortexM7_IMXRT(CortexM):
-
     # System Control Space(SRC)
     SRC_SBMR1 = 0x400F8004
     SRC_SBMR2 = 0x400F801C
@@ -59,7 +58,7 @@ class CortexM7_IMXRT(CortexM):
         0x00: "Boot From Fuses",
         0x01: "Serial Download Mode",
         0x02: "Internal Boot",
-        0x03: "Reserved"
+        0x03: "Reserved",
     }
 
     def __init__(self, *args, **kwargs):
@@ -101,13 +100,20 @@ class CortexM7_IMXRT(CortexM):
         bootdevice = self.get_boot_device()
 
         # boot from flexspi_nor
-        if bootmode == 2 and bootdevice == 0 and \
-            reset_type not in (self.ResetType.SW_SYSRESETREQ, self.ResetType.SW_VECTRESET):
+        if (
+            bootmode == 2
+            and bootdevice == 0
+            and reset_type
+            not in (self.ResetType.SW_SYSRESETREQ, self.ResetType.SW_VECTRESET)
+        ):
             # Disable Reset Vector Catch in DEMCR
             value = self.read_memory(CortexM.DEMCR)
             self.write_memory(CortexM.DEMCR, (value & (~0x00000001)))
             vectable_addr = self._get_flash_vector_addr()
-            LOG.debug("vectable_addr: %s", hex(vectable_addr) if (vectable_addr is not None) else "None")
+            LOG.debug(
+                "vectable_addr: %s",
+                hex(vectable_addr) if (vectable_addr is not None) else "None",
+            )
             vectable = None
             imageentry = None
 
@@ -142,8 +148,8 @@ class CortexM7_IMXRT(CortexM):
         else:
             # Disable Reset Vector Catch in DEMCR
             value = self.read_memory(CortexM.DEMCR)
-            self.write_memory(CortexM.DEMCR, (value& (~0x00000001)))
+            self.write_memory(CortexM.DEMCR, (value & (~0x00000001)))
             # Clear BP0 and FPB
-            self.write_memory(CortexM7_IMXRT.FPB_COMP0, 0)                        # Clear BP0
-            self.write_memory(CortexM7_IMXRT.FPB_CTRL, 0x00000002)                # Disable FPB
+            self.write_memory(CortexM7_IMXRT.FPB_COMP0, 0)  # Clear BP0
+            self.write_memory(CortexM7_IMXRT.FPB_CTRL, 0x00000002)  # Disable FPB
             LOG.debug("clear fpb")

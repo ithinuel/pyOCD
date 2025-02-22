@@ -17,8 +17,10 @@
 
 from typing import Optional
 
+
 class TraceEvent:
     """@brief Base trace event class."""
+
     def __init__(self, desc: str = "", ts: int = 0) -> None:
         self._desc = desc
         self._timestamp = ts
@@ -37,13 +39,17 @@ class TraceEvent:
     def __repr__(self) -> str:
         return "<{}: {}>".format(self.__class__.__name__, str(self))
 
+
 class TraceOverflow(TraceEvent):
     """@brief Trace overflow event."""
+
     def __init__(self, ts: int = 0) -> None:
         super().__init__("overflow", ts)
 
+
 class TraceTimestamp(TraceEvent):
     """@brief Trace local timestamp."""
+
     def __init__(self, tc: int, ts: int = 0):
         super().__init__("timestamp", ts)
         self._tc = tc
@@ -53,10 +59,14 @@ class TraceTimestamp(TraceEvent):
         return self._tc
 
     def __str__(self) -> str:
-        return "[{}] local timestamp TC={:#x} {}".format(self._timestamp, self.tc, self.timestamp)
+        return "[{}] local timestamp TC={:#x} {}".format(
+            self._timestamp, self.tc, self.timestamp
+        )
+
 
 class TraceITMEvent(TraceEvent):
     """@brief Trace ITM stimulus port event."""
+
     def __init__(self, port: int, data: int, width: int, ts: int = 0) -> None:
         super().__init__("itm", ts)
         self._port = port
@@ -85,8 +95,10 @@ class TraceITMEvent(TraceEvent):
             d = "{:#010x}".format(self.data)
         return "[{}] ITM: port={:d} data={}".format(self.timestamp, self.port, d)
 
+
 class TraceEventCounter(TraceEvent):
     """@brief Trace DWT counter overflow event."""
+
     CPI_MASK = 0x01
     EXC_MASK = 0x02
     SLEEP_MASK = 0x04
@@ -119,21 +131,27 @@ class TraceEventCounter(TraceEvent):
         return msg
 
     def __str__(self) -> str:
-        return "[{}] DWT: Event:{}".format(self.timestamp, self._get_event_desc(self.counter_mask))
+        return "[{}] DWT: Event:{}".format(
+            self.timestamp, self._get_event_desc(self.counter_mask)
+        )
+
 
 class TraceExceptionEvent(TraceEvent):
     """@brief Exception trace event."""
+
     ENTERED = 1
     EXITED = 2
     RETURNED = 3
 
-    ACTION_DESC = {
-        ENTERED : "Entered",
-        EXITED : "Exited",
-        RETURNED : "Returned"
-        }
+    ACTION_DESC = {ENTERED: "Entered", EXITED: "Exited", RETURNED: "Returned"}
 
-    def __init__(self, exception_number: int, exception_name: Optional[str], action: int, ts: int = 0) -> None:
+    def __init__(
+        self,
+        exception_number: int,
+        exception_name: Optional[str],
+        action: int,
+        ts: int = 0,
+    ) -> None:
         super().__init__("exception", ts)
         self._number = exception_number
         self._name = exception_name or ""
@@ -154,10 +172,14 @@ class TraceExceptionEvent(TraceEvent):
 
     def __str__(self) -> str:
         action = TraceExceptionEvent.ACTION_DESC.get(self.action, "<invalid action>")
-        return "[{}] DWT: Exception #{:d} {} {}".format(self.timestamp, self.exception_number, action, self.exception_name)
+        return "[{}] DWT: Exception #{:d} {} {}".format(
+            self.timestamp, self.exception_number, action, self.exception_name
+        )
+
 
 class TracePeriodicPC(TraceEvent):
     """@brief Periodic PC trace event."""
+
     def __init__(self, pc: int, ts: int = 0) -> None:
         super().__init__("pc", ts)
         self._pc = pc
@@ -169,6 +191,7 @@ class TracePeriodicPC(TraceEvent):
     def __str__(self) -> str:
         return "[{}] DWT: PC={:#010x}".format(self.timestamp, self.pc)
 
+
 class TraceDataTraceEvent(TraceEvent):
     """@brief DWT data trace event.
 
@@ -179,16 +202,17 @@ class TraceDataTraceEvent(TraceEvent):
     - PC value, data value, whether it was read or written, and the transfer size.
     - Bits[15:0] of a data address, data value, whether it was read or written, and the transfer size.
     """
+
     def __init__(
-                self,
-                cmpn: Optional[int] = None,
-                pc: Optional[int] = None,
-                addr: Optional[int] = None,
-                value: Optional[int] = None,
-                rnw: Optional[int] = None,
-                sz: Optional[int] = None,
-                ts: int = 0
-            ) -> None:
+        self,
+        cmpn: Optional[int] = None,
+        pc: Optional[int] = None,
+        addr: Optional[int] = None,
+        value: Optional[int] = None,
+        rnw: Optional[int] = None,
+        sz: Optional[int] = None,
+        ts: int = 0,
+    ) -> None:
         super().__init__("data-trace", ts)
         self._cmpn = cmpn
         self._pc = pc
@@ -197,7 +221,9 @@ class TraceDataTraceEvent(TraceEvent):
         self._rnw = rnw
         self._sz = sz
         # Setting a value must also include a read/write flag and value size.
-        assert (self._value is None) or ((self._rnw is not None) and (self._sz is not None))
+        assert (self._value is None) or (
+            (self._rnw is not None) and (self._sz is not None)
+        )
 
     @property
     def comparator(self) -> Optional[int]:
@@ -237,10 +263,9 @@ class TraceDataTraceEvent(TraceEvent):
             width = self.transfer_size
             rnw = "R" if self.is_read else "W"
             if width == 1:
-                msg +=  " Value={}:{:#04x}".format(rnw, self.value)
+                msg += " Value={}:{:#04x}".format(rnw, self.value)
             elif width == 2:
-                msg +=  " Value={}:{:#06x}".format(rnw, self.value)
+                msg += " Value={}:{:#06x}".format(rnw, self.value)
             else:
                 msg += " Value={}:{:#010x}".format(rnw, self.value)
         return "[{}] DWT: Data Trace {}".format(self.timestamp, msg.strip())
-

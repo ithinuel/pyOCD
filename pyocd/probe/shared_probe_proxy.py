@@ -22,6 +22,7 @@ from ..core import exceptions
 
 LOG = logging.getLogger(__name__)
 
+
 class SharedDebugProbeProxy(object):
     """@brief Proxy for a DebugProbe that allows it to be shared by multiple clients.
 
@@ -65,7 +66,10 @@ class SharedDebugProbeProxy(object):
         if self._connect_count == 0:
             self._probe.connect(protocol)
         elif protocol not in (DebugProbe.Protocol.DEFAULT, self._probe.wire_protocol):
-            raise exceptions.ProbeError("probe already connected using %s protocol" % self._probe.wire_protocol.name)
+            raise exceptions.ProbeError(
+                "probe already connected using %s protocol"
+                % self._probe.wire_protocol.name
+            )
         self._connect_count += 1
 
     def disconnect(self):
@@ -82,4 +86,3 @@ class SharedDebugProbeProxy(object):
             return getattr(self._probe, name)
         else:
             raise AttributeError(name)
-

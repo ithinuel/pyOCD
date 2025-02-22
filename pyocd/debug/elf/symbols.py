@@ -16,6 +16,7 @@
 
 from ..symbols import SymbolProvider
 
+
 class ELFSymbolProvider(SymbolProvider):
     """@brief Get symbol information from an ELF file."""
 
@@ -28,4 +29,3 @@ class ELFSymbolProvider(SymbolProvider):
             return sym.address
         else:
             return None
-

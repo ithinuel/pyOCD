@@ -20,7 +20,7 @@ import threading
 import queue
 import socket
 
-CTRL_C = b'\x03'
+CTRL_C = b"\x03"
 
 LOG = logging.getLogger(__name__)
 
@@ -30,12 +30,16 @@ TRACE_ACK.setLevel(logging.CRITICAL)
 TRACE_PACKETS = LOG.getChild("trace.packet")
 TRACE_PACKETS.setLevel(logging.CRITICAL)
 
+
 def checksum(data: bytes) -> bytes:
     return ("%02x" % (sum(data) % 256)).encode()
 
+
 class ConnectionClosedException(Exception):
     """@brief Exception used to signal the GDB server connection closed."""
+
     pass
+
 
 class GDBServerPacketIOThread(threading.Thread):
     """@brief Packet I/O thread.
@@ -58,10 +62,10 @@ class GDBServerPacketIOThread(threading.Thread):
         self.interrupt_event = threading.Event()
         self.send_acks = True
         self._clear_send_acks = False
-        self._buffer = b''
+        self._buffer = b""
         self._expecting_ack = False
         self.drop_reply = False
-        self._last_packet = b''
+        self._last_packet = b""
         self._closed = False
         self.setDaemon(True)
         self.start()
@@ -116,11 +120,14 @@ class GDBServerPacketIOThread(threading.Thread):
                     self._closed = True
                     break
 
-                TRACE_PACKETS.debug('-->>>> GDB read %d bytes: %s', len(data), data)
+                TRACE_PACKETS.debug("-->>>> GDB read %d bytes: %s", len(data), data)
 
                 self._buffer += data
             except (ConnectionAbortedError, ConnectionResetError) as err:
-                LOG.warning("GDB packet thread: connection unexpectedly closed during receive (%s)", err)
+                LOG.warning(
+                    "GDB packet thread: connection unexpectedly closed during receive (%s)",
+                    err,
+                )
                 self._closed = True
                 break
             except socket.timeout:
@@ -137,7 +144,7 @@ class GDBServerPacketIOThread(threading.Thread):
         LOG.debug("GDB packet thread stopping")
 
     def _write_packet(self, packet):
-        TRACE_PACKETS.debug('--<<<< GDB send %d bytes: %s', len(packet), packet)
+        TRACE_PACKETS.debug("--<<<< GDB send %d bytes: %s", len(packet), packet)
 
         # Make sure the entire packet is sent.
         try:
@@ -148,7 +155,10 @@ class GDBServerPacketIOThread(threading.Thread):
                 if remaining:
                     packet = packet[written:]
         except (ConnectionAbortedError, ConnectionResetError) as err:
-            LOG.warning("GDB packet thread: connection unexpectedly closed during send (%s)", err)
+            LOG.warning(
+                "GDB packet thread: connection unexpectedly closed during send (%s)",
+                err,
+            )
             self._closed = True
 
         if self.send_acks:
@@ -157,10 +167,10 @@ class GDBServerPacketIOThread(threading.Thread):
     def _check_expected_ack(self):
         # Handle expected ack.
         c = self._buffer[0:1]
-        if c in (b'+', b'-'):
+        if c in (b"+", b"-"):
             self._buffer = self._buffer[1:]
-            TRACE_ACK.debug('got ack: %s', c)
-            if c == b'-':
+            TRACE_ACK.debug("got ack: %s", c)
+            if c == b"-":
                 # Handle nack from gdb
                 self._write_packet(self._last_packet)
                 return
@@ -189,8 +199,8 @@ class GDBServerPacketIOThread(threading.Thread):
                 pkt_begin = self._buffer.index(b"$")
                 pkt_end = self._buffer.index(b"#") + 2
                 if pkt_begin >= 0 and pkt_end < len(self._buffer):
-                    pkt = self._buffer[pkt_begin:pkt_end + 1]
-                    self._buffer = self._buffer[pkt_end + 1:]
+                    pkt = self._buffer[pkt_begin : pkt_end + 1]
+                    self._buffer = self._buffer[pkt_end + 1 :]
                     self._handling_incoming_packet(pkt)
                 else:
                     break
@@ -200,15 +210,14 @@ class GDBServerPacketIOThread(threading.Thread):
 
     def _handling_incoming_packet(self, packet):
         # Compute checksum
-        data, cksum = packet[1:].split(b'#')
+        data, cksum = packet[1:].split(b"#")
         computedCksum = checksum(data)
-        goodPacket = (computedCksum.lower() == cksum.lower())
+        goodPacket = computedCksum.lower() == cksum.lower()
 
         if self.send_acks:
-            ack = b'+' if goodPacket else b'-'
+            ack = b"+" if goodPacket else b"-"
             self._abstract_socket.write(ack)
             TRACE_ACK.debug(ack)
 
         if goodPacket:
             self._receive_queue.put(packet)
-

@@ -20,11 +20,13 @@ import logging
 
 LOG = logging.getLogger(__name__)
 
+
 class ProgressReport(object):
     """@brief Base progress report class.
 
     This base class implements the logic but no output.
     """
+
     def __init__(self, file=None):
         self._file = file or sys.stdout
         self.prev_progress = 0
@@ -72,6 +74,7 @@ class ProgressReport(object):
     def _finish(self):
         raise NotImplementedError()
 
+
 class ProgressReportTTY(ProgressReport):
     """@brief Progress report subclass for TTYs.
 
@@ -83,13 +86,14 @@ class ProgressReportTTY(ProgressReport):
     WIDTH = 50
 
     def _update(self, progress):
-        self._file.write('\r')
+        self._file.write("\r")
         i = int(progress * self.WIDTH)
-        self._file.write("[%-50s] %3d%%" % ('=' * i, round(progress * 100)))
+        self._file.write("[%-50s] %3d%%" % ("=" * i, round(progress * 100)))
         self._file.flush()
 
     def _finish(self):
         self._file.write("\n")
+
 
 class ProgressReportNoTTY(ProgressReport):
     """@brief Progress report subclass for non-TTY output.
@@ -105,19 +109,20 @@ class ProgressReportNoTTY(ProgressReport):
     def _start(self):
         super(ProgressReportNoTTY, self)._start()
 
-        self._file.write('[' + '---|' * 9 + '----]\n[')
+        self._file.write("[" + "---|" * 9 + "----]\n[")
         self._file.flush()
 
     def _update(self, progress):
         i = int(progress * self.WIDTH)
         delta = i - self.last
-        self._file.write('=' * delta)
+        self._file.write("=" * delta)
         self._file.flush()
         self.last = i
 
     def _finish(self):
         self._file.write("]\n")
         self._file.flush()
+
 
 def print_progress(file=None):
     """@brief Progress printer factory.
@@ -140,4 +145,3 @@ def print_progress(file=None):
 
     klass = ProgressReportTTY if istty else ProgressReportNoTTY
     return klass(file)
-

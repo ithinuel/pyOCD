@@ -20,13 +20,19 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from time import time
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union, cast)
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union, cast
 
 from ..core import exceptions
 from ..core.memory_map import RamRegion
 from ..core.target import Target
 from ..utility.progress import print_progress
-from .builder import (FlashBuilder, MemoryBuilder, ProgrammingInfo, get_page_count, get_sector_count)
+from .builder import (
+    FlashBuilder,
+    MemoryBuilder,
+    ProgrammingInfo,
+    get_page_count,
+    get_sector_count,
+)
 
 if TYPE_CHECKING:
     from ..core.memory_map import MemoryMap, MemoryRegion
@@ -36,10 +42,12 @@ LOG = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[Union[int, float]], None]
 
+
 @dataclass
 class DataChunk:
     addr: int
     data: Union[bytes, bytearray]
+
 
 class RamBuilder(MemoryBuilder):
     """@brief Memory builder for writing potentially discontiguous data to RAM."""
@@ -49,7 +57,9 @@ class RamBuilder(MemoryBuilder):
 
     def __init__(self, session: "Session", region: MemoryRegion) -> None:
         """@brief Constructor."""
-        assert region.is_writable, "Memory region passed to RamBuilder must be directly writable"
+        assert region.is_writable, (
+            "Memory region passed to RamBuilder must be directly writable"
+        )
         super().__init__()
         self._session = session
         self._region = region
@@ -58,14 +68,18 @@ class RamBuilder(MemoryBuilder):
     def add_data(self, addr: int, data: Union[bytes, bytearray]) -> None:
         # Make sure this address range is contained by our region.
         if not self._region.contains_range(start=addr, length=len(data)):
-            raise ValueError(f"Attempt to add data ({addr:#010x}-{addr + len(data) - 1:#010x}) outside "
-                              "of RAM builder region {self._region}")
+            raise ValueError(
+                f"Attempt to add data ({addr:#010x}-{addr + len(data) - 1:#010x}) outside "
+                "of RAM builder region {self._region}"
+            )
 
         self._chunks.append(DataChunk(addr, bytearray(data)))
         self._chunks.sort(key=lambda c: c.addr)
         self._buffered_data_size += len(data)
 
-    def program(self, progress_cb: Optional[ProgressCallback] = None, **kwargs: Any) -> ProgrammingInfo:
+    def program(
+        self, progress_cb: Optional[ProgressCallback] = None, **kwargs: Any
+    ) -> ProgrammingInfo:
         target = self._session.target
         assert isinstance(target, Target)
 
@@ -81,9 +95,9 @@ class RamBuilder(MemoryBuilder):
             while offset_within_chunk < chunk_size:
                 write_size = min(self._MAX_WRITE_SIZE, chunk_size - offset_within_chunk)
                 target.write_memory_block8(
-                            chunk.addr + offset_within_chunk,
-                            chunk.data[offset_within_chunk:offset_within_chunk + write_size]
-                            )
+                    chunk.addr + offset_within_chunk,
+                    chunk.data[offset_within_chunk : offset_within_chunk + write_size],
+                )
 
                 offset_within_chunk += write_size
                 written_byte_count += write_size
@@ -102,7 +116,7 @@ class RamBuilder(MemoryBuilder):
             program_time=time() - start_time,
             total_byte_count=self.buffered_data_size,
             program_byte_count=self.buffered_data_size,
-            )
+        )
 
     @property
     def region(self) -> "MemoryRegion":
@@ -144,15 +158,16 @@ class MemoryLoader:
     _keep_unwritten: Optional[bool]
     _no_reset: Optional[bool]
 
-    def __init__(self,
-            session: "Session",
-            progress: Optional[ProgressCallback] = None,
-            chip_erase: Optional[str] = None,
-            smart_flash: Optional[bool] = None,
-            trust_crc: Optional[bool] = None,
-            keep_unwritten: Optional[bool] = None,
-            no_reset: Optional[bool] = None
-        ):
+    def __init__(
+        self,
+        session: "Session",
+        progress: Optional[ProgressCallback] = None,
+        chip_erase: Optional[bool] = None,
+        smart_flash: Optional[bool] = None,
+        trust_crc: Optional[bool] = None,
+        keep_unwritten: Optional[bool] = None,
+        no_reset: Optional[bool] = None,
+    ):
         """@brief Constructor.
 
         @param self
@@ -182,27 +197,42 @@ class MemoryLoader:
 
         if progress is not None:
             self._progress = progress
-        elif session.options.get('hide_programming_progress'):
+        elif session.options.get("hide_programming_progress"):
             self._progress = None
         else:
             self._progress = print_progress()
 
         # We have to use a special sentinel object for chip_erase because None is a valid value.
-        self._chip_erase = chip_erase if (chip_erase is not None) \
-                            else self._session.options.get('chip_erase')
-        self._smart_flash = smart_flash if (smart_flash is not None) \
-                            else self._session.options.get('smart_flash')
-        self._trust_crc = trust_crc if (trust_crc is not None) \
-                            else self._session.options.get('fast_program')
-        self._keep_unwritten = keep_unwritten if (keep_unwritten is not None) \
-                            else self._session.options.get('keep_unwritten')
-        self._no_reset = no_reset if (no_reset is not None) \
-                            else self._session.options.get('no_reset')
+        self._chip_erase = (
+            chip_erase
+            if (chip_erase is not None)
+            else self._session.options.get("chip_erase")
+        )
+        self._smart_flash = (
+            smart_flash
+            if (smart_flash is not None)
+            else self._session.options.get("smart_flash")
+        )
+        self._trust_crc = (
+            trust_crc
+            if (trust_crc is not None)
+            else self._session.options.get("fast_program")
+        )
+        self._keep_unwritten = (
+            keep_unwritten
+            if (keep_unwritten is not None)
+            else self._session.options.get("keep_unwritten")
+        )
+        self._no_reset = (
+            no_reset
+            if (no_reset is not None)
+            else self._session.options.get("no_reset")
+        )
 
         self._reset_state()
 
     def _reset_state(self):
-        """@brief Clear all state variables. """
+        """@brief Clear all state variables."""
         # _builders is a dict that maps memory regions to either a FlashBuilder or, for writable memories,
         # a bytearray.
         self._builders = {}
@@ -231,7 +261,9 @@ class MemoryLoader:
             # Look up the memory region for this address.
             region = self._map.get_region_for_address(address)
             if region is None:
-                raise ValueError("no memory region defined for address 0x%08x" % address)
+                raise ValueError(
+                    "no memory region defined for address 0x%08x" % address
+                )
 
             region_builder = self._builders.get(region, None)
 
@@ -240,7 +272,9 @@ class MemoryLoader:
             if region_builder is None:
                 if region.is_flash:
                     if region.flash is None:
-                        raise exceptions.TargetSupportError(f"flash memory region at address {address:#010x} has no flash instance")
+                        raise exceptions.TargetSupportError(
+                            f"flash memory region at address {address:#010x} has no flash instance"
+                        )
                     region_builder = region.flash.get_flash_builder()
                     region_builder.log_performance = False
                 elif region.is_writable:
@@ -248,7 +282,9 @@ class MemoryLoader:
                     # that the region is writable
                     region_builder = RamBuilder(self._session, cast(RamRegion, region))
                 else:
-                    raise ValueError(f"memory region at address {address:#010x} is not writable")
+                    raise ValueError(
+                        f"memory region at address {address:#010x} is not writable"
+                    )
 
                 # Save the new builder.
                 assert region_builder is not None
@@ -287,16 +323,20 @@ class MemoryLoader:
         # Iterate over builders we've created and program the data.
         for builder in sorted(self._builders.values(), key=lambda v: v.region.start):
             # Determine this builder's portion of total progress.
-            self._current_progress_fraction = builder.buffered_data_size / self._total_data_size
+            self._current_progress_fraction = (
+                builder.buffered_data_size / self._total_data_size
+            )
 
             # Program the data.
             chipErase = self._chip_erase if not didChipErase else "sector"
-            perf = builder.program(chip_erase=chipErase,
-                                    progress_cb=self._progress_cb,
-                                    smart_flash=self._smart_flash,
-                                    fast_verify=self._trust_crc,
-                                    keep_unwritten=self._keep_unwritten,
-                                    no_reset=self._no_reset)
+            perf = builder.program(
+                chip_erase=chipErase,
+                progress_cb=self._progress_cb,
+                smart_flash=self._smart_flash,
+                fast_verify=self._trust_crc,
+                keep_unwritten=self._keep_unwritten,
+                no_reset=self._no_reset,
+            )
             perfList.append(perf)
             didChipErase = True
 
@@ -322,26 +362,39 @@ class MemoryLoader:
         if totalProgramTime == 0:
             kbps = 0
         else:
-            kbps = (program_byte_count/1024) / totalProgramTime
+            kbps = (program_byte_count / 1024) / totalProgramTime
 
-        if any(perf.program_type == FlashBuilder.FLASH_CHIP_ERASE for perf in perf_list):
-            LOG.info("Erased chip, programmed %d bytes (%s), skipped %d bytes (%s) at %.02f kB/s",
-                actual_program_byte_count, get_page_count(actual_program_page_count),
-                skipped_byte_count, get_page_count(skipped_page_count),
-                kbps)
+        if any(
+            perf.program_type == FlashBuilder.FLASH_CHIP_ERASE for perf in perf_list
+        ):
+            LOG.info(
+                "Erased chip, programmed %d bytes (%s), skipped %d bytes (%s) at %.02f kB/s",
+                actual_program_byte_count,
+                get_page_count(actual_program_page_count),
+                skipped_byte_count,
+                get_page_count(skipped_page_count),
+                kbps,
+            )
         else:
             erase_byte_count = sum(perf.erase_byte_count for perf in perf_list)
             erase_sector_count = sum(perf.erase_sector_count for perf in perf_list)
 
-            LOG.info("Erased %d bytes (%s), programmed %d bytes (%s), skipped %d bytes (%s) at %.02f kB/s",
-                erase_byte_count, get_sector_count(erase_sector_count),
-                actual_program_byte_count, get_page_count(actual_program_page_count),
-                skipped_byte_count, get_page_count(skipped_page_count),
-                kbps)
+            LOG.info(
+                "Erased %d bytes (%s), programmed %d bytes (%s), skipped %d bytes (%s) at %.02f kB/s",
+                erase_byte_count,
+                get_sector_count(erase_sector_count),
+                actual_program_byte_count,
+                get_page_count(actual_program_page_count),
+                skipped_byte_count,
+                get_page_count(skipped_page_count),
+                kbps,
+            )
 
     def _progress_cb(self, amount):
         if self._progress is not None:
-            self._progress((amount * self._current_progress_fraction) + self._progress_offset)
+            self._progress(
+                (amount * self._current_progress_fraction) + self._progress_offset
+            )
 
     @classmethod
     def program_binary_data(cls, session, address, data):
@@ -357,6 +410,7 @@ class MemoryLoader:
         mgr = cls(session)
         mgr.add_data(address, data)
         mgr.commit()
+
 
 # Define deprecated class name.
 FlashLoader = MemoryLoader

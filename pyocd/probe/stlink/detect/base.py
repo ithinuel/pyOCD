@@ -23,16 +23,16 @@ import logging
 
 LOG = logging.getLogger(__name__)
 
+
 class StlinkDetectBase(object, metaclass=ABCMeta):
-    """ Base class for stlink detection, defines public interface for
+    """Base class for stlink detection, defines public interface for
     mbed-enabled stlink devices detection for various hosts
     """
 
     MBED_HTM_NAME = "mbed.htm"
 
     def __init__(self):
-        """ ctor
-        """
+        """ctor"""
         pass
 
     @abstractmethod
@@ -46,7 +46,7 @@ class StlinkDetectBase(object, metaclass=ABCMeta):
         raise NotImplementedError
 
     def list_mbeds(self):
-        """ List details of connected devices
+        """List details of connected devices
         @return Returns list of structures with detailed info about each mbed
         @details Function returns list of dictionaries with mbed attributes
           'mount_point', TargetID name etc.
@@ -64,8 +64,8 @@ class StlinkDetectBase(object, metaclass=ABCMeta):
         return result
 
     def _update_device_from_fs(self, device):
-        """ Updates the device information based on files from its 'mount_point'
-            @param device Dictionary containing device information
+        """Updates the device information based on files from its 'mount_point'
+        @param device Dictionary containing device information
         """
         try:
             directory_entries = listdir(device["mount_point"])
@@ -138,8 +138,7 @@ class StlinkDetectBase(object, metaclass=ABCMeta):
         return None
 
     def mount_point_ready(self, path):
-        """Check if a mount point is ready for file operations
-        """
+        """Check if a mount point is ready for file operations"""
         return exists(path) and isdir(path)
 
     @staticmethod
@@ -153,4 +152,3 @@ class StlinkDetectBase(object, metaclass=ABCMeta):
         p = Popen(cmd, shell=shell, stdout=PIPE, stderr=PIPE)
         _stdout, _stderr = p.communicate()
         return _stdout, _stderr, p.returncode
-

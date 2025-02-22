@@ -16,7 +16,7 @@
 # limitations under the License.
 
 import logging
-from typing import (Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, cast)
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 from ..core.target import Target
 from ..core.options import OPTIONS_INFO
@@ -24,12 +24,13 @@ from ..utility.compatibility import to_str_safe
 
 LOG = logging.getLogger(__name__)
 
+
 def split_command(cmd: str) -> List[str]:
     """@brief Split command by whitespace, supporting quoted strings."""
     result: List[str] = []
     state = 0
-    word = ''
-    open_quote = ''
+    word = ""
+    open_quote = ""
     pos = 0
     while pos < len(cmd):
         c = cmd[pos]
@@ -38,19 +39,19 @@ def split_command(cmd: str) -> List[str]:
             if c.isspace():
                 if word:
                     result.append(word)
-                    word = ''
+                    word = ""
             elif c in ('"', "'"):
                 if word:
                     result.append(word)
-                word = ''
+                word = ""
                 open_quote = c
                 state = 1
-            elif c in ';!@#$%^&*()+=[]{}|<>,?':
+            elif c in ";!@#$%^&*()+=[]{}|<>,?":
                 if word:
                     result.append(word)
                 word = c
                 state = 2
-            elif c == '\\':
+            elif c == "\\":
                 if pos < len(cmd):
                     c = cmd[pos]
                     pos += 1
@@ -60,10 +61,10 @@ def split_command(cmd: str) -> List[str]:
         elif state == 1:
             if c == open_quote:
                 result.append(word)
-                word = ''
+                word = ""
                 state = 0
             # Only honour escapes in double quotes.
-            elif open_quote == '"' and c == '\\':
+            elif open_quote == '"' and c == "\\":
                 if pos < len(cmd):
                     c = cmd[pos]
                     pos += 1
@@ -74,12 +75,13 @@ def split_command(cmd: str) -> List[str]:
             if word:
                 result.append(word)
             # Back up to reprocess this char in state 0.
-            word = ''
+            word = ""
             pos -= 1
             state = 0
     if word:
         result.append(word)
     return result
+
 
 def split_command_line(cmd_line: Union[str, List[str]]) -> List[str]:
     """@brief Split command line by whitespace, supporting quoted strings."""
@@ -92,20 +94,22 @@ def split_command_line(cmd_line: Union[str, List[str]]) -> List[str]:
         result += split_command(cmd)
     return result
 
+
 ## Map of vector char characters to masks.
 VECTOR_CATCH_CHAR_MAP = {
-        'e': Target.VectorCatch.SECURE_FAULT,
-        'h': Target.VectorCatch.HARD_FAULT,
-        'b': Target.VectorCatch.BUS_FAULT,
-        'm': Target.VectorCatch.MEM_FAULT,
-        'i': Target.VectorCatch.INTERRUPT_ERR,
-        's': Target.VectorCatch.STATE_ERR,
-        'c': Target.VectorCatch.CHECK_ERR,
-        'p': Target.VectorCatch.COPROCESSOR_ERR,
-        'r': Target.VectorCatch.CORE_RESET,
-        'a': Target.VectorCatch.ALL,
-        'n': Target.VectorCatch.NONE,
-    }
+    "e": Target.VectorCatch.SECURE_FAULT,
+    "h": Target.VectorCatch.HARD_FAULT,
+    "b": Target.VectorCatch.BUS_FAULT,
+    "m": Target.VectorCatch.MEM_FAULT,
+    "i": Target.VectorCatch.INTERRUPT_ERR,
+    "s": Target.VectorCatch.STATE_ERR,
+    "c": Target.VectorCatch.CHECK_ERR,
+    "p": Target.VectorCatch.COPROCESSOR_ERR,
+    "r": Target.VectorCatch.CORE_RESET,
+    "a": Target.VectorCatch.ALL,
+    "n": Target.VectorCatch.NONE,
+}
+
 
 def convert_vector_catch(vcvalue: Union[str, bytes]) -> int:
     """@brief Convert a vector catch string to a mask.
@@ -116,9 +120,9 @@ def convert_vector_catch(vcvalue: Union[str, bytes]) -> int:
     value: str = to_str_safe(vcvalue).lower()
 
     # Handle special vector catch options.
-    if value == 'all':
+    if value == "all":
         return Target.VectorCatch.ALL
-    elif value == 'none':
+    elif value == "none":
         return Target.VectorCatch.NONE
 
     # Convert options string to mask.
@@ -127,6 +131,7 @@ def convert_vector_catch(vcvalue: Union[str, bytes]) -> int:
     except KeyError as e:
         # Reraise an error with a more helpful message.
         raise ValueError("invalid vector catch option '{}'".format(e.args[0]))
+
 
 def _convert_string_list_option(value: Optional[str]) -> List[str]:
     """@brief Convert a comma-separated list of strings.
@@ -138,15 +143,14 @@ def _convert_string_list_option(value: Optional[str]) -> List[str]:
     """
     if value is None:
         return []
-    return [
-        i.strip()
-        for i in value.split(',')
-    ]
+    return [i.strip() for i in value.split(",")]
+
 
 ## Map with special converter routines for session options that need them.
 _OPTION_CONVERTERS: Dict[str, Callable[[Optional[str]], Any]] = {
-    'pack.debug_sequences.disabled_sequences': _convert_string_list_option,
+    "pack.debug_sequences.disabled_sequences": _convert_string_list_option,
 }
+
 
 def convert_one_session_option(name: str, value: Optional[str]) -> Tuple[str, Any]:
     """@brief Convert one session option's value from a string.
@@ -158,7 +162,7 @@ def convert_one_session_option(name: str, value: Optional[str]) -> Tuple[str, An
         in for cases like a "no-" prefix.
     """
     # Check for and strip "no-" prefix before we validate the option name.
-    if name.startswith('no-'):
+    if name.startswith("no-"):
         name = name[3:]
         had_no_prefix = True
     else:
@@ -221,13 +225,14 @@ def convert_one_session_option(name: str, value: Optional[str]) -> Tuple[str, An
 
     return name, result
 
+
 def convert_session_options(option_list: Iterable[str]) -> Dict[str, Any]:
     """@brief Convert a list of session option settings to a dictionary."""
     options = {}
     if option_list is not None:
         for o in option_list:
-            if '=' in o:
-                name, value = o.split('=', 1)
+            if "=" in o:
+                name, value = o.split("=", 1)
                 name = name.strip().lower()
                 value = value.strip()
             else:
@@ -239,24 +244,26 @@ def convert_session_options(option_list: Iterable[str]) -> Dict[str, Any]:
                 options[name] = value
     return options
 
+
 ## Map to convert from reset type names to enums.
 RESET_TYPE_MAP: Dict[str, Optional[Target.ResetType]] = {
-        'default': None,
-        'hw': Target.ResetType.HW,
-        'sw': Target.ResetType.SW,
-        'hardware': Target.ResetType.HW,
-        'software': Target.ResetType.SW,
-        'sw_system': Target.ResetType.SW_SYSTEM,
-        'sw_core': Target.ResetType.SW_CORE,
-        'sw_sysresetreq': Target.ResetType.SW_SYSRESETREQ,
-        'sw_vectreset': Target.ResetType.SW_VECTRESET,
-        'sw_emulated': Target.ResetType.SW_EMULATED,
-        'system': Target.ResetType.SW_SYSTEM,
-        'core': Target.ResetType.SW_CORE,
-        'sysresetreq': Target.ResetType.SW_SYSRESETREQ,
-        'vectreset': Target.ResetType.SW_VECTRESET,
-        'emulated': Target.ResetType.SW_EMULATED,
-    }
+    "default": None,
+    "hw": Target.ResetType.HW,
+    "sw": Target.ResetType.SW,
+    "hardware": Target.ResetType.HW,
+    "software": Target.ResetType.SW,
+    "sw_system": Target.ResetType.SW_SYSTEM,
+    "sw_core": Target.ResetType.SW_CORE,
+    "sw_sysresetreq": Target.ResetType.SW_SYSRESETREQ,
+    "sw_vectreset": Target.ResetType.SW_VECTRESET,
+    "sw_emulated": Target.ResetType.SW_EMULATED,
+    "system": Target.ResetType.SW_SYSTEM,
+    "core": Target.ResetType.SW_CORE,
+    "sysresetreq": Target.ResetType.SW_SYSRESETREQ,
+    "vectreset": Target.ResetType.SW_VECTRESET,
+    "emulated": Target.ResetType.SW_EMULATED,
+}
+
 
 def convert_reset_type(value: str) -> Optional[Target.ResetType]:
     """@brief Convert a reset_type session option value to the Target.ResetType enum.
@@ -267,6 +274,7 @@ def convert_reset_type(value: str) -> Optional[Target.ResetType]:
     if value not in RESET_TYPE_MAP:
         raise ValueError("unexpected value for reset_type option ('%s')" % value)
     return RESET_TYPE_MAP[value]
+
 
 def convert_frequency(value: str) -> int:
     """@brief Applies scale suffix to frequency value string.
@@ -279,11 +287,11 @@ def convert_frequency(value: str) -> int:
     if value.endswith("hz"):
         value = value[:-2]
     suffix = value[-1]
-    if suffix in ('k', 'm'):
+    if suffix in ("k", "m"):
         fvalue = float(value[:-1])
-        if suffix == 'k':
+        if suffix == "k":
             fvalue *= 1000
-        elif suffix == 'm':
+        elif suffix == "m":
             fvalue *= 1000000
         return int(fvalue)
     else:
@@ -298,4 +306,3 @@ def int_base_0(x: str) -> int:
 def flatten_args(args: Iterable[Iterable[Any]]) -> List[Any]:
     """@brief Converts a list of lists to a single list."""
     return [item for sublist in args for item in sublist]
-

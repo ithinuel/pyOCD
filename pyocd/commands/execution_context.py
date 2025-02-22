@@ -19,8 +19,19 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import (Any, Callable, cast, Dict, IO, Iterator, List, NamedTuple, Optional, Sequence,
-        TYPE_CHECKING)
+from typing import (
+    Any,
+    Callable,
+    cast,
+    Dict,
+    IO,
+    Iterator,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    TYPE_CHECKING,
+)
 import six
 import pprint
 import subprocess
@@ -37,10 +48,11 @@ if TYPE_CHECKING:
     from ..core.core_target import CoreTarget
     from ..core.soc_target import SoCTarget
     from ..board.board import Board
-    from ..coresight.ap import (APAddressBase, AccessPort)
+    from ..coresight.ap import APAddressBase, AccessPort
     from ..probe.debug_probe import DebugProbe
 
 LOG = logging.getLogger(__name__)
+
 
 class CommandSet:
     """@brief Holds a set of command classes."""
@@ -49,7 +61,7 @@ class CommandSet:
     DID_LOAD_COMMAND_MODULES = False
 
     def __init__(self):
-        self._commands = {} # Dict of all available commands.
+        self._commands = {}  # Dict of all available commands.
         self._command_classes = set()
         self._command_matcher = UniquePrefixMatcher()
         self._values = {}
@@ -97,6 +109,7 @@ class CommandSet:
         @param group_name String with the name of the group to add.
         """
         from .base import ALL_COMMANDS
+
         self.add_commands(ALL_COMMANDS.get(group_name, set()))
 
     def add_commands(self, commands):
@@ -105,17 +118,23 @@ class CommandSet:
         @param commands List of command classes.
         """
         from .base import ValueBase
+
         value_classes = {klass for klass in commands if issubclass(klass, ValueBase)}
         cmd_classes = commands - value_classes
-        cmd_names = {name: klass for klass in cmd_classes for name in klass.INFO['names']}
+        cmd_names = {
+            name: klass for klass in cmd_classes for name in klass.INFO["names"]
+        }
         self._commands.update(cmd_names)
         self._command_classes.update(cmd_classes)
         self._command_matcher.add_items(cmd_names.keys())
 
-        value_names = {name: klass for klass in value_classes for name in klass.INFO['names']}
+        value_names = {
+            name: klass for klass in value_classes for name in klass.INFO["names"]
+        }
         self._values.update(value_names)
         self._value_classes.update(value_classes)
         self._value_matcher.add_items(value_names.keys())
+
 
 class CommandInvocation(NamedTuple):
     """@brief Groups the command name with an iterable of args and a handler function.
@@ -123,9 +142,11 @@ class CommandInvocation(NamedTuple):
     The handler is a callable that will evaluate the command. It accepts a single argument of the
     CommandInvocation instance.
     """
+
     cmd: str
     args: Sequence[str]
-    handler: Callable[["CommandInvocation"], None] # type:ignore # mypy doesn't support recursive types yet!
+    handler: Callable[["CommandInvocation"], None]  # type:ignore # mypy doesn't support recursive types yet!
+
 
 class CommandExecutionContext:
     """@brief Manages command execution.
@@ -162,9 +183,9 @@ class CommandExecutionContext:
         self._loaded_peripherals = False
 
         # Add in the standard commands.
-        self._command_set.add_command_group('standard')
+        self._command_set.add_command_group("standard")
 
-    def write(self, message='', **kwargs):
+    def write(self, message="", **kwargs):
         """@brief Write a fixed message to the output stream.
 
         The message is written to the output stream passed to the constructor, terminated with
@@ -177,7 +198,7 @@ class CommandExecutionContext:
         """
         if self._output is None:
             return
-        end = kwargs.pop('end', "\n")
+        end = kwargs.pop("end", "\n")
         if not isinstance(message, str):
             message = str(message)
         self._output.write(message + end)
@@ -232,7 +253,7 @@ class CommandExecutionContext:
         self.target.add_target_command_groups(self.command_set)
 
         # Add user-defined commands once we know we have a session created.
-        self.command_set.add_command_group('user')
+        self.command_set.add_command_group("user")
 
         return True
 
@@ -331,6 +352,7 @@ class CommandExecutionContext:
             return None
         else:
             from ..coresight.coresight_target import CoreSightTarget
+
             assert self.target
             if isinstance(self.target, CoreSightTarget):
                 return cast(CoreSightTarget, self.target).aps[self.selected_ap_address]
@@ -360,7 +382,7 @@ class CommandExecutionContext:
                 line = line.strip()
 
                 # Skip empty or comment lines.
-                if (len(line) == 0) or (line[0] == '#'):
+                if (len(line) == 0) or (line[0] == "#"):
                     continue
 
                 self.process_command_line(line)
@@ -378,19 +400,19 @@ class CommandExecutionContext:
 
         # Check for Python or system command. For these we yield a list of 2 elements: the command
         # followed by the rest of the command line as it was originally.
-        if parts and (parts[0] in '$!'):
+        if parts and (parts[0] in "$!"):
             # Remove the Python/system command prefix from the command line. Can't use str.removeprefix()
             # since it was added in 3.9.
             line_remainder = line.strip()
             assert line_remainder.find(parts[0]) == 0
-            line_remainder = line_remainder[len(parts[0]):].strip()
+            line_remainder = line_remainder[len(parts[0]) :].strip()
             yield [parts[0], line_remainder]
             return
 
         result: List[str] = []
 
         for p in parts:
-            if p == ';':
+            if p == ";":
                 if result:
                     yield result
                     result = []
@@ -403,15 +425,15 @@ class CommandExecutionContext:
         """@brief Create a CommandInvocation from a single command."""
         # Check for Python or system command lines.
         first_char = cmdline[0]
-        if first_char in '$!':
+        if first_char in "$!":
             # cmdline parameters that are for Python and system commands must be a 2-element list,
             # as generated by _split_commands().
             assert len(cmdline) == 2
 
             # Return the invocation instance with the handler set appropriately.
-            if first_char == '$':
+            if first_char == "$":
                 return CommandInvocation(cmdline[1], [], self.handle_python)
-            elif first_char == '!':
+            elif first_char == "!":
                 return CommandInvocation(cmdline[1], [], self.handle_system)
 
         # Split command into words.
@@ -426,8 +448,10 @@ class CommandExecutionContext:
         if matched_command is None:
             all_matches = self._command_set.command_matcher.find_all(cmd)
             if len(all_matches) > 1:
-                raise exceptions.CommandError("command '%s' is ambiguous; matches are %s" % (cmd,
-                        ", ".join("'%s'" % c for c in all_matches)))
+                raise exceptions.CommandError(
+                    "command '%s' is ambiguous; matches are %s"
+                    % (cmd, ", ".join("'%s'" % c for c in all_matches))
+                )
             else:
                 raise exceptions.CommandError("unrecognized command '%s'" % cmd)
 
@@ -436,7 +460,9 @@ class CommandExecutionContext:
     def execute_command(self, invocation: CommandInvocation) -> None:
         """@brief Execute a single command."""
         # Must have an attached session to run commands, except for certain commands.
-        assert (self.session is not None) or (invocation.cmd in ('list', 'help', 'exit'))
+        assert (self.session is not None) or (
+            invocation.cmd in ("list", "help", "exit")
+        )
 
         # Run command.
         cmd_class = self._command_set.commands[invocation.cmd]
@@ -456,10 +482,12 @@ class CommandExecutionContext:
         assert self.session
         assert self.target
         ns = self.session.user_script_proxy.namespace
-        ns.update({
-                'elf': self.elf,
-                'map': self.target.memory_map,
-            })
+        ns.update(
+            {
+                "elf": self.elf,
+                "map": self.target.memory_map,
+            }
+        )
         self._python_namespace = ns
 
     def handle_python(self, invocation: CommandInvocation) -> None:
@@ -484,12 +512,16 @@ class CommandExecutionContext:
             # Log the traceback before raising the exception.
             if self.session and self.session.log_tracebacks:
                 LOG.error("Exception while executing expression: %s", e, exc_info=True)
-            raise exceptions.CommandError("exception while executing expression: %s" % e)
+            raise exceptions.CommandError(
+                "exception while executing expression: %s" % e
+            )
 
     def handle_system(self, invocation: CommandInvocation) -> None:
         """@brief Evaluate a system call command."""
         try:
-            output = subprocess.check_output(invocation.cmd, stderr=subprocess.STDOUT, shell=True)
-            self.write(six.ensure_str(output), end='')
+            output = subprocess.check_output(
+                invocation.cmd, stderr=subprocess.STDOUT, shell=True
+            )
+            self.write(six.ensure_str(output), end="")
         except subprocess.CalledProcessError as err:
             raise exceptions.CommandError(str(err)) from err

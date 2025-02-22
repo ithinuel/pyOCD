@@ -15,7 +15,8 @@
 # limitations under the License.
 
 import re
-from typing import (Iterable, Sequence, Optional, Tuple)
+from typing import Iterable, Sequence, Optional, Tuple
+
 
 class UniquePrefixMatcher:
     """@brief Manages detection of shortest unique prefix match of a set of strings."""
@@ -62,7 +63,8 @@ class UniquePrefixMatcher:
         return None
 
 
-_INT_SUFFIX_RE = re.compile(r'[0-9]+$')
+_INT_SUFFIX_RE = re.compile(r"[0-9]+$")
+
 
 def uniquify_name(name: str, others: Sequence[str]) -> str:
     """@brief Ensure the given name is unique amongst the other provided names.
@@ -80,7 +82,7 @@ def uniquify_name(name: str, others: Sequence[str]) -> str:
         if len(matches):
             match = matches[0]
             u_value = int(match.group())
-            name = name[:match.start()]
+            name = name[: match.start()]
         else:
             name += "_"
             u_value = 0

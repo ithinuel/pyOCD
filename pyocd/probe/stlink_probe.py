@@ -18,13 +18,13 @@
 from __future__ import annotations
 
 from time import sleep
-from typing import (Any, Callable, Dict, List, Optional, Sequence, Union, TYPE_CHECKING)
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
 
 from .debug_probe import DebugProbe
 from ..core.memory_interface import MemoryInterface
 from ..core.plugin import Plugin
 from ..core.options import OptionInfo
-from ..coresight.ap import (APVersion, APSEL, APSEL_SHIFT, APv1Address)
+from ..coresight.ap import APVersion, APSEL, APSEL_SHIFT, APv1Address
 from .stlink.usb import STLinkUSBInterface
 from .stlink.stlink import STLink
 from .stlink.detect.factory import create_mbed_detector
@@ -34,6 +34,7 @@ from ..utility import conversion
 
 if TYPE_CHECKING:
     from ..board.board_ids import BoardInfo
+
 
 class StlinkProbe(DebugProbe):
     """@brief Wraps an STLink as a DebugProbe."""
@@ -45,12 +46,15 @@ class StlinkProbe(DebugProbe):
     _mbed_board_id_cache: Dict[str, Optional[str]] = {}
 
     @classmethod
-    def get_all_connected_probes(cls, unique_id: Optional[str] = None,
-            is_explicit: bool = False) -> List[StlinkProbe]:
+    def get_all_connected_probes(
+        cls, unique_id: Optional[str] = None, is_explicit: bool = False
+    ) -> List[StlinkProbe]:
         return [cls(dev) for dev in STLinkUSBInterface.get_all_connected_devices()]
 
     @classmethod
-    def get_probe_with_id(cls, unique_id: str, is_explicit: bool = False) -> Optional[StlinkProbe]:
+    def get_probe_with_id(
+        cls, unique_id: str, is_explicit: bool = False
+    ) -> Optional[StlinkProbe]:
         for dev in STLinkUSBInterface.get_all_connected_devices():
             if dev.serial_number == unique_id:
                 return cls(dev)
@@ -86,12 +90,12 @@ class StlinkProbe(DebugProbe):
                 detector = create_mbed_detector()
                 if detector is not None:
                     for info in detector.list_mbeds():
-                        usb_id = info['target_id_usb_id']
+                        usb_id = info["target_id_usb_id"]
 
                         # Some STLink probes provide an MSD volume, but not the mbed.htm file.
                         # We can live without the board ID, so just ignore any error.
                         try:
-                            this_board_id = info['target_id_mbed_htm'][0:4]
+                            this_board_id = info["target_id_mbed_htm"][0:4]
                         except KeyError:
                             # No board ID is available for this board.
                             StlinkProbe._mbed_board_id_cache[usb_id] = None
@@ -119,7 +123,11 @@ class StlinkProbe(DebugProbe):
 
     @property
     def supported_wire_protocols(self):
-        return [DebugProbe.Protocol.DEFAULT, DebugProbe.Protocol.SWD, DebugProbe.Protocol.JTAG]
+        return [
+            DebugProbe.Protocol.DEFAULT,
+            DebugProbe.Protocol.SWD,
+            DebugProbe.Protocol.JTAG,
+        ]
 
     @property
     def unique_id(self):
@@ -148,7 +156,9 @@ class StlinkProbe(DebugProbe):
         assert self.session is not None
         board_info = self.associated_board_info
         if board_info or self.board_id:
-            return MbedBoard(self.session, board_info=board_info, board_id=self.board_id)
+            return MbedBoard(
+                self.session, board_info=board_info, board_id=self.board_id
+            )
         else:
             return None
 
@@ -159,17 +169,17 @@ class StlinkProbe(DebugProbe):
         self._is_open = True
 
         # This call is ignored if the STLink is not V3.
-        prescaler = self.session.options.get('stlink.v3_prescaler')
+        prescaler = self.session.options.get("stlink.v3_prescaler")
         if prescaler not in (1, 2, 4):
-            prescaler = self.session.options.get_default('stlink.v3_prescaler')
+            prescaler = self.session.options.get_default("stlink.v3_prescaler")
         self._link.set_prescaler(prescaler)
 
         # Update capabilities.
         self._caps = {
-                self.Capability.SWO,
-                self.Capability.MANAGED_AP_SELECTION,
-                self.Capability.MANAGED_DPBANKSEL,
-                }
+            self.Capability.SWO,
+            self.Capability.MANAGED_AP_SELECTION,
+            self.Capability.MANAGED_DPBANKSEL,
+        }
         if self._link.supports_banked_dp:
             self._caps.add(self.Capability.BANKED_DP_REGISTERS)
 
@@ -198,9 +208,9 @@ class StlinkProbe(DebugProbe):
     def reset(self):
         assert self.session
         self._link.drive_nreset(True)
-        sleep(self.session.options.get('reset.hold_time'))
+        sleep(self.session.options.get("reset.hold_time"))
         self._link.drive_nreset(False)
-        sleep(self.session.options.get('reset.post_delay'))
+        sleep(self.session.options.get("reset.post_delay"))
 
     def assert_reset(self, asserted):
         self._link.drive_nreset(asserted)
@@ -229,7 +239,7 @@ class StlinkProbe(DebugProbe):
 
     def read_ap(self, addr, now=True):
         apsel = (addr & APSEL) >> APSEL_SHIFT
-        result = self._link.read_dap_register(apsel, addr & 0xffff)
+        result = self._link.read_dap_register(apsel, addr & 0xFFFF)
 
         def read_ap_result_callback():
             return result
@@ -238,7 +248,7 @@ class StlinkProbe(DebugProbe):
 
     def write_ap(self, addr, data):
         apsel = (addr & APSEL) >> APSEL_SHIFT
-        self._link.write_dap_register(apsel, addr & 0xffff, data)
+        self._link.write_dap_register(apsel, addr & 0xFFFF, data)
 
     def read_ap_multiple(self, addr, count=1, now=True):
         results = [self.read_ap(addr, now=True) for n in range(count)]
@@ -273,6 +283,7 @@ class StlinkProbe(DebugProbe):
     def swo_read(self):
         return self._link.swo_read()
 
+
 class STLinkMemoryInterface(MemoryInterface):
     """@brief Concrete memory interface for a single AP."""
 
@@ -280,54 +291,72 @@ class STLinkMemoryInterface(MemoryInterface):
         self._link = link
         self._apsel = apsel
 
-    def write_memory(self, addr: int, data: int, transfer_size: int=32, **attrs: Any) -> None:
+    def write_memory(
+        self, addr: int, data: int, transfer_size: int = 32, **attrs: Any
+    ) -> None:
         """@brief Write a single memory location.
 
         By default the transfer size is a word.
         """
         assert transfer_size in (8, 16, 32)
-        addr &= 0xffffffff
-        csw = attrs.get('csw', 0)
+        addr &= 0xFFFFFFFF
+        csw = attrs.get("csw", 0)
         if transfer_size == 32:
-            self._link.write_mem32(addr, conversion.u32le_list_to_byte_list([data]), self._apsel, csw)
+            self._link.write_mem32(
+                addr, conversion.u32le_list_to_byte_list([data]), self._apsel, csw
+            )
         elif transfer_size == 16:
-            self._link.write_mem16(addr, conversion.u16le_list_to_byte_list([data]), self._apsel, csw)
+            self._link.write_mem16(
+                addr, conversion.u16le_list_to_byte_list([data]), self._apsel, csw
+            )
         elif transfer_size == 8:
             self._link.write_mem8(addr, [data], self._apsel, csw)
 
-    def read_memory(self, addr: int, transfer_size: int=32, now: bool=True, **attrs: Any) \
-            -> Union[int, Callable[[], int]]:
+    def read_memory(
+        self, addr: int, transfer_size: int = 32, now: bool = True, **attrs: Any
+    ) -> Union[int, Callable[[], int]]:
         """@brief Read a memory location.
 
         By default, a word will be read.
         """
         assert transfer_size in (8, 16, 32)
-        addr &= 0xffffffff
-        csw = attrs.get('csw', 0)
+        addr &= 0xFFFFFFFF
+        csw = attrs.get("csw", 0)
         if transfer_size == 32:
-            result = conversion.byte_list_to_u32le_list(self._link.read_mem32(addr, 4, self._apsel, csw))[0]
+            result = conversion.byte_list_to_u32le_list(
+                self._link.read_mem32(addr, 4, self._apsel, csw)
+            )[0]
         elif transfer_size == 16:
-            result = conversion.byte_list_to_u16le_list(self._link.read_mem16(addr, 2, self._apsel, csw))[0]
+            result = conversion.byte_list_to_u16le_list(
+                self._link.read_mem16(addr, 2, self._apsel, csw)
+            )[0]
         elif transfer_size == 8:
             result = self._link.read_mem8(addr, 1, self._apsel, csw)[0]
 
         def read_callback():
             return result
+
         return result if now else read_callback
 
-    def write_memory_block32(self, addr: int, data: Sequence[int], **attrs: Any) -> None:
-        addr &= 0xffffffff
-        csw = attrs.get('csw', 0)
-        self._link.write_mem32(addr, conversion.u32le_list_to_byte_list(data), self._apsel, csw)
+    def write_memory_block32(
+        self, addr: int, data: Sequence[int], **attrs: Any
+    ) -> None:
+        addr &= 0xFFFFFFFF
+        csw = attrs.get("csw", 0)
+        self._link.write_mem32(
+            addr, conversion.u32le_list_to_byte_list(data), self._apsel, csw
+        )
 
     def read_memory_block32(self, addr: int, size: int, **attrs: Any) -> Sequence[int]:
-        addr &= 0xffffffff
-        csw = attrs.get('csw', 0)
-        return conversion.byte_list_to_u32le_list(self._link.read_mem32(addr, size * 4, self._apsel, csw))
+        addr &= 0xFFFFFFFF
+        csw = attrs.get("csw", 0)
+        return conversion.byte_list_to_u32le_list(
+            self._link.read_mem32(addr, size * 4, self._apsel, csw)
+        )
 
     def read_memory_block8(self, addr: int, size: int, **attrs: Any) -> Sequence[int]:
-        addr &= 0xffffffff
-        csw = attrs.get('csw', 0)
+        addr &= 0xFFFFFFFF
+        csw = attrs.get("csw", 0)
         res = []
 
         # Transfers are handled in 3 phases:
@@ -339,49 +368,52 @@ class STLinkMemoryInterface(MemoryInterface):
 
         # 1. read leading unaligned bytes
         unaligned_count = 3 & (4 - addr)
-        if (size > unaligned_count > 0):
+        if size > unaligned_count > 0:
             res += self._link.read_mem8(addr, unaligned_count, self._apsel, csw)
             size -= unaligned_count
             addr += unaligned_count
 
         # 2. read aligned block of 32 bits
-        if (size >= 4):
+        if size >= 4:
             aligned_size = size & ~3
             res += self._link.read_mem32(addr, aligned_size, self._apsel, csw)
             size -= aligned_size
             addr += aligned_size
 
         # 3. read trailing unaligned bytes
-        if (size > 0):
+        if size > 0:
             res += self._link.read_mem8(addr, size, self._apsel, csw)
 
         return res
 
     def write_memory_block8(self, addr: int, data: Sequence[int], **attrs: Any) -> None:
-        addr &= 0xffffffff
-        csw = attrs.get('csw', 0)
+        addr &= 0xFFFFFFFF
+        csw = attrs.get("csw", 0)
         size = len(data)
         idx = 0
 
         # write leading unaligned bytes
         unaligned_count = 3 & (4 - addr)
-        if (size > unaligned_count > 0):
+        if size > unaligned_count > 0:
             self._link.write_mem8(addr, data[:unaligned_count], self._apsel, csw)
             size -= unaligned_count
             addr += unaligned_count
             idx += unaligned_count
 
         # write aligned block of 32 bits
-        if (size >= 4):
+        if size >= 4:
             aligned_size = size & ~3
-            self._link.write_mem32(addr, data[idx:idx + aligned_size], self._apsel, csw)
+            self._link.write_mem32(
+                addr, data[idx : idx + aligned_size], self._apsel, csw
+            )
             size -= aligned_size
             addr += aligned_size
             idx += aligned_size
 
         # write trailing unaligned bytes
-        if (size > 0):
+        if size > 0:
             self._link.write_mem8(addr, data[idx:], self._apsel, csw)
+
 
 class StlinkProbePlugin(Plugin):
     """@brief Plugin class for StlLinkProbe."""
@@ -404,7 +436,11 @@ class StlinkProbePlugin(Plugin):
     @property
     def options(self) -> List[OptionInfo]:
         return [
-            OptionInfo('stlink.v3_prescaler', int, 1,
-                    "Sets the HCLK prescaler of an STLinkV3, changing performance versus power tradeoff. "
-                    "The value must be one of 1=high performance (default), 2=normal, or 4=low power.")
+            OptionInfo(
+                "stlink.v3_prescaler",
+                int,
+                1,
+                "Sets the HCLK prescaler of an STLinkV3, changing performance versus power tradeoff. "
+                "The value must be one of 1=high performance (default), 2=normal, or 4=low power.",
+            )
         ]

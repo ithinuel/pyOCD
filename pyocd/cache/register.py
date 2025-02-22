@@ -17,10 +17,11 @@
 import logging
 
 from ..core import exceptions
-from ..coresight.cortex_m_core_registers import (CortexMCoreRegisterInfo, index_for_reg)
+from ..coresight.cortex_m_core_registers import CortexMCoreRegisterInfo, index_for_reg
 from .metrics import CacheMetrics
 
 LOG = logging.getLogger(__name__)
+
 
 class RegisterCache(object):
     """@brief Cache of a core's register values.
@@ -35,26 +36,32 @@ class RegisterCache(object):
     Same logic applies for XPSR submasks.
     """
 
-    CFBP_INDEX = index_for_reg('cfbp')
-    XPSR_INDEX = index_for_reg('xpsr')
+    CFBP_INDEX = index_for_reg("cfbp")
+    XPSR_INDEX = index_for_reg("xpsr")
 
-    CFBP_REGS = [index_for_reg(name) for name in [
-                'cfbp',
-                'control',
-                'faultmask',
-                'basepri',
-                'primask',
-                ]]
+    CFBP_REGS = [
+        index_for_reg(name)
+        for name in [
+            "cfbp",
+            "control",
+            "faultmask",
+            "basepri",
+            "primask",
+        ]
+    ]
 
-    XPSR_REGS = [index_for_reg(name) for name in [
-                    'xpsr',
-                    'apsr',
-                    'iapsr',
-                    'eapsr',
-                    'ipsr',
-                    'epsr',
-                    'iepsr',
-                    ]]
+    XPSR_REGS = [
+        index_for_reg(name)
+        for name in [
+            "xpsr",
+            "apsr",
+            "iapsr",
+            "eapsr",
+            "ipsr",
+            "epsr",
+            "iepsr",
+        ]
+    ]
 
     def __init__(self, context, core):
         self._context = context
@@ -68,7 +75,12 @@ class RegisterCache(object):
 
     def _dump_metrics(self):
         if self._metrics.total > 0:
-            LOG.debug("%d reads [%d%% hits, %d regs]", self._metrics.total, self._metrics.percent_hit, self._metrics.hits)
+            LOG.debug(
+                "%d reads [%d%% hits, %d regs]",
+                self._metrics.total,
+                self._metrics.percent_hit,
+                self._metrics.hits,
+            )
         else:
             LOG.debug("no accesses")
 
@@ -135,7 +147,7 @@ class RegisterCache(object):
             for r in self.CFBP_REGS:
                 if r == self.CFBP_INDEX:
                     continue
-                self._cache[r] = (v >> ((-r - 1) * 8)) & 0xff
+                self._cache[r] = (v >> ((-r - 1) * 8)) & 0xFF
 
         # Update all XPSR based registers.
         if reading_xpsr:
@@ -197,4 +209,3 @@ class RegisterCache(object):
 
     def invalidate(self):
         self._reset_cache()
-

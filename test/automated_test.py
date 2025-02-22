@@ -25,7 +25,7 @@ from xml.etree import ElementTree
 import multiprocessing as mp
 import io
 from dataclasses import dataclass
-from typing import (IO, List, Optional)
+from typing import IO, List, Optional
 
 from pyocd.core.session import Session
 from pyocd.core.helpers import ConnectHelper
@@ -39,7 +39,7 @@ from test_util import (
     get_session_options,
     ensure_output_dir,
     TEST_OUTPUT_DIR,
-    )
+)
 
 from basic_test import BasicTest
 from speed_test import SpeedTest
@@ -62,46 +62,50 @@ SUMMARY_FILE_TEMPLATE = "automated_test_summary{}.txt"
 
 LOG_FORMAT = "%(relativeCreated)07d:%(levelname)s:%(module)s:%(message)s"
 
-JOB_TIMEOUT = 30 * 60 # 30 minutes
+JOB_TIMEOUT = 30 * 60  # 30 minutes
 
 # Put together list of all tests.
 all_tests = [
-             BasicTest(),
-             JsonListsTest(),
-             ConnectTest(),
-             SpeedTest(),
-             CortexTest(),
-             ConcurrencyTest(),
-             FlashTest(),
-             FlashLoaderTest(),
-             DebugContextTest(),
-             GdbTest(),
-             CommandsTest(),
-             CommanderTest(),
-             ProbeserverTest(),
-             UserScriptTest(),
-             ]
+    BasicTest(),
+    JsonListsTest(),
+    ConnectTest(),
+    SpeedTest(),
+    CortexTest(),
+    ConcurrencyTest(),
+    FlashTest(),
+    FlashLoaderTest(),
+    DebugContextTest(),
+    GdbTest(),
+    CommandsTest(),
+    CommanderTest(),
+    ProbeserverTest(),
+    UserScriptTest(),
+]
 
 # Actual list used at runtime, filted by command line args.
 test_list = []
 
 # Tests that can fail without causing a non-zero exit code.
 IGNORE_FAILURE_TESTS = [
-            "Connect Test",
-            "Gdb Test",
-            ]
+    "Connect Test",
+    "Gdb Test",
+]
+
 
 def print_summary(test_list, result_list, test_time, output_file=None):
     for test in test_list:
         test.print_perf_info(result_list, output_file=output_file)
 
-    Test.print_results(result_list, output_file=output_file, ignored=IGNORE_FAILURE_TESTS)
+    Test.print_results(
+        result_list, output_file=output_file, ignored=IGNORE_FAILURE_TESTS
+    )
     print("", file=output_file)
     print("Test Time: %.3f" % test_time, file=output_file)
     if Test.all_tests_pass(result_list):
         print("All tests passed", file=output_file)
     else:
         print("One or more tests has failed!", file=output_file)
+
 
 def split_results_by_board(result_list):
     boards = {}
@@ -112,6 +116,7 @@ def split_results_by_board(result_list):
             boards[result.board_name] = [result]
     return boards
 
+
 def generate_xml_results(result_list):
     board_results = split_results_by_board(result_list)
 
@@ -120,24 +125,21 @@ def generate_xml_results(result_list):
     total_tests = 0
     total_time = 0
 
-    root = ElementTree.Element('testsuites',
-            name="pyocd"
-            )
+    root = ElementTree.Element("testsuites", name="pyocd")
     root.text = "\n"
 
     for board_name, results in board_results.items():
         total = 0
         failures = 0
         suite_time = 0
-        suite = ElementTree.SubElement(root, 'testsuite',
-                    name=board_name,
-                    id=str(suite_id))
+        suite = ElementTree.SubElement(
+            root, "testsuite", name=board_name, id=str(suite_id)
+        )
         suite.text = "\n"
         suite.tail = "\n"
         suite_id += 1
 
         for result in results:
-
             total += 1
             if not result.passed:
                 failures += 1
@@ -145,23 +147,31 @@ def generate_xml_results(result_list):
             suite.append(case)
             suite_time += result.time
 
-        suite.set('tests', str(total))
-        suite.set('failures', str(failures))
-        suite.set('time', "%.3f" % suite_time)
+        suite.set("tests", str(total))
+        suite.set("failures", str(failures))
+        suite.set("time", "%.3f" % suite_time)
         total_tests += total
         total_failures += failures
         total_time += suite_time
 
-    root.set('tests', str(total_tests))
-    root.set('failures', str(total_failures))
-    root.set('time', "%.3f" % total_time)
+    root.set("tests", str(total_tests))
+    root.set("failures", str(total_failures))
+    root.set("time", "%.3f" % total_time)
 
-    xml_results = os.path.join(TEST_OUTPUT_DIR, XML_RESULTS_TEMPLATE.format(get_env_file_name()))
-    ElementTree.ElementTree(root).write(xml_results, encoding="UTF-8", xml_declaration=True)
+    xml_results = os.path.join(
+        TEST_OUTPUT_DIR, XML_RESULTS_TEMPLATE.format(get_env_file_name())
+    )
+    ElementTree.ElementTree(root).write(
+        xml_results, encoding="UTF-8", xml_declaration=True
+    )
 
-def print_board_header(outputFile, board, n, includeDividers=True, includeLeadingNewline=False):
+
+def print_board_header(
+    outputFile, board, n, includeDividers=True, includeLeadingNewline=False
+):
     header = "TESTING BOARD {name} [{target}] [{uid}] #{n}".format(
-        name=board.name, target=board.target_type, uid=board.unique_id, n=n)
+        name=board.name, target=board.target_type, uid=board.unique_id, n=n
+    )
     if includeDividers:
         divider = "=" * len(header)
         if includeLeadingNewline:
@@ -172,6 +182,7 @@ def print_board_header(outputFile, board, n, includeDividers=True, includeLeadin
     if includeDividers:
         print(divider + "\n", file=outputFile)
 
+
 def print_test_header(output_file, board, test):
     header = f"Test: {test.name} | {board.name} #{test.n}"
     divider = "-" * 80
@@ -179,8 +190,10 @@ def print_test_header(output_file, board, test):
     print(header, file=output_file)
     print(divider, file=output_file)
 
+
 def clean_board_name(name: str) -> str:
     return "".join((c if c.isalnum() else "_") for c in name)
+
 
 @dataclass
 class BoardTestConfig:
@@ -190,6 +203,7 @@ class BoardTestConfig:
     log_to_console: bool
     common_log_file: Optional[IO[str]]
     test_list: List[Test]
+
 
 def test_board(config: BoardTestConfig):
     """@brief Run all tests on a given board.
@@ -223,14 +237,16 @@ def test_board(config: BoardTestConfig):
     originalStderr = sys.stderr
 
     # Set up board-specific output file. A previously existing file is removed.
-    env_name = (("_" + os.environ['TOX_ENV_NAME']) if ('TOX_ENV_NAME' in os.environ) else '')
+    env_name = (
+        ("_" + os.environ["TOX_ENV_NAME"]) if ("TOX_ENV_NAME" in os.environ) else ""
+    )
     name_info = "{}_{}_{}".format(env_name, clean_board_name(board.name), n)
     log_filename = os.path.join(TEST_OUTPUT_DIR, LOG_FILE_TEMPLATE.format(name_info))
     if os.path.exists(log_filename):
         os.remove(log_filename)
 
     # Skip board if specified in the config.
-    if session.options['skip_test']:
+    if session.options["skip_test"]:
         print("Skipping board %s due as specified in config" % board.unique_id)
         return []
     # Skip this board if we don't have a test binary.
@@ -241,7 +257,9 @@ def test_board(config: BoardTestConfig):
     # Open board-specific output file. This is done after skipping so a skipped board doesn't have a
     # log file created for it (but a previous log file will be removed, above).
     # buffering=1=Line buffered
-    log_file = open(log_filename, "w", buffering=1, encoding='utf-8', errors='backslashreplace')
+    log_file = open(
+        log_filename, "w", buffering=1, encoding="utf-8", errors="backslashreplace"
+    )
 
     # Setup logging.
     log_handler = RecordingLogHandler(None)
@@ -256,11 +274,16 @@ def test_board(config: BoardTestConfig):
         print_board_header(log_file, board, n)
         if commonLogFile:
             print_board_header(commonLogFile, board, n, includeLeadingNewline=(n != 0))
-        print_board_header(originalStdout, board, n, logToConsole, includeLeadingNewline=(n != 0))
+        print_board_header(
+            originalStdout, board, n, logToConsole, includeLeadingNewline=(n != 0)
+        )
 
         # Run all tests on this board.
         for test in config.test_list:
-            print("{} #{}: starting {}...".format(board.name, n, test.name), file=originalStdout)
+            print(
+                "{} #{}: starting {}...".format(board.name, n, test.name),
+                file=originalStdout,
+            )
 
             # Set the test number on the test object. Used to get a unique port for the GdbTest.
             test.n = n
@@ -292,9 +315,12 @@ def test_board(config: BoardTestConfig):
             result_list.append(result)
 
             passFail = "PASSED" if result.passed else "FAILED"
-            print("{} #{}: finished {}... {} ({:.3f} s)".format(
-                board.name, n, test.name, passFail, result.time),
-                file=originalStdout)
+            print(
+                "{} #{}: finished {}... {} ({:.3f} s)".format(
+                    board.name, n, test.name, passFail, result.time
+                ),
+                file=originalStdout,
+            )
     finally:
         # Restore stdout/stderr in case we're running in the parent process (1 job).
         sys.stdout = originalStdout
@@ -305,40 +331,52 @@ def test_board(config: BoardTestConfig):
         log_handler.close()
     return result_list
 
+
 def filter_tests(args):
     """@brief Generate the list of tests to run based on arguments."""
     if args.exclude_tests and args.include_tests:
         print("Please only include or exclude tests, not both simultaneously.")
         sys.exit(1)
-    excludes = [t.strip().lower() for t in args.exclude_tests.split(',')] if args.exclude_tests else []
-    includes = [t.strip().lower() for t in args.include_tests.split(',')] if args.include_tests else []
+    excludes = (
+        [t.strip().lower() for t in args.exclude_tests.split(",")]
+        if args.exclude_tests
+        else []
+    )
+    includes = (
+        [t.strip().lower() for t in args.include_tests.split(",")]
+        if args.include_tests
+        else []
+    )
 
     for test in all_tests:
         if excludes:
-            include_it = (test.name.lower() not in excludes)
+            include_it = test.name.lower() not in excludes
         elif includes:
-            include_it = (test.name.lower() in includes)
+            include_it = test.name.lower() in includes
         else:
             include_it = True
 
         if include_it:
             test_list.append(test)
 
+
 def main():
-    parser = argparse.ArgumentParser(description='pyOCD automated testing')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
-    parser.add_argument('-q', '--quiet', action="store_true", help='Hide test progress for 1 job')
-    parser.add_argument('-j', '--jobs', action="store", default=1, type=int, metavar="JOBS",
-        help='Set number of concurrent board tests (default is 1)')
-    parser.add_argument('-b', '--board', action="append", metavar="ID", help="Limit testing to boards with specified unique IDs. Multiple boards can be listed.")
-    parser.add_argument('-l', '--list-tests', action="store_true", help="Print a list of tests that will be run.")
-    parser.add_argument('-x', '--exclude-tests', metavar="TESTS", default="", help="Comma-separated list of tests to exclude.")
-    parser.add_argument('-i', '--include-tests', metavar="TESTS", default="", help="Comma-separated list of tests to include.")
+    parser = argparse.ArgumentParser(description="pyOCD automated testing")
+    # fmt: off
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Hide test progress for 1 job")
+    parser.add_argument("-j", "--jobs", action="store", default=1, type=int, metavar="JOBS",
+        help="Set number of concurrent board tests (default is 1)")
+    parser.add_argument("-b", "--board", action="append", metavar="ID", help="Limit testing to boards with specified unique IDs. Multiple boards can be listed.")
+    parser.add_argument("-l", "--list-tests", action="store_true", help="Print a list of tests that will be run.")
+    parser.add_argument("-x", "--exclude-tests", metavar="TESTS", default="", help="Comma-separated list of tests to exclude.")
+    parser.add_argument("-i", "--include-tests", metavar="TESTS", default="", help="Comma-separated list of tests to include.")
+    # fmt: on
     args = parser.parse_args()
 
     # Allow CI to override the number of concurrent jobs.
-    if 'CI_JOBS' in os.environ:
-        args.jobs = int(os.environ['CI_JOBS'])
+    if "CI_JOBS" in os.environ:
+        args.jobs = int(os.environ["CI_JOBS"])
 
     filter_tests(args)
 
@@ -352,8 +390,14 @@ def main():
     # to be used in order to init correctly (CoreFoundation is used in hidapi). Only on Python
     # version 3.4+ is the multiprocessing.set_start_method() API available that lets us
     # switch to the 'spawn' method, i.e. exec().
-    if args.jobs > 1 and sys.platform.startswith('darwin') and sys.version_info[0:2] < (3, 4):
-        print("WARNING: Cannot support multiple jobs on macOS prior to Python 3.4. Forcing 1 job.")
+    if (
+        args.jobs > 1
+        and sys.platform.startswith("darwin")
+        and sys.version_info[0:2] < (3, 4)
+    ):
+        print(
+            "WARNING: Cannot support multiple jobs on macOS prior to Python 3.4. Forcing 1 job."
+        )
         args.jobs = 1
 
     ensure_output_dir()
@@ -361,7 +405,9 @@ def main():
     # Setup logging based on concurrency and quiet option.
     level = logging.DEBUG if args.debug else logging.INFO
     if args.jobs == 1 and not args.quiet:
-        log_file = os.path.join(TEST_OUTPUT_DIR, LOG_FILE_TEMPLATE.format(get_env_file_name()))
+        log_file = os.path.join(
+            TEST_OUTPUT_DIR, LOG_FILE_TEMPLATE.format(get_env_file_name())
+        )
         # Create common log file.
         if os.path.exists(log_file):
             os.remove(log_file)
@@ -381,22 +427,26 @@ def main():
     # Filter boards.
     if args.board:
         # Get the full unique ID of any matching probes.
-        board_id_list = [b for b in board_id_list if any(c for c in args.board if c.lower() in b.lower())]
+        board_id_list = [
+            b
+            for b in board_id_list
+            if any(c for c in args.board if c.lower() in b.lower())
+        ]
         # Add in any requested remotes.
-        board_id_list += [a for a in args.board if a.startswith('remote:')]
+        board_id_list += [a for a in args.board if a.startswith("remote:")]
 
     # Generate board test configs.
     test_configs = [
-                BoardTestConfig(
-                    board_id=board_id,
-                    n=n,
-                    loglevel=level,
-                    log_to_console=logToConsole,
-                    common_log_file=commonLogFile,
-                    test_list=test_list,
-                )
-                for n, board_id in enumerate(board_id_list)
-            ]
+        BoardTestConfig(
+            board_id=board_id,
+            n=n,
+            loglevel=level,
+            log_to_console=logToConsole,
+            common_log_file=commonLogFile,
+            test_list=test_list,
+        )
+        for n, board_id in enumerate(board_id_list)
+    ]
 
     # If only 1 job was requested, don't bother spawning processes.
     start = time()
@@ -409,8 +459,9 @@ def main():
             pool = mp.Pool(args.jobs)
 
             # Issue board test job to process pool.
-            async_results = [pool.apply_async(test_board, (config,))
-                             for config in test_configs]
+            async_results = [
+                pool.apply_async(test_board, (config,)) for config in test_configs
+            ]
 
             # Gather results.
             for r in async_results:
@@ -419,22 +470,26 @@ def main():
             pool.close()
             pool.join()
     stop = time()
-    test_time = (stop - start)
+    test_time = stop - start
 
     print_summary(test_list, result_list, test_time)
-    summary_file = os.path.join(TEST_OUTPUT_DIR, SUMMARY_FILE_TEMPLATE.format(get_env_file_name()))
+    summary_file = os.path.join(
+        TEST_OUTPUT_DIR, SUMMARY_FILE_TEMPLATE.format(get_env_file_name())
+    )
     with open(summary_file, "w") as output_file:
         print_summary(test_list, result_list, test_time, output_file)
     generate_xml_results(result_list)
 
-    exit_val = 0 if Test.all_tests_pass(result_list, ignored=IGNORE_FAILURE_TESTS) else -1
+    exit_val = (
+        0 if Test.all_tests_pass(result_list, ignored=IGNORE_FAILURE_TESTS) else -1
+    )
     exit(exit_val)
 
-    #TODO - check if any threads are still running?
+    # TODO - check if any threads are still running?
+
 
 if __name__ == "__main__":
     # set_start_method is only available in Python 3.4+.
     if sys.version_info[0:2] >= (3, 4):
-        mp.set_start_method('spawn')
+        mp.set_start_method("spawn")
     main()
-

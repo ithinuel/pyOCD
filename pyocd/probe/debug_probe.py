@@ -17,9 +17,19 @@
 
 from __future__ import annotations
 
-from enum import (Enum, IntFlag)
+from enum import Enum, IntFlag
 import threading
-from typing import (Callable, Collection, Optional, overload, Sequence, Set, TYPE_CHECKING, Tuple, Union)
+from typing import (
+    Callable,
+    Collection,
+    Optional,
+    overload,
+    Sequence,
+    Set,
+    TYPE_CHECKING,
+    Tuple,
+    Union,
+)
 from typing_extensions import Literal
 
 if TYPE_CHECKING:
@@ -28,6 +38,7 @@ if TYPE_CHECKING:
     from ..board.board import Board
     from ..board.board_ids import BoardInfo
     from ..coresight.ap import APAddressBase
+
 
 class DebugProbe:
     """@brief Abstract debug probe class.
@@ -70,17 +81,20 @@ class DebugProbe:
 
     class Protocol(Enum):
         """@brief Debug wire protocols."""
+
         DEFAULT = 0
         SWD = 1
         JTAG = 2
 
     class PinGroup(Enum):
         """@brief Available pin groups for read/write pins APIs."""
+
         PROTOCOL_PINS = 0
         GPIO_PINS = 1
 
     class ProtocolPin(IntFlag):
         """@brief Pin mask constants for SWD/JTAG protocol pins."""
+
         SWCLK_TCK = 1 << 0
         SWDIO_TMS = 1 << 1
         TDI = 1 << 2
@@ -91,13 +105,14 @@ class DebugProbe:
 
     ## Map from wire protocol setting name to debug probe constant.
     PROTOCOL_NAME_MAP = {
-            'swd': Protocol.SWD,
-            'jtag': Protocol.JTAG,
-            'default': Protocol.DEFAULT,
-        }
+        "swd": Protocol.SWD,
+        "jtag": Protocol.JTAG,
+        "default": Protocol.DEFAULT,
+    }
 
     class Capability(Enum):
         """@brief Probe capabilities."""
+
         ## @brief Whether the probe supports the swj_sequence() API.
         #
         # If this property is True, then the swj_sequence() method is used to move between protocols.
@@ -140,10 +155,8 @@ class DebugProbe:
 
     @classmethod
     def get_all_connected_probes(
-                cls,
-                unique_id: Optional[str] = None,
-                is_explicit: bool = False
-            ) -> Sequence[DebugProbe]:
+        cls, unique_id: Optional[str] = None, is_explicit: bool = False
+    ) -> Sequence[DebugProbe]:
         """@brief Returns a list of DebugProbe instances.
 
         To filter the list of returned probes, the `unique_id` parameter may be set to a string with a full or
@@ -162,7 +175,9 @@ class DebugProbe:
         raise NotImplementedError()
 
     @classmethod
-    def get_probe_with_id(cls, unique_id: str, is_explicit: bool = False) -> Optional[DebugProbe]:
+    def get_probe_with_id(
+        cls, unique_id: str, is_explicit: bool = False
+    ) -> Optional[DebugProbe]:
         """@brief Returns a DebugProbe instance for a probe with the given unique ID.
 
         If no probe is connected with a fully matching unique ID, then None will be returned.
@@ -319,7 +334,9 @@ class DebugProbe:
         """
         pass
 
-    def swd_sequence(self, sequences: Sequence[Union[Tuple[int], Tuple[int, int]]]) -> Tuple[int, Sequence[bytes]]:
+    def swd_sequence(
+        self, sequences: Sequence[Union[Tuple[int], Tuple[int, int]]]
+    ) -> Tuple[int, Sequence[bytes]]:
         """@brief Send a sequences of bits on the SWDIO signal.
 
         Each sequence in the _sequences_ parameter is a tuple with 1 or 2 members in this order:
@@ -336,7 +353,9 @@ class DebugProbe:
         """
         raise NotImplementedError()
 
-    def jtag_sequence(self, cycles: int, tms: int, read_tdo: bool, tdi: int) -> Optional[int]:
+    def jtag_sequence(
+        self, cycles: int, tms: int, read_tdo: bool, tdi: int
+    ) -> Optional[int]:
         """@brief Send JTAG sequence.
 
         @param self
@@ -421,20 +440,16 @@ class DebugProbe:
     ##@{
 
     @overload
-    def read_dp(self, addr: int) -> int:
-        ...
+    def read_dp(self, addr: int) -> int: ...
 
     @overload
-    def read_dp(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_dp(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_dp(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_dp(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_dp(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_dp(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     def read_dp(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
         """@brief Read a DP register.
@@ -457,20 +472,16 @@ class DebugProbe:
         raise NotImplementedError()
 
     @overload
-    def read_ap(self, addr: int) -> int:
-        ...
+    def read_ap(self, addr: int) -> int: ...
 
     @overload
-    def read_ap(self, addr: int, now: Literal[True] = True) -> int:
-        ...
+    def read_ap(self, addr: int, now: Literal[True] = True) -> int: ...
 
     @overload
-    def read_ap(self, addr: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_ap(self, addr: int, now: Literal[False]) -> Callable[[], int]: ...
 
     @overload
-    def read_ap(self, addr: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_ap(self, addr: int, now: bool) -> Union[int, Callable[[], int]]: ...
 
     def read_ap(self, addr: int, now: bool = True) -> Union[int, Callable[[], int]]:
         """@brief Read an AP register."""
@@ -481,23 +492,26 @@ class DebugProbe:
         raise NotImplementedError()
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int = 1) -> Sequence[int]:
-        ...
+    def read_ap_multiple(self, addr: int, count: int = 1) -> Sequence[int]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: Literal[True] = True) -> Sequence[int]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: Literal[True] = True
+    ) -> Sequence[int]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: Literal[False]) -> Callable[[], Sequence[int]]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: Literal[False]
+    ) -> Callable[[], Sequence[int]]: ...
 
     @overload
-    def read_ap_multiple(self, addr: int, count: int, now: bool) -> Union[Sequence[int], Callable[[], Sequence[int]]]:
-        ...
+    def read_ap_multiple(
+        self, addr: int, count: int, now: bool
+    ) -> Union[Sequence[int], Callable[[], Sequence[int]]]: ...
 
-    def read_ap_multiple(self, addr: int, count: int = 1, now: bool = True) \
-             -> Union[Sequence[int], Callable[[], Sequence[int]]]:
+    def read_ap_multiple(
+        self, addr: int, count: int = 1, now: bool = True
+    ) -> Union[Sequence[int], Callable[[], Sequence[int]]]:
         """@brief Read one AP register multiple times."""
         raise NotImplementedError()
 
@@ -505,7 +519,9 @@ class DebugProbe:
         """@brief Write one AP register multiple times."""
         raise NotImplementedError()
 
-    def get_memory_interface_for_ap(self, ap_address: APAddressBase) -> Optional[MemoryInterface]:
+    def get_memory_interface_for_ap(
+        self, ap_address: APAddressBase
+    ) -> Optional[MemoryInterface]:
         """@brief Returns a @ref pyocd.core.memory_interface.MemoryInterface "MemoryInterface" for
             the specified AP.
 
@@ -548,6 +564,6 @@ class DebugProbe:
     ##@}
 
     def __repr__(self):
-        return "<{}@{:x} {}>".format(self.__class__.__name__, id(self), self.description)
-
-
+        return "<{}@{:x} {}>".format(
+            self.__class__.__name__, id(self), self.description
+        )

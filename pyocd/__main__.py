@@ -24,7 +24,7 @@ import logging
 import argparse
 import colorama
 import fnmatch
-from typing import (Any, Optional, Sequence)
+from typing import Any, Optional, Sequence
 
 from . import __version__
 from .core.session import Session
@@ -47,9 +47,9 @@ from .subcommands.rtt_cmd import RTTSubcommand
 ## @brief Logger for this module.
 LOG = logging.getLogger("pyocd.tool")
 
+
 class PyOCDTool(SubcommandBase):
-    """@brief Main class for the pyocd tool and subcommands.
-    """
+    """@brief Main class for the pyocd tool and subcommands."""
 
     HELP = "PyOCD debug tools for Arm Cortex devices"
 
@@ -65,16 +65,16 @@ class PyOCDTool(SubcommandBase):
         ResetSubcommand,
         ServerSubcommand,
         RTTSubcommand,
-        ]
+    ]
 
     ## @brief Logging level names.
     LOG_LEVEL_NAMES = {
-            'debug': logging.DEBUG,
-            'info': logging.INFO,
-            'warning': logging.WARNING,
-            'error': logging.ERROR,
-            'critical': logging.CRITICAL,
-            }
+        "debug": logging.DEBUG,
+        "info": logging.INFO,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+        "critical": logging.CRITICAL,
+    }
 
     def __init__(self):
         # Start with an empty namespace.
@@ -87,9 +87,12 @@ class PyOCDTool(SubcommandBase):
         parser = argparse.ArgumentParser(description=self.HELP)
         parser.set_defaults(command_class=self, quiet=0, verbose=0, log_level=[])
 
-        parser.add_argument('-V', '--version', action='version', version=__version__)
-        parser.add_argument('--help-options', action='store_true',
-            help="Display available session options.")
+        parser.add_argument("-V", "--version", action="version", version=__version__)
+        parser.add_argument(
+            "--help-options",
+            action="store_true",
+            help="Display available session options.",
+        )
 
         self.add_subcommands(parser)
 
@@ -106,11 +109,14 @@ class PyOCDTool(SubcommandBase):
         Log level for specific loggers are also configured here.
         """
         # Get the color setting to use, defaulting to 'auto'.
-        color_setting = ((hasattr(self._args, 'color') and self._args.color) \
-                        or os.environ.get('PYOCD_COLOR', 'auto'))
+        color_setting = (
+            hasattr(self._args, "color") and self._args.color
+        ) or os.environ.get("PYOCD_COLOR", "auto")
 
         # Compute global log level.
-        level = max(1, self._args.command_class.DEFAULT_LOG_LEVEL + self._get_log_level_delta())
+        level = max(
+            1, self._args.command_class.DEFAULT_LOG_LEVEL + self._get_log_level_delta()
+        )
 
         # Build the logger to output to stderr (the default).
         build_color_logger(level=level, color_setting=color_setting)
@@ -118,19 +124,27 @@ class PyOCDTool(SubcommandBase):
         # Handle settings for individual loggers from --log-level arguments.
         for logger_setting in self._args.log_level:
             try:
-                loggers, level_name = logger_setting.split('=')[:2]
+                loggers, level_name = logger_setting.split("=")[:2]
                 level = self.LOG_LEVEL_NAMES[level_name.strip().lower()]
-                for logger_pattern in loggers.split(','):
-                    matching_loggers = fnmatch.filter(logging.root.manager.loggerDict.keys(), logger_pattern.strip()) # type:ignore
-                    LOG.debug('setting log level %s for %s', level_name, matching_loggers)
+                for logger_pattern in loggers.split(","):
+                    matching_loggers = fnmatch.filter(
+                        logging.root.manager.loggerDict.keys(), logger_pattern.strip()
+                    )  # type:ignore
+                    LOG.debug(
+                        "setting log level %s for %s", level_name, matching_loggers
+                    )
                     for logger in matching_loggers:
                         log = logging.getLogger(logger)
                         log.setLevel(level)
                         log.disabled = False
             except (ValueError, KeyError):
-                raise exceptions.CommandError(f"invalid --log-level argument '{logger_setting}'")
+                raise exceptions.CommandError(
+                    f"invalid --log-level argument '{logger_setting}'"
+                )
             except AttributeError:
-                LOG.warning("Failed to set logger levels; logging module may have changed.")
+                LOG.warning(
+                    "Failed to set logger levels; logging module may have changed."
+                )
                 break
 
     def invoke(self) -> int:
@@ -153,7 +167,7 @@ class PyOCDTool(SubcommandBase):
             self._setup_logging()
 
             # Pass any options to DAPAccess.
-            if hasattr(self._args, 'daparg'):
+            if hasattr(self._args, "daparg"):
                 DAPAccess.set_args(self._args.daparg)
 
             # Create an instance of the subcommand and invoke it.
@@ -179,13 +193,23 @@ class PyOCDTool(SubcommandBase):
                 typename = ", ".join(t.__name__ for t in info.type)
             else:
                 typename = info.type.__name__
-            print((colorama.Fore.CYAN + colorama.Style.BRIGHT + "{name}" + colorama.Style.RESET_ALL  # type:ignore
-                + colorama.Fore.GREEN + " ({typename})" + colorama.Style.RESET_ALL
-                + " {help}").format(
-                name=info.name, typename=typename, help=info.help))
+            print(
+                (
+                    colorama.Fore.CYAN
+                    + colorama.Style.BRIGHT
+                    + "{name}"
+                    + colorama.Style.RESET_ALL  # type:ignore
+                    + colorama.Fore.GREEN
+                    + " ({typename})"
+                    + colorama.Style.RESET_ALL
+                    + " {help}"
+                ).format(name=info.name, typename=typename, help=info.help)
+            )
+
 
 def main():
     sys.exit(PyOCDTool().run())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

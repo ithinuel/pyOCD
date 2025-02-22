@@ -18,10 +18,19 @@
 from __future__ import annotations
 
 import logging
-from typing import (Callable, Dict, List, Optional, overload, Sequence, Union, TYPE_CHECKING)
+from typing import (
+    Callable,
+    Dict,
+    List,
+    Optional,
+    overload,
+    Sequence,
+    Union,
+    TYPE_CHECKING,
+)
 from typing_extensions import Literal
 
-from .target import (Target, TargetGraphNode)
+from .target import Target, TargetGraphNode
 from .core_target import CoreTarget
 from ..flash.eraser import FlashEraser
 from ..debug.cache import CachingDebugContext
@@ -33,12 +42,17 @@ from ..utility.sequencer import CallSequence
 if TYPE_CHECKING:
     from .session import Session
     from .memory_map import MemoryMap
-    from .core_registers import (CoreRegistersIndex, CoreRegisterNameOrNumberType, CoreRegisterValueType)
+    from .core_registers import (
+        CoreRegistersIndex,
+        CoreRegisterNameOrNumberType,
+        CoreRegisterValueType,
+    )
     from ..debug.context import DebugContext
     from ..debug.breakpoints.provider import Breakpoint
     from ..commands.execution_context import CommandSet
 
 LOG = logging.getLogger(__name__)
+
 
 class SoCTarget(TargetGraphNode):
     """@brief Represents a microcontroller system-on-chip.
@@ -61,18 +75,20 @@ class SoCTarget(TargetGraphNode):
 
     VENDOR = "Generic"
 
-    def __init__(self, session: Session, memory_map: Optional[MemoryMap] = None) -> None:
+    def __init__(
+        self, session: Session, memory_map: Optional[MemoryMap] = None
+    ) -> None:
         super().__init__(session, memory_map)
         self.vendor: str = self.VENDOR
-        self.part_families: List[str] = getattr(self, 'PART_FAMILIES', [])
-        self.part_number: str = getattr(self, 'PART_NUMBER', self.__class__.__name__)
+        self.part_families: List[str] = getattr(self, "PART_FAMILIES", [])
+        self.part_number: str = getattr(self, "PART_NUMBER", self.__class__.__name__)
         self._cores: Dict[int, CoreTarget] = {}
         self._selected_core: int = -1
         self._new_core_num = 0
         self._elf = None
 
         # Set our graph node name.
-        self.node_name = 'soc'
+        self.node_name = "soc"
 
     @property
     def cores(self) -> Dict[int, CoreTarget]:
@@ -87,10 +103,12 @@ class SoCTarget(TargetGraphNode):
 
     @selected_core.setter
     def selected_core(self, core_number: int) -> None:  # type:ignore # core_number int type is not the same
-                                                                      # as selected_core property return type
+        # as selected_core property return type
         """@brief Set the selected CPU core object."""
         if core_number not in self.cores:
-            raise ValueError("invalid core number %d" % core_number) # TODO should be a KeyError
+            raise ValueError(
+                "invalid core number %d" % core_number
+            )  # TODO should be a KeyError
         LOG.debug("selected core #%d" % core_number)
         self._selected_core = core_number
 
@@ -111,7 +129,7 @@ class SoCTarget(TargetGraphNode):
 
         @exception KeyError The `primary_core` option is invalid.
         """
-        primary_core_number = self.session.options.get('primary_core')
+        primary_core_number = self.session.options.get("primary_core")
         return self.cores[primary_core_number]
 
     @property
@@ -119,16 +137,19 @@ class SoCTarget(TargetGraphNode):
         return self._elf
 
     @elf.setter
-    def elf(self, filename: str) -> None: # type:ignore # filename str type is not same as elf property return type
+    def elf(self, filename: str) -> None:  # type:ignore # filename str type is not same as elf property return type
         if filename is None:
             self._elf = None
         else:
             self._elf = ELFBinaryFile(filename, self.memory_map)
             for core_number in range(len(self.cores)):
                 self.cores[core_number].elf = self._elf
-                if self.session.options['cache.read_code_from_elf']:
+                if self.session.options["cache.read_code_from_elf"]:
                     self.cores[core_number].set_target_context(
-                            ElfReaderContext(self.cores[core_number].get_target_context(), self._elf))
+                        ElfReaderContext(
+                            self.cores[core_number].get_target_context(), self._elf
+                        )
+                    )
 
     @property
     def supported_security_states(self) -> Sequence[Target.SecurityState]:
@@ -143,10 +164,10 @@ class SoCTarget(TargetGraphNode):
         if self.debug_sequence_delegate:
             core.debug_sequence_delegate = self.debug_sequence_delegate
         ctx = CachingDebugContext(
-                core,
-                enable_memory=self.session.options['cache.enable_memory'],
-                enable_register=self.session.options['cache.enable_register'],
-                )
+            core,
+            enable_memory=self.session.options["cache.enable_memory"],
+            enable_register=self.session.options["cache.enable_register"],
+        )
         core.set_target_context(ctx)
         self.cores[core.core_number] = core
         self.add_child(core)
@@ -156,7 +177,7 @@ class SoCTarget(TargetGraphNode):
             self.selected_core = core.core_number
         # Otherwise, when the chosen primary core is added, select it. This assumes that cores are only
         # added at init/discovery time.
-        elif core.core_number == self.session.options.get('primary_core'):
+        elif core.core_number == self.session.options.get("primary_core"):
             self.selected_core = core.core_number
 
     def create_init_sequence(self) -> CallSequence:
@@ -170,9 +191,9 @@ class SoCTarget(TargetGraphNode):
 
         # Create and execute the init sequence.
         seq = self.create_init_sequence()
-        self.call_delegate('will_init_target', target=self, init_sequence=seq)
+        self.call_delegate("will_init_target", target=self, init_sequence=seq)
         seq.invoke()
-        self.call_delegate('did_init_target', target=self)
+        self.call_delegate("did_init_target", target=self)
 
     def post_connect_hook(self) -> None:
         """@brief Hook function called after post_connect init task.
@@ -183,10 +204,10 @@ class SoCTarget(TargetGraphNode):
 
     def disconnect(self, resume: bool = True) -> None:
         self.session.notify(Target.Event.PRE_DISCONNECT, self)
-        self.call_delegate('will_disconnect', target=self, resume=resume)
+        self.call_delegate("will_disconnect", target=self, resume=resume)
         for core in self.cores.values():
             core.disconnect(resume)
-        self.call_delegate('did_disconnect', target=self, resume=resume)
+        self.call_delegate("did_disconnect", target=self, resume=resume)
 
     @property
     def run_token(self) -> int:
@@ -195,15 +216,20 @@ class SoCTarget(TargetGraphNode):
     def halt(self) -> None:
         return self.selected_core_or_raise.halt()
 
-    def step(self, disable_interrupts: bool = True, start: int = 0, end: int = 0,
-            hook_cb: Optional[Callable[[], bool]] = None) -> None:
+    def step(
+        self,
+        disable_interrupts: bool = True,
+        start: int = 0,
+        end: int = 0,
+        hook_cb: Optional[Callable[[], bool]] = None,
+    ) -> None:
         return self.selected_core_or_raise.step(disable_interrupts, start, end, hook_cb)
 
     def resume(self) -> None:
         return self.selected_core_or_raise.resume()
 
     def mass_erase(self) -> None:
-        if not self.call_delegate('mass_erase', target=self):
+        if not self.call_delegate("mass_erase", target=self):
             # The default mass erase implementation is to simply perform a chip erase.
             eraser = FlashEraser(self.session, FlashEraser.Mode.CHIP)
             eraser._log_chip_erase = False
@@ -213,22 +239,26 @@ class SoCTarget(TargetGraphNode):
         return self.selected_core_or_raise.write_memory(addr, data, transfer_size)
 
     @overload
-    def read_memory(self, addr: int, transfer_size: int = 32) -> int:
-        ...
+    def read_memory(self, addr: int, transfer_size: int = 32) -> int: ...
 
     @overload
-    def read_memory(self, addr: int, transfer_size: int = 32, now: Literal[True] = True) -> int:
-        ...
+    def read_memory(
+        self, addr: int, transfer_size: int = 32, now: Literal[True] = True
+    ) -> int: ...
 
     @overload
-    def read_memory(self, addr: int, transfer_size: int, now: Literal[False]) -> Callable[[], int]:
-        ...
+    def read_memory(
+        self, addr: int, transfer_size: int, now: Literal[False]
+    ) -> Callable[[], int]: ...
 
     @overload
-    def read_memory(self, addr: int, transfer_size: int, now: bool) -> Union[int, Callable[[], int]]:
-        ...
+    def read_memory(
+        self, addr: int, transfer_size: int, now: bool
+    ) -> Union[int, Callable[[], int]]: ...
 
-    def read_memory(self, addr: int, transfer_size: int = 32, now: bool = True) -> Union[int, Callable[[], int]]:
+    def read_memory(
+        self, addr: int, transfer_size: int = 32, now: bool = True
+    ) -> Union[int, Callable[[], int]]:
         return self.selected_core_or_raise.read_memory(addr, transfer_size, now)
 
     def write_memory_block8(self, addr: int, data: Sequence[int]) -> None:
@@ -243,28 +273,40 @@ class SoCTarget(TargetGraphNode):
     def read_memory_block32(self, addr: int, size: int) -> Sequence[int]:
         return self.selected_core_or_raise.read_memory_block32(addr, size)
 
-    def read_core_register(self, id: CoreRegisterNameOrNumberType) -> CoreRegisterValueType:
+    def read_core_register(
+        self, id: CoreRegisterNameOrNumberType
+    ) -> CoreRegisterValueType:
         return self.selected_core_or_raise.read_core_register(id)
 
-    def write_core_register(self, id: CoreRegisterNameOrNumberType, data: CoreRegisterValueType) -> None:
+    def write_core_register(
+        self, id: CoreRegisterNameOrNumberType, data: CoreRegisterValueType
+    ) -> None:
         return self.selected_core_or_raise.write_core_register(id, data)
 
     def read_core_register_raw(self, reg: CoreRegisterNameOrNumberType) -> int:
         return self.selected_core_or_raise.read_core_register_raw(reg)
 
-    def read_core_registers_raw(self, reg_list: Sequence[CoreRegisterNameOrNumberType]) -> List[int]:
+    def read_core_registers_raw(
+        self, reg_list: Sequence[CoreRegisterNameOrNumberType]
+    ) -> List[int]:
         return self.selected_core_or_raise.read_core_registers_raw(reg_list)
 
-    def write_core_register_raw(self, reg: CoreRegisterNameOrNumberType, data: int) -> None:
+    def write_core_register_raw(
+        self, reg: CoreRegisterNameOrNumberType, data: int
+    ) -> None:
         self.selected_core_or_raise.write_core_register_raw(reg, data)
 
-    def write_core_registers_raw(self, reg_list: Sequence[CoreRegisterNameOrNumberType], data_list: Sequence[int]) -> None:
+    def write_core_registers_raw(
+        self, reg_list: Sequence[CoreRegisterNameOrNumberType], data_list: Sequence[int]
+    ) -> None:
         self.selected_core_or_raise.write_core_registers_raw(reg_list, data_list)
 
     def find_breakpoint(self, addr: int) -> Optional[Breakpoint]:
         return self.selected_core_or_raise.find_breakpoint(addr)
 
-    def set_breakpoint(self, addr: int, type: Target.BreakpointType = Target.BreakpointType.AUTO) -> bool:
+    def set_breakpoint(
+        self, addr: int, type: Target.BreakpointType = Target.BreakpointType.AUTO
+    ) -> bool:
         return self.selected_core_or_raise.set_breakpoint(addr, type)
 
     def get_breakpoint_type(self, addr: int) -> Optional[Target.BreakpointType]:
@@ -276,7 +318,9 @@ class SoCTarget(TargetGraphNode):
     def set_watchpoint(self, addr: int, size: int, type: Target.WatchpointType) -> bool:
         return self.selected_core_or_raise.set_watchpoint(addr, size, type)
 
-    def remove_watchpoint(self, addr: int, size: Optional[int], type: Optional[Target.WatchpointType]) -> None:
+    def remove_watchpoint(
+        self, addr: int, size: Optional[int], type: Optional[Target.WatchpointType]
+    ) -> None:
         return self.selected_core_or_raise.remove_watchpoint(addr, size, type)
 
     def reset(self, reset_type: Optional[Target.ResetType] = None) -> None:
@@ -315,12 +359,13 @@ class SoCTarget(TargetGraphNode):
         return core_obj.get_target_context()
 
     def trace_start(self):
-        self.call_delegate('trace_start', target=self, mode=0)
+        self.call_delegate("trace_start", target=self, mode=0)
 
     def trace_stop(self):
-        self.call_delegate('trace_stop', target=self, mode=0)
+        self.call_delegate("trace_stop", target=self, mode=0)
 
     def add_target_command_groups(self, command_set: CommandSet):
         """@brief Hook for adding target-specific commands to a command set."""
-        self.call_delegate('add_target_command_groups', target=self, command_set=command_set)
-
+        self.call_delegate(
+            "add_target_command_groups", target=self, command_set=command_set
+        )

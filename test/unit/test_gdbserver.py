@@ -27,6 +27,7 @@ from pyocd.gdbserver.gdbserver import (
 # '}' (0x7d) -> '}]'
 # '*' (0x2a) -> '}\x0a'
 
+
 class TestGdbServerEscaping:
     def test_escape_transparent(self):
         assert escape(b"hello") == b"hello"
@@ -45,7 +46,7 @@ class TestGdbServerEscaping:
 
     def test_escape_combined(self):
         assert escape(b"#$}*") == b"}\x03}\x04}]}\x0a"
-        assert escape(b'}}}') == b"}]}]}]"
+        assert escape(b"}}}") == b"}]}]}]"
 
     def test_unescape_transparent(self):
         assert unescape(b"bytes") == list(b"bytes")
@@ -57,10 +58,10 @@ class TestGdbServerEscaping:
         assert unescape(b"hello}\x0afoo") == list(b"hello*foo")
 
     def test_unescape_single(self):
-        assert unescape(b"}\x03") == [b'#'[0]]
-        assert unescape(b"}\x04") == [b'$'[0]]
-        assert unescape(b"}]") == [b'}'[0]]
-        assert unescape(b"}\x0a") == [b'*'[0]]
+        assert unescape(b"}\x03") == [b"#"[0]]
+        assert unescape(b"}\x04") == [b"$"[0]]
+        assert unescape(b"}]") == [b"}"[0]]
+        assert unescape(b"}\x0a") == [b"*"[0]]
 
     def test_unescape_combined(self):
         assert unescape(b"}\x03}\x04}]}\x0a") == list(b"#$}*")

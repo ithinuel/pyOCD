@@ -21,15 +21,16 @@ from typing import (
     Any,
     Dict,
     List,
-    )
+)
 
 from .._version import version as pyocd_version
 from .options import (
     add_option_set,
     OptionInfo,
-    )
+)
 
 LOG = logging.getLogger(__name__)
+
 
 class Plugin:
     """@brief Class that describes a plugin for pyOCD.
@@ -82,7 +83,10 @@ class Plugin:
         """@brief Short description of the plugin."""
         return ""
 
-def load_plugin_classes_of_type(plugin_group: str, plugin_dict: Dict[str, Any], base_class: type) -> None:
+
+def load_plugin_classes_of_type(
+    plugin_group: str, plugin_dict: Dict[str, Any], base_class: type
+) -> None:
     """@brief Helper method to load plugins.
 
     Plugins are expected to return an implementation class from their Plugin.load() method. This
@@ -96,8 +100,11 @@ def load_plugin_classes_of_type(plugin_group: str, plugin_dict: Dict[str, Any], 
         # Instantiate the plugin class.
         plugin = entry_point.load()()
         if not isinstance(plugin, Plugin):
-            LOG.warning("Plugin '%s' of type '%s' has an invalid plugin object",
-                    entry_point.name, plugin_group)
+            LOG.warning(
+                "Plugin '%s' of type '%s' has an invalid plugin object",
+                entry_point.name,
+                plugin_group,
+            )
             continue
 
         # Ask the plugin whether it should be loaded.
@@ -105,11 +112,13 @@ def load_plugin_classes_of_type(plugin_group: str, plugin_dict: Dict[str, Any], 
             # Load the plugin and stuff the implementation class it gives
             impl_class = plugin.load()
             if not issubclass(impl_class, base_class):
-                LOG.warning("Plugin '%s' of type '%s' returned an unexpected implementation class",
-                        plugin.name, plugin_group)
+                LOG.warning(
+                    "Plugin '%s' of type '%s' returned an unexpected implementation class",
+                    plugin.name,
+                    plugin_group,
+                )
                 continue
             plugin_dict[plugin.name] = impl_class
 
             # Add any plugin options.
             add_option_set(plugin.options)
-
