@@ -125,7 +125,7 @@ class LPC5500Family(CoreSightTarget):
             return
 
         # The debugger mailbox should always be present.
-        if not DM_AP in self.aps:
+        if DM_AP not in self.aps:
             LOG.error("cannot request debug unlock; no debugger mailbox AP was found")
             return
 

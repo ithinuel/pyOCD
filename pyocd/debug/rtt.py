@@ -21,7 +21,6 @@
 
 from abc import ABC, abstractmethod
 from ctypes import Structure, c_char, c_int32, c_uint32, sizeof
-import struct
 from typing import Optional, Sequence
 
 from ..core.memory_map import MemoryMap, MemoryRegion, MemoryType

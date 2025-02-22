@@ -93,7 +93,6 @@ from . import target_lpc4088dm
 from . import target_RTL8195AM
 from . import target_RTL8762C
 from . import target_CC3220SF
-from . import target_CC3220SF
 from ..family import target_psoc6
 from .cypress import target_CY8C6xxA
 from .cypress import target_CY8C6xx7

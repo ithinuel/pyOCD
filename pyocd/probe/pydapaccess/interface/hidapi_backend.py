@@ -31,7 +31,6 @@ from .common import (
     )
 from ..dap_access_api import DAPAccessIntf
 from ....utility.compatibility import to_str_safe
-from ....utility.timeout import Timeout
 
 LOG = logging.getLogger(__name__)
 TRACE = LOG.getChild("trace")

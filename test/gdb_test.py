@@ -31,7 +31,7 @@ from subprocess import (
     Popen,
     STDOUT,
     PIPE,
-    )
+)
 import argparse
 import logging
 import traceback
@@ -54,7 +54,7 @@ from test_util import (
     TEST_OUTPUT_DIR,
     ensure_output_dir,
     wait_with_deadline,
-    )
+)
 
 # TODO, c1728p9 - run script several times with
 #       with different command line parameters
@@ -66,6 +66,7 @@ TEST_TIMEOUT_SECONDS = 60.0 * 5
 SERVER_EXIT_TIMEOUT = 10.0
 
 GDB_SCRIPT_PATH = os.path.join(TEST_DIR, "gdb_test_script.py")
+
 
 class GdbTestResult(TestResult):
     def __init__(self):
@@ -83,12 +84,12 @@ class GdbTest(Test):
         except Exception as e:
             result = GdbTestResult()
             result.passed = False
-            print("Exception %s when testing board %s" %
-                  (e, board.unique_id))
+            print("Exception %s when testing board %s" % (e, board.unique_id))
             traceback.print_exc(file=sys.stdout)
         result.board = board
         result.test = self
         return result
+
 
 TEST_RESULT_KEYS = [
     "breakpoint_count",
@@ -103,12 +104,13 @@ TEST_RESULT_KEYS = [
 def test_gdb(board_id=None, n=0):
     temp_test_elf_name = None
     result = GdbTestResult()
-    with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
+    with ConnectHelper.session_with_chosen_probe(
+        unique_id=board_id, **get_session_options()
+    ) as session:
         board = session.board
         memory_map = board.target.get_memory_map()
         ram_region = memory_map.get_default_region_of_type(MemoryType.RAM)
         rom_region = memory_map.get_boot_memory()
-        target_type = board.target_type
         binary_file = get_test_binary_path(board.test_binary)
         if board_id is None:
             board_id = board.unique_id
@@ -120,7 +122,9 @@ def test_gdb(board_id=None, n=0):
         # Cortex-M devices with FPB revision 1.
         fpb = session.target.selected_core.fpb
         assert fpb is not None
-        ignore_hw_bkpt_result = int(fpb.revision == 1 and ram_region.start >= 0x20000000)
+        ignore_hw_bkpt_result = int(
+            fpb.revision == 1 and ram_region.start >= 0x20000000
+        )
 
         # Program with initial test image
         FileProgrammer(session).program(binary_file, base_address=rom_region.start)
@@ -130,54 +134,72 @@ def test_gdb(board_id=None, n=0):
 
     # Write out the test configuration
     test_params = {
-        "test_port" : test_port,
-        "rom_start" : rom_region.start,
-        "rom_length" : rom_region.length,
-        "ram_start" : ram_region.start,
-        "ram_length" : ram_region.length,
-        "invalid_start" : 0x3E000000,
-        "invalid_length" : 0x1000,
-        "expect_error_on_invalid_access" : target_test_params['error_on_invalid_access'],
-        "ignore_hw_bkpt_result" : ignore_hw_bkpt_result,
-        "test_elf" : temp_test_elf_name,
-        }
-    test_param_filename = os.path.join(TEST_OUTPUT_DIR, "gdb_test_params%s_%d.txt" % (get_env_file_name(), n))
+        "test_port": test_port,
+        "rom_start": rom_region.start,
+        "rom_length": rom_region.length,
+        "ram_start": ram_region.start,
+        "ram_length": ram_region.length,
+        "invalid_start": 0x3E000000,
+        "invalid_length": 0x1000,
+        "expect_error_on_invalid_access": target_test_params["error_on_invalid_access"],
+        "ignore_hw_bkpt_result": ignore_hw_bkpt_result,
+        "test_elf": temp_test_elf_name,
+    }
+    test_param_filename = os.path.join(
+        TEST_OUTPUT_DIR, "gdb_test_params%s_%d.txt" % (get_env_file_name(), n)
+    )
     with open(test_param_filename, "w") as f:
         f.write(json.dumps(test_params))
 
     # Remove result from previous run.
-    test_result_filename = os.path.join(TEST_OUTPUT_DIR, "gdb_test_results%s_%d.txt" % (get_env_file_name(), n))
+    test_result_filename = os.path.join(
+        TEST_OUTPUT_DIR, "gdb_test_results%s_%d.txt" % (get_env_file_name(), n)
+    )
     if os.path.exists(test_result_filename):
         os.remove(test_result_filename)
 
     # Run the test
-    gdb_args = [PYTHON_GDB, "--nh", "-ex", "set $testn=%d" % n, "--command=%s" % GDB_SCRIPT_PATH]
-    gdb_output_filename = os.path.join(TEST_OUTPUT_DIR, "gdb_output%s_%s_%d.txt" % (get_env_file_name(), board.target_type, n))
+    gdb_args = [
+        PYTHON_GDB,
+        "--nh",
+        "-ex",
+        "set $testn=%d" % n,
+        "--command=%s" % GDB_SCRIPT_PATH,
+    ]
+    gdb_output_filename = os.path.join(
+        TEST_OUTPUT_DIR,
+        "gdb_output%s_%s_%d.txt" % (get_env_file_name(), board.target_type, n),
+    )
     with open(gdb_output_filename, "w") as f:
-        LOG.info('Starting gdb (stdout -> %s): %s', gdb_output_filename, ' '.join(gdb_args))
+        LOG.info(
+            "Starting gdb (stdout -> %s): %s", gdb_output_filename, " ".join(gdb_args)
+        )
         gdb_program = Popen(gdb_args, stdin=PIPE, stdout=f, stderr=STDOUT)
-        server_args = ['gdbserver',
-                '--port=%i' % test_port,
-                "--telnet-port=%i" % telnet_port,
-                "--frequency=%i" % target_test_params['test_clock'],
-                "--uid=%s" % board_id,
-                ]
+        server_args = [
+            "gdbserver",
+            "--port=%i" % test_port,
+            "--telnet-port=%i" % telnet_port,
+            "--frequency=%i" % target_test_params["test_clock"],
+            "--uid=%s" % board_id,
+        ]
         server = PyOCDTool()
-        server._setup_logging = lambda: None # Disable logging setup so we don't have duplicate log output.
-        LOG.info('Starting gdbserver: %s', ' '.join(server_args))
+        server._setup_logging = (
+            lambda: None
+        )  # Disable logging setup so we don't have duplicate log output.
+        LOG.info("Starting gdbserver: %s", " ".join(server_args))
         server_thread = threading.Thread(target=server.run, args=[server_args])
         server_thread.daemon = True
         server_thread.start()
 
-        LOG.info('Waiting for gdb to finish...')
+        LOG.info("Waiting for gdb to finish...")
         did_complete = wait_with_deadline(gdb_program, TEST_TIMEOUT_SECONDS)
         if not did_complete:
             LOG.error("Test timed out!")
 
-        LOG.info('Waiting for server to finish...')
+        LOG.info("Waiting for server to finish...")
         server_thread.join(timeout=SERVER_EXIT_TIMEOUT)
         if server_thread.is_alive():
-            LOG.error('Server is still running! Stopping now... and failing test')
+            LOG.error("Server is still running! Stopping now... and failing test")
             did_complete = False
             session = Session.get_current()
             LOG.info(f"gdbserver session: {session}")
@@ -193,8 +215,8 @@ def test_gdb(board_id=None, n=0):
                 LOG.error("Server thread is still alive after stopping gdbservers!")
 
     try:
-        with open(gdb_output_filename, 'r') as f:
-            LOG.debug('Gdb output:\n%s', f.read())
+        with open(gdb_output_filename, "r") as f:
+            LOG.debug("Gdb output:\n%s", f.read())
     except IOError:
         pass
 
@@ -210,8 +232,7 @@ def test_gdb(board_id=None, n=0):
                 print("----------------Test Results----------------")
                 print("HW breakpoint count: %s" % test_result["breakpoint_count"])
                 print("Watchpoint count: %s" % test_result["watchpoint_count"])
-                print("Average instruction step time: %s" %
-                      test_result["step_time_si"])
+                print("Average instruction step time: %s" % test_result["step_time_si"])
                 print("Average single step time: %s" % test_result["step_time_s"])
                 print("Average over step time: %s" % test_result["step_time_n"])
                 print("Failure count: %i" % test_result["fail_count"])
@@ -230,14 +251,17 @@ def test_gdb(board_id=None, n=0):
             os.remove(temp_test_elf_name)
         os.remove(test_result_filename)
         os.remove(test_param_filename)
-    except IOError as err:
+    except IOError:
         pass
 
     return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD gdb test')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
+    parser = argparse.ArgumentParser(description="pyOCD gdb test")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)

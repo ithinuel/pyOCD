@@ -98,7 +98,7 @@ class STLinkUSBInterface:
                    "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help.",
                    error, dev.idVendor, dev.idProduct)
             return False
-        except (IndexError, NotImplementedError, ValueError) as error:
+        except (IndexError, NotImplementedError, ValueError):
             return False
 
     @classmethod
@@ -115,7 +115,7 @@ class STLinkUSBInterface:
             try:
                 intf = cls(dev)
                 intfList.append(intf)
-            except (ValueError, usb.core.USBError, IndexError, NotImplementedError) as error:
+            except (ValueError, usb.core.USBError, IndexError, NotImplementedError):
                 # Ignore errors that can be raised by libusb, just don't add the device to the list.
                 pass
 

@@ -23,52 +23,44 @@ from __future__ import print_function
 #  the GNU Tools ARM Embedded bin directory needs to be added to
 #  your path.
 
-import os
-import json
 import sys
 from subprocess import (
     Popen,
     STDOUT,
     PIPE,
-    check_output,
-    )
+)
 import argparse
 import logging
 import traceback
 import threading
-from time import sleep
 
 from pyocd.__main__ import PyOCDTool
 from pyocd.core.helpers import ConnectHelper
-from pyocd.utility.compatibility import to_str_safe
-from pyocd.core.memory_map import MemoryType
-from pyocd.flash.file_programmer import FileProgrammer
 from pyocd.utility.timeout import Timeout
 from test_util import (
     Test,
     TestResult,
     get_session_options,
     get_target_test_params,
-    binary_to_elf_file,
-    get_env_file_name,
     get_test_binary_path,
-    TEST_DIR,
-    TEST_OUTPUT_DIR,
     ensure_output_dir,
     wait_with_deadline,
-    )
+)
 
 LOG = logging.getLogger(__name__)
 
 TEST_TIMEOUT_SECONDS = 60.0 * 5
 
+
 class TestError(Exception):
     pass
+
 
 class ProbeserverTestResult(TestResult):
     def __init__(self):
         super(self.__class__, self).__init__(None, None, None)
         self.name = "probeserver"
+
 
 class ProbeserverTest(Test):
     def __init__(self):
@@ -80,19 +72,20 @@ class ProbeserverTest(Test):
         except Exception as e:
             result = ProbeserverTestResult()
             result.passed = False
-            print("Exception %s when testing board %s" %
-                  (e, board.unique_id))
+            print("Exception %s when testing board %s" % (e, board.unique_id))
             traceback.print_exc(file=sys.stdout)
         result.board = board
         result.test = self
         return result
 
+
 def test_probeserver(board_id=None, n=0):
     test_port = 5555 + n
-    temp_test_elf_name = None
     result = ProbeserverTestResult()
     print("Connecting to identify target")
-    with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
+    with ConnectHelper.session_with_chosen_probe(
+        unique_id=board_id, **get_session_options()
+    ) as session:
         board = session.board
         target_test_params = get_target_test_params(session)
         binary_file = get_test_binary_path(board.test_binary)
@@ -101,46 +94,53 @@ def test_probeserver(board_id=None, n=0):
         target_type = board.target_type
 
     # Run the test. We can't kill the server thread, so
-    LOG.info('Starting server on port %d', test_port)
-    server_args = ['pyocd', 'server',
-            '-v',
-            '--port=%i' % test_port,
-            "--uid=%s" % board_id,
-            ]
+    LOG.info("Starting server on port %d", test_port)
+    server_args = [
+        "pyocd",
+        "server",
+        "-v",
+        "--port=%i" % test_port,
+        "--uid=%s" % board_id,
+    ]
     server_program = Popen(server_args, stdout=PIPE, stderr=STDOUT)
 
     try:
         # Read server output waiting for it to report that the server is running.
         with Timeout(TEST_TIMEOUT_SECONDS) as time_out:
             while time_out.check():
-                ln = server_program.stdout.readline().decode('ascii')
-                print("Server:", ln, end='')
+                ln = server_program.stdout.readline().decode("ascii")
+                print("Server:", ln, end="")
                 if "Serving debug probe" in ln:
                     break
-                if ln == '':
+                if ln == "":
                     raise TestError("no more output from server")
             else:
                 raise TestError("server failed to start")
 
-        server_thread = threading.Thread(target=wait_with_deadline, args=[server_program, TEST_TIMEOUT_SECONDS])
+        server_thread = threading.Thread(
+            target=wait_with_deadline, args=[server_program, TEST_TIMEOUT_SECONDS]
+        )
         server_thread.daemon = True
         server_thread.start()
 
         # Start client in a thread.
-        client_args = ['flash',
-                "--frequency=%i" % target_test_params['test_clock'],
-                "--uid=remote:localhost:%d" % test_port,
-                "--target=%s" % target_type,
-                binary_file
-                ]
+        client_args = [
+            "flash",
+            "--frequency=%i" % target_test_params["test_clock"],
+            "--uid=remote:localhost:%d" % test_port,
+            "--target=%s" % target_type,
+            binary_file,
+        ]
         client = PyOCDTool()
-        client._setup_logging = lambda: None # Disable logging setup so we don't have duplicate log output.
-        LOG.info('Starting client: %s', ' '.join(client_args))
+        client._setup_logging = (
+            lambda: None
+        )  # Disable logging setup so we don't have duplicate log output.
+        LOG.info("Starting client: %s", " ".join(client_args))
         client_thread = threading.Thread(target=client.run, args=[client_args])
         client_thread.daemon = True
         client_thread.start()
 
-        LOG.info('Waiting for client to finish...')
+        LOG.info("Waiting for client to finish...")
         client_thread.join(timeout=TEST_TIMEOUT_SECONDS)
         did_complete = not client_thread.is_alive()
         if not did_complete:
@@ -163,10 +163,13 @@ def test_probeserver(board_id=None, n=0):
 
     return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD probeserver test')
-    parser.add_argument('-u', '--uid', help='Debug probe unique ID')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
+    parser = argparse.ArgumentParser(description="pyOCD probeserver test")
+    parser.add_argument("-u", "--uid", help="Debug probe unique ID")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)

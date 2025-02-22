@@ -110,13 +110,13 @@ class JsonSubcommand(SubcommandBase):
                     obj = ListGenerator.list_features()
                 else:
                     assert False
-        except Exception as e:
+        except Exception:
             # Report exceptions via JSON output.
             obj = {
                 'pyocd_version' : __version__,
                 'version' : { 'major' : 1, 'minor' : 0 },
                 'status' : 1,
-                'error' : f"Error occurred during processing.\n" + traceback.format_exc(),
+                'error' : "Error occurred during processing.\n" + traceback.format_exc(),
                 }
             exit_status = 1
 

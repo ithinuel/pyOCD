@@ -161,12 +161,12 @@ class BreakpointManager:
 
         # Get added breakpoints.
         for bp in self._updated_breakpoints.values():
-            if not bp.addr in self._breakpoints:
+            if bp.addr not in self._breakpoints:
                 added.append(bp)
 
         # Get removed breakpoints.
         for bp in self._breakpoints.values():
-            if not bp.addr in self._updated_breakpoints:
+            if bp.addr not in self._updated_breakpoints:
                 removed.append(bp)
 
         # Return the list of pages to update.

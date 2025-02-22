@@ -144,6 +144,6 @@ class CortexM7_IMXRT(CortexM):
             value = self.read_memory(CortexM.DEMCR)
             self.write_memory(CortexM.DEMCR, (value& (~0x00000001)))
             # Clear BP0 and FPB
-            self.write_memory(CortexM7_IMXRT.FPB_COMP0, 0);                        # Clear BP0
-            self.write_memory(CortexM7_IMXRT.FPB_CTRL, 0x00000002);                # Disable FPB
+            self.write_memory(CortexM7_IMXRT.FPB_COMP0, 0)                        # Clear BP0
+            self.write_memory(CortexM7_IMXRT.FPB_CTRL, 0x00000002)                # Disable FPB
             LOG.debug("clear fpb")

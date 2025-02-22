@@ -16,8 +16,6 @@
 # limitations under the License.
 
 import pytest
-import logging
-from unittest import mock
 
 from .mockcore import MockCore
 

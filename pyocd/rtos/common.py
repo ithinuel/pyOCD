@@ -24,7 +24,8 @@ LOG = logging.getLogger(__name__)
 
 ## Mask on EXC_RETURN indicating whether space for FP registers is allocated
 # on the frame. The bit is 0 if the frame is extended.
-EXC_RETURN_EXT_FRAME_MASK = (1 << 4)
+EXC_RETURN_EXT_FRAME_MASK = 1 << 4
+
 
 def read_c_string(context, ptr):
     """@brief Reads a null-terminated C string from the target."""
@@ -52,7 +53,7 @@ def read_c_string(context, ptr):
                     if badCount > 4:
                         done = True
                         break
-                    s += '?'
+                    s += "?"
                 else:
                     s += chr(c)
                     badCount = 0
@@ -60,6 +61,7 @@ def read_c_string(context, ptr):
         LOG.debug("TransferError while trying to read 16 bytes at 0x%08x", ptr)
 
     return s
+
 
 class HandlerModeThread(TargetThread):
     """@brief Class representing the handler mode."""
@@ -72,7 +74,7 @@ class HandlerModeThread(TargetThread):
         self._provider = provider
 
     def get_stack_pointer(self):
-        return self._target_context.read_core_register('msp')
+        return self._target_context.read_core_register("msp")
 
     @property
     def priority(self):
@@ -88,12 +90,12 @@ class HandlerModeThread(TargetThread):
 
     @property
     def description(self):
-        ipsr = self._target_context.read_core_register('ipsr');
+        ipsr = self._target_context.read_core_register("ipsr")
         return self._target_context.core.exception_number_to_name(ipsr)
 
     @property
     def is_current(self):
-        return self._target_context.read_core_register('ipsr') > 0
+        return self._target_context.read_core_register("ipsr") > 0
 
     @property
     def context(self):
@@ -104,6 +106,3 @@ class HandlerModeThread(TargetThread):
 
     def __repr__(self):
         return str(self)
-
-
-

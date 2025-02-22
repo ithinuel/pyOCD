@@ -14,15 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import board
-from . import core
-from . import debug
-from . import flash
-from . import gdbserver
-from . import target
-from . import utility
-from . import coresight
-from . import trace
+from . import board as board
+from . import core as core
+from . import debug as debug
+from . import flash as flash
+from . import gdbserver as gdbserver
+from . import target as target
+from . import utility as utility
+from . import coresight as coresight
+from . import trace as trace
 
-from ._version import version as __version__
+from ._version import version
 
+__version__ = version

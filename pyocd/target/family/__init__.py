@@ -16,7 +16,7 @@
 # limitations under the License.
 
 import re
-from typing import (Any, NamedTuple, Pattern)
+from typing import Any, NamedTuple, Pattern
 
 from . import target_imxrt
 from . import target_kinetis
@@ -26,11 +26,26 @@ from . import target_nRF54L
 from . import target_nRF91
 from . import target_rp2
 
+__all__ = [
+    "target_imxrt",
+    "target_kinetis",
+    "target_lpc5500",
+    "target_nRF52",
+    "target_nRF54L",
+    "target_nRF91",
+    "target_rp2",
+    "FamilyInfo",
+    "FAMILIES",
+]
+
+
 class FamilyInfo(NamedTuple):
     """@brief Container for family matching information."""
+
     vendor: str
     matches: Pattern[str]
     klass: Any
+
 
 ## @brief Lookup table to convert from CMSIS-Pack family names to a family class.
 #
@@ -41,8 +56,14 @@ class FamilyInfo(NamedTuple):
 # present), or the 'Dname' or 'Dvariant' part numbers. The comparisons are performed in order from
 # specific to general, starting with the part number.
 FAMILIES = [
-    FamilyInfo("NXP",                   re.compile(r'MK[LEVWS]?.*'),        target_kinetis.Kinetis          ),
-    FamilyInfo("Nordic Semiconductor",  re.compile(r'nRF52[0-9]+.*'),       target_nRF52.NRF52              ),
-    FamilyInfo("Nordic Semiconductor",  re.compile(r'nRF54L[0-9]+.*'),      target_nRF54L.NRF54L              ),
-    FamilyInfo("Nordic Semiconductor",  re.compile(r'nRF91[0-9]+.*'),       target_nRF91.NRF91              ),
-    ]
+    FamilyInfo("NXP", re.compile(r"MK[LEVWS]?.*"), target_kinetis.Kinetis),
+    FamilyInfo(
+        "Nordic Semiconductor", re.compile(r"nRF52[0-9]+.*"), target_nRF52.NRF52
+    ),
+    FamilyInfo(
+        "Nordic Semiconductor", re.compile(r"nRF54L[0-9]+.*"), target_nRF54L.NRF54L
+    ),
+    FamilyInfo(
+        "Nordic Semiconductor", re.compile(r"nRF91[0-9]+.*"), target_nRF91.NRF91
+    ),
+]

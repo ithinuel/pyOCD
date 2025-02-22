@@ -34,7 +34,8 @@ from ...utility.progress import print_progress
 from ...commands.base import CommandBase
 from ...commands.execution_context import CommandSet
 
-from typing import (Callable, Optional, TYPE_CHECKING, Union)
+from typing import Callable, Optional, TYPE_CHECKING, Union
+
 ProgressCallback = Callable[[Union[int, float]], None]
 
 if TYPE_CHECKING:
@@ -82,8 +83,9 @@ DATA_EVENT = 0x4002A110
 IPC_PIPELINED_MAX_BUFFER_SIZE = 0xE000
 IPC_MAX_BUFFER_SIZE = 0x10000
 
-CSW_DEVICEEN =  0x00000040
+CSW_DEVICEEN = 0x00000040
 
+# fmt: off
 # just an empty program compiled with the Nordic MDK without ENABLE_APPROTECT set
 nrf91_empty_image = [
     0x00, 0xe0, 0x03, 0x20, 0xe1, 0x04, 0x00, 0x00, 0x09, 0x05, 0x00, 0x00, 0x0b, 0x05, 0x00, 0x00, \
@@ -274,24 +276,28 @@ nrf91_empty_image = [
     0x58, 0x04, 0x00, 0x20, 0x00, 0x90, 0xd0, 0x03, 0x1d, 0x03, 0x00, 0x00, 0x79, 0x01, 0x00, 0x00, \
     0x55, 0x01, 0x00, 0x00
 ]
+# fmt: on
 
 LOG = logging.getLogger(__name__)
 
 
 def change_endianness(x: int, n=4) -> int:
-    return sum(((x >> 8*i) & 0xFF) << 8*(n-i-1) for i in range(n))
+    return sum(((x >> 8 * i) & 0xFF) << 8 * (n - i - 1) for i in range(n))
+
 
 def bytes_to_word(bts):
     result = 0
     for i, b in enumerate(bts):
-        result |= b << (8*i)
+        result |= b << (8 * i)
     return result
+
 
 def word_to_bytes(wrd):
     result = []
     for i in range(4):
-        result.append((wrd >> (8*i)) & 0xFF)
+        result.append((wrd >> (8 * i)) & 0xFF)
     return bytes(result)
+
 
 def split_addr_range_into_chunks(range, chunk_size):
     chunks = []
@@ -304,6 +310,8 @@ def split_addr_range_into_chunks(range, chunk_size):
             break
     return chunks
 
+
+# fmt: off
 FLASH_ALGO_UICR = {
     'load_address' : 0x20000000,
 
@@ -383,52 +391,52 @@ FLASH_ALGO_UICR = {
         (0x0, 0x1000),
     )
 }
+# fmt: on
+
 
 class nRF91ModemFirmwareUpdateCommand(CommandBase):
     INFO = {
-            'names': ['nrf91-update-modem-fw'],
-            'group': 'nrf91',
-            'category': 'nrf91',
-            'nargs': '*',
-            'usage': "[-f] mfw_nrf91xx_x.x.x.zip",
-            'help': "Update modem firmware for an nRF91 target.",
-            'extra_help':
-                "If -f is specified, modem firmware is written to the device, "
-                "even if the correct version is already present."
-            }
-    
+        "names": ["nrf91-update-modem-fw"],
+        "group": "nrf91",
+        "category": "nrf91",
+        "nargs": "*",
+        "usage": "[-f] mfw_nrf91xx_x.x.x.zip",
+        "help": "Update modem firmware for an nRF91 target.",
+        "extra_help": "If -f is specified, modem firmware is written to the device, "
+        "even if the correct version is already present.",
+    }
+
     file_path = ""
     needs_update = False
 
     def parse(self, args):
         if len(args) == 0 or not args[-1].endswith(".zip"):
-            raise exceptions.CommandError(f"invalid argument")
+            raise exceptions.CommandError("invalid argument")
         self.file_path = args[-1]
         for a in args:
-            if a == '-f':
+            if a == "-f":
                 self.needs_update = True
-
 
     def execute(self):
         if not self.needs_update:
             try:
                 ModemUpdater(self.context.session).verify(self.file_path)
-            except:
+            except Exception:
                 self.needs_update = True
         if self.needs_update:
             ModemUpdater(self.context.session).program_and_verify(self.file_path)
 
-class NRF91(CoreSightTarget):
 
+class NRF91(CoreSightTarget):
     VENDOR = "Nordic Semiconductor"
 
     def __init__(self, session, memory_map=None):
         super(NRF91, self).__init__(session, memory_map)
-        if memory_map.get_region_for_address(0x00ff8000) is None:
+        if memory_map.get_region_for_address(0x00FF8000) is None:
             LOG.debug("Adding UICR region")
             memory_map.add_region(
                 FlashRegion(
-                    start=0x00ff8000,
+                    start=0x00FF8000,
                     length=0x1000,
                     blocksize=0x1000,
                     is_testable=False,
@@ -444,19 +452,24 @@ class NRF91(CoreSightTarget):
 
         # Must check whether security is enabled, and potentially auto-unlock, before
         # any init tasks that require system bus access.
-        seq.wrap_task('discovery',
-            lambda seq: seq.insert_before('find_components',
-                              ('check_ctrl_ap_idr', self.check_ctrl_ap_idr),
-                              ('check_flash_security', self.check_flash_security),
-                          )
-            )
-        seq.wrap_task('discovery',
-            lambda seq: seq.insert_after('create_cores',
-                              ('persist_unlock', self.persist_unlock),
-                          )
-            )
-        seq.insert_before('post_connect_hook',
-                          ('check_part_info', self.check_part_info))
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.insert_before(
+                "find_components",
+                ("check_ctrl_ap_idr", self.check_ctrl_ap_idr),
+                ("check_flash_security", self.check_flash_security),
+            ),
+        )
+        seq.wrap_task(
+            "discovery",
+            lambda seq: seq.insert_after(
+                "create_cores",
+                ("persist_unlock", self.persist_unlock),
+            ),
+        )
+        seq.insert_before(
+            "post_connect_hook", ("check_part_info", self.check_part_info)
+        )
 
         return seq
 
@@ -465,21 +478,27 @@ class NRF91(CoreSightTarget):
 
         # Check CTRL-AP ID.
         if self.ctrl_ap.idr != CTRL_IDR_EXPECTED:
-            LOG.error("%s: bad CTRL-AP IDR (is 0x%08x)", self.part_number, self.ctrl_ap.idr)
+            LOG.error(
+                "%s: bad CTRL-AP IDR (is 0x%08x)", self.part_number, self.ctrl_ap.idr
+            )
 
     def ap_is_enabled(self):
         csw = self.dp.read_ap(AHB_AP_NUM << 24)
         return csw & CSW_DEVICEEN
-    
+
     def persist_unlock(self):
-        if self.session.options.get('auto_unlock') and self.has_hardened_approtect:
+        if self.session.options.get("auto_unlock") and self.has_hardened_approtect:
             # Write Unprotected to UICR.APPROTECT
             self.write_uicr(0x00FF8000, 0x50FA50FA)
 
             # Write Unprotected to UICR.SECUREAPPROTECT
             self.write_uicr(0x00FF802C, 0x50FA50FA)
 
-        if self.session.options.get('auto_unlock') and self.has_hardened_approtect and self.was_locked:
+        if (
+            self.session.options.get("auto_unlock")
+            and self.has_hardened_approtect
+            and self.was_locked
+        ):
             # write unlock image
             self.write_flash(0, nrf91_empty_image)
 
@@ -496,16 +515,19 @@ class NRF91(CoreSightTarget):
 
         target_id = self.dp.read_dp(0x24)
         if target_id & 0xFFF != 0x289:
-            LOG.error(f"This doesn't look like a Nordic Semiconductor device!")
+            LOG.error("This doesn't look like a Nordic Semiconductor device!")
         if target_id & 0xF0000 != 0x90000:
-            LOG.error(f"This doesn't look like an nRF91 devcice!")
+            LOG.error("This doesn't look like an nRF91 devcice!")
         revision = target_id >> 28
         self.has_hardened_approtect = revision > 2
 
         if self.is_locked():
             self.was_locked = True
-            if self.session.options.get('auto_unlock'):
-                LOG.warning("%s APPROTECT enabled: will try to unlock via mass erase", self.part_number)
+            if self.session.options.get("auto_unlock"):
+                LOG.warning(
+                    "%s APPROTECT enabled: will try to unlock via mass erase",
+                    self.part_number,
+                )
 
                 unlock_successful = False
                 for _ in range(3):
@@ -531,14 +553,18 @@ class NRF91(CoreSightTarget):
                 self._discoverer._create_1_ap(AHB_AP_NUM)
                 self._discoverer._create_1_ap(APB_AP_NUM)
             else:
-                LOG.warning("%s APPROTECT enabled: not automatically unlocking", self.part_number)
+                LOG.warning(
+                    "%s APPROTECT enabled: not automatically unlocking",
+                    self.part_number,
+                )
         else:
             LOG.info("%s not in secure state", self.part_number)
 
     def is_locked(self):
         status = self.ctrl_ap.read_reg(CTRL_AP_APPROTECTSTATUS)
-        return (status & CTRL_AP_APPROTECTSTATUS_APPROTECT_MSK == 0) \
-            or (status & CTRL_AP_APPROTECTSTATUS_SECUREAPPROTECT_MSK == 0)
+        return (status & CTRL_AP_APPROTECTSTATUS_APPROTECT_MSK == 0) or (
+            status & CTRL_AP_APPROTECTSTATUS_SECUREAPPROTECT_MSK == 0
+        )
 
     def is_eraseprotected(self):
         status = self.ctrl_ap.read_reg(CTRL_AP_ERASEPROTECTSTATUS)
@@ -581,9 +607,11 @@ class NRF91(CoreSightTarget):
         hwrevision = self.read32(0x00FF0144)
         variant = self.read32(0x00FF0148)
 
-        LOG.info(f"This appears to be an nRF{partno:X} " +
-                 f"{word_to_bytes(variant).decode('ASCII', errors='ignore')} " +
-         	 f"{word_to_bytes(hwrevision).decode('ASCII', errors='ignore')}")
+        LOG.info(
+            f"This appears to be an nRF{partno:X} "
+            + f"{word_to_bytes(variant).decode('ASCII', errors='ignore')} "
+            + f"{word_to_bytes(hwrevision).decode('ASCII', errors='ignore')}"
+        )
 
     def write_uicr(self, addr: int, value: int):
         current_value = self.read32(addr)
@@ -602,13 +630,13 @@ class NRF91(CoreSightTarget):
         self.write32(0x50039504, 1)  # NVMC.CONFIG = WriteEnable
         self._wait_nvmc_ready()
         for off in range(0, len(bytes), 4):
-            self.write32(addr+off, bytes_to_word(bytes[off:off+4]))
+            self.write32(addr + off, bytes_to_word(bytes[off : off + 4]))
             self._wait_nvmc_readynext()
         self.write32(0x50039504, 0)  # NVMC.CONFIG = ReadOnly
         self._wait_nvmc_ready()
 
     def add_target_command_groups(self, command_set: CommandSet) -> None:
-        command_set.add_command_group('nrf91')
+        command_set.add_command_group("nrf91")
 
     def _wait_nvmc_ready(self):
         with Timeout(MASS_ERASE_TIMEOUT) as to:
@@ -617,7 +645,7 @@ class NRF91(CoreSightTarget):
                     break
             else:
                 raise exceptions.TargetError("wait for NVMC timed out")
-            
+
     def _wait_nvmc_readynext(self):
         with Timeout(MASS_ERASE_TIMEOUT) as to:
             while to.check():
@@ -626,8 +654,10 @@ class NRF91(CoreSightTarget):
             else:
                 raise exceptions.TargetError("wait for NVMC timed out")
 
+
 class ModemUpdater(object):
     """@brief Implements the nRF91 Modem Update procedure like described in nAN-41"""
+
     _target: "Target"
     _session: "Session"
     _progress: Optional[ProgressCallback]
@@ -639,10 +669,11 @@ class ModemUpdater(object):
     _segments: list
     _firmware_update_digest: str
 
-    def __init__(self,
-                 session: "Session",
-                 progress: Optional[ProgressCallback] = None,
-                 ):
+    def __init__(
+        self,
+        session: "Session",
+        progress: Optional[ProgressCallback] = None,
+    ):
         self._session = session
         self._target = session.board.target
         self._total_data_size = 0
@@ -652,7 +683,7 @@ class ModemUpdater(object):
 
         if progress is not None:
             self._progress = progress
-        elif session.options.get('hide_programming_progress'):
+        elif session.options.get("hide_programming_progress"):
             self._progress = None
         else:
             self._progress = print_progress()
@@ -665,7 +696,9 @@ class ModemUpdater(object):
         self._process_zip_file(mfw_zip)
 
         LOG.info("programming modem firmware..")
-        self._total_data_size = sum(r[1]-r[0] for s in self._segments for r in s.segments())
+        self._total_data_size = sum(
+            r[1] - r[0] for s in self._segments for r in s.segments()
+        )
         for s in self._segments:
             self._program_segment(s)
         self._progress(1.0)
@@ -712,7 +745,7 @@ class ModemUpdater(object):
 
         # 3. configure RAM as non-secure
         for n in range(32):
-            self._target.write32(addr=0x50003700+(n*4), value=0x00000007)
+            self._target.write32(addr=0x50003700 + (n * 4), value=0x00000007)
 
         # 4. allocate memory in RAM
         self._target.write32(addr=0x20000000, value=0x80010000)
@@ -732,7 +765,7 @@ class ModemUpdater(object):
         modem_firmware_loader = None
 
         with TemporaryDirectory() as tmpdir:
-            with ZipFile(mfw_zip, 'r') as zip_ref:
+            with ZipFile(mfw_zip, "r") as zip_ref:
                 zip_ref.extractall(tmpdir)
             files = os.listdir(tmpdir)
 
@@ -743,22 +776,25 @@ class ModemUpdater(object):
                     m = re.match(r"\.ipc_dfu\.signed_(\d+)\.(\d+)\.(\d+)\.ihex", f[7:])
                     if m:
                         loader_version = tuple(int(x) for x in m.groups())
-                        LOG.info("modem_firmware_loader version: {}.{}.{}".format(
-                            *loader_version))
+                        LOG.info(
+                            "modem_firmware_loader version: {}.{}.{}".format(
+                                *loader_version
+                            )
+                        )
                         if loader_version > (1, 1, 2):
                             LOG.info("using pipelined method")
                             self._pipelined = True
                     break
             if not modem_firmware_loader:
                 raise exceptions.TargetError(
-                    f"No compatible loader {digest_id}.ipc_dfu.signed_x.x.x.ihex found.")
+                    f"No compatible loader {digest_id}.ipc_dfu.signed_x.x.x.ihex found."
+                )
 
             # find modem firmware segments
             for f in files:
                 m = re.match(r"firmware\.update\.image\.segments\.(\d+).hex", f)
                 if m:
-                    self._segments.append(
-                        (m.group(1), os.path.join(tmpdir, f)))
+                    self._segments.append((m.group(1), os.path.join(tmpdir, f)))
             self._segments.sort()
             self._segments = [IntelHex(s[1]) for s in self._segments]
 
@@ -766,10 +802,14 @@ class ModemUpdater(object):
                 raise exceptions.TargetError("No modem firmware segments found")
 
             # parse segment digests
-            with open(os.path.join(tmpdir, "firmware.update.image.digest.txt"), "r") as f:
+            with open(
+                os.path.join(tmpdir, "firmware.update.image.digest.txt"), "r"
+            ) as f:
                 for line in f:
-                    m = re.match(r"SHA256 of all ranges in ascending address order:\s*(\w{64})",
-                                 line)
+                    m = re.match(
+                        r"SHA256 of all ranges in ascending address order:\s*(\w{64})",
+                        line,
+                    )
                     if m:
                         self._firmware_update_digest = m.group(1)
             if not self._firmware_update_digest:
@@ -777,7 +817,8 @@ class ModemUpdater(object):
 
             LOG.info("loading modem firmware loader..")
             FileProgrammer(self._session).program(
-                modem_firmware_loader, file_format='hex')
+                modem_firmware_loader, file_format="hex"
+            )
             self._target.write32(0x4002A004, 0x00000001)  # start IPC task
             self._wait_and_ack_events()
             LOG.info("modem_firmware_loader started.")
@@ -819,15 +860,14 @@ class ModemUpdater(object):
     def _write_chunk(self, segment: IntelHex, chunk, bank):
         """@brief write a chunk of the current segment to RAM"""
         start = chunk[0]
-        size = chunk[1]-chunk[0]
+        size = chunk[1] - chunk[0]
         if self._pipelined:
             ram_address = 0x2000001C + IPC_PIPELINED_MAX_BUFFER_SIZE * bank
         else:
             ram_address = 0x20000018
 
         data = list(segment.tobinarray(start=start, size=size))
-        data_words = [bytes_to_word(data[i:i+4])
-                      for i in range(0, len(data), 4)]
+        data_words = [bytes_to_word(data[i : i + 4]) for i in range(0, len(data), 4)]
         self._target.write_memory_block32(ram_address, data_words)
         self._current_progress_fraction = size / float(self._total_data_size)
         self._progress_cb(1.0)
@@ -837,7 +877,7 @@ class ModemUpdater(object):
         """@brief signal DFU loader that chunk is ready to be programmed"""
         buffer_offset = bank * IPC_PIPELINED_MAX_BUFFER_SIZE
         self._target.write32(0x20000010, chunk[0])
-        self._target.write32(0x20000014, chunk[1]-chunk[0])
+        self._target.write32(0x20000014, chunk[1] - chunk[0])
         if self._pipelined:
             self._target.write32(0x20000018, buffer_offset)
         if self._pipelined:
@@ -861,7 +901,7 @@ class ModemUpdater(object):
         self._target.write32(0x20000010, len(ranges_to_verify))
         for i, (start, end) in enumerate(ranges_to_verify):
             self._target.write32(0x20000014 + (8 * i), start)
-            self._target.write32(0x20000018 + (8 * i), end-start)
+            self._target.write32(0x20000018 + (8 * i), end - start)
 
         # command = VERIFY
         self._target.write32(0x2000000C, 0x7)
@@ -872,9 +912,13 @@ class ModemUpdater(object):
 
         response = self._target.read32(0x2000000C)
         if (response & 0xFF000000) == 0x5A000000:
-            raise exceptions.TargetError(f"Error while verifying: {response & 0xFFFFFF:X}")
+            raise exceptions.TargetError(
+                f"Error while verifying: {response & 0xFFFFFF:X}"
+            )
 
-        digest_data = [self._target.read32(x) for x in range(0x20000010, 0x2000002D, 0x4)]
+        digest_data = [
+            self._target.read32(x) for x in range(0x20000010, 0x2000002D, 0x4)
+        ]
         digest_str = "".join(f"{x:08X}" for x in digest_data)
 
         if digest_str != self._firmware_update_digest:
@@ -913,7 +957,7 @@ class ModemUpdater(object):
             raise exceptions.TargetError("modem triggered FAULT_EVENT")
 
     def _reset_state(self):
-        """@brief Clear all state variables. """
+        """@brief Clear all state variables."""
         self._total_data_size = 0
         self._progress_offset = 0.0
         self._current_progress_fraction = 0.0
@@ -921,4 +965,6 @@ class ModemUpdater(object):
     def _progress_cb(self, amount):
         """@brief callback for updating the progress bar"""
         if self._progress is not None:
-            self._progress((amount * self._current_progress_fraction) + self._progress_offset)
+            self._progress(
+                (amount * self._current_progress_fraction) + self._progress_offset
+            )

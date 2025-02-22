@@ -14,11 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-import logging
 
-from pyocd.debug.cache import MemoryCache
-from pyocd.debug.context import DebugContext
 from pyocd.coresight.component import CoreSightCoreComponent
 from pyocd.core.core_registers import CoreRegistersIndex
 from pyocd.core.memory_interface import MemoryInterface
@@ -29,7 +25,6 @@ from pyocd.coresight.cortex_m_core_registers import (
 )
 from pyocd.core import memory_map
 from pyocd.utility import conversion
-from pyocd.utility import mask
 
 CFBP_INDEX = index_for_reg('cfbp')
 XPSR_INDEX = index_for_reg('xpsr')

@@ -28,23 +28,23 @@ from .. import target
 from ..core.session import Session
 from ..core.helpers import ConnectHelper
 from ..gdbserver import GDBServer
-from ..utility.cmdline import (split_command_line, convert_session_options)
+from ..utility.cmdline import split_command_line, convert_session_options
 from ..probe.pydapaccess import DAPAccess
-from ..core.session import Session
 from ..coresight.generic_mem_ap import GenericMemAPTarget
 
 LOG = logging.getLogger(__name__)
 
 LEVELS = {
-    'debug': logging.DEBUG,
-    'info': logging.INFO,
-    'warning': logging.WARNING,
-    'error': logging.ERROR,
-    'critical': logging.CRITICAL
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL,
 }
 
 SUPPORTED_TARGETS = list(sorted(target.TARGET.keys()))
 DEBUG_LEVELS = list(LEVELS.keys())
+
 
 class GDBServerTool(object):
     def __init__(self):
@@ -54,8 +54,11 @@ class GDBServerTool(object):
 
     def build_parser(self):
         # Build epilog with list of targets.
-        epilog = "Available targets for use with --target option: " + ", ".join(SUPPORTED_TARGETS)
+        epilog = "Available targets for use with --target option: " + ", ".join(
+            SUPPORTED_TARGETS
+        )
 
+        # fmt: off
         # Keep args in snyc with flash_tool.py when possible
         parser = argparse.ArgumentParser(description='PyOCD GDB Server', epilog=epilog)
         parser.add_argument('--version', action='version', version=__version__)
@@ -95,6 +98,7 @@ class GDBServerTool(object):
         parser.add_argument("--elf", metavar="PATH", help="Optionally specify ELF file being debugged.")
         parser.add_argument("-O", "--option", metavar="OPTION", action="append", help="Set session option of form 'OPTION=VALUE'.")
         parser.add_argument("--no-deprecation-warning", action="store_true", help="Do not warn about pyocd-gdbserver being deprecated.")
+        # fmt: on
         self.parser = parser
         return parser
 
@@ -112,34 +116,33 @@ class GDBServerTool(object):
 
         # Handle deprecated options.
         if args.break_on_reset:
-            vector_catch += 'r'
+            vector_catch += "r"
         if args.no_break_at_hardfault:
             # Must handle all case specially since we can't just filter 'h'.
-            if vector_catch == 'all' or 'a' in vector_catch:
-                vector_catch = 'bmiscpr' # Does not include 'h'.
+            if vector_catch == "all" or "a" in vector_catch:
+                vector_catch = "bmiscpr"  # Does not include 'h'.
             else:
-                vector_catch = vector_catch.replace('h', '')
+                vector_catch = vector_catch.replace("h", "")
 
         return vector_catch
 
     def get_gdb_server_settings(self, args):
         # Set gdb server settings
         return {
-            'gdbserver_port' : self.args.port_number,
-            'step_into_interrupt' : args.step_into_interrupt,
-            'persist' : args.persist,
-            'chip_erase': self.get_chip_erase(args),
-            'hide_programming_progress' : args.hide_progress,
-            'fast_program' : args.fast_program,
-            'enable_semihosting' : args.enable_semihosting,
-            'semihost_console_type' : args.semihost_console_type,
-            'soft_bkpt_as_hard' : args.soft_bkpt_as_hard,
-            'telnet_port' : args.telnet_port,
-            'semihost_use_syscalls' : args.semihost_use_syscalls,
-            'serve_local_only' : args.serve_local_only,
-            'vector_catch' : self.get_vector_catch(args),
+            "gdbserver_port": self.args.port_number,
+            "step_into_interrupt": args.step_into_interrupt,
+            "persist": args.persist,
+            "chip_erase": self.get_chip_erase(args),
+            "hide_programming_progress": args.hide_progress,
+            "fast_program": args.fast_program,
+            "enable_semihosting": args.enable_semihosting,
+            "semihost_console_type": args.semihost_console_type,
+            "soft_bkpt_as_hard": args.soft_bkpt_as_hard,
+            "telnet_port": args.telnet_port,
+            "semihost_use_syscalls": args.semihost_use_syscalls,
+            "serve_local_only": args.serve_local_only,
+            "vector_catch": self.get_vector_catch(args),
         }
-
 
     def setup_logging(self, args):
         format = "%(relativeCreated)07d:%(levelname)s:%(module)s:%(message)s"
@@ -154,20 +157,22 @@ class GDBServerTool(object):
             try:
                 cmd_list = split_command_line(cmd_list)
                 cmd = cmd_list[0]
-                if cmd == 'gdb_port':
+                if cmd == "gdb_port":
                     if len(cmd_list) < 2:
                         print("Missing port argument")
                     else:
                         self.args.port_number = int(cmd_list[1], base=0)
-                elif cmd == 'telnet_port':
+                elif cmd == "telnet_port":
                     if len(cmd_list) < 2:
                         print("Missing port argument")
                     else:
-                        self.gdb_server_settings['telnet_port'] = int(cmd_list[1], base=0)
-                elif cmd == 'echo':
-                    self.echo_msg = ' '.join(cmd_list[1:])
+                        self.gdb_server_settings["telnet_port"] = int(
+                            cmd_list[1], base=0
+                        )
+                elif cmd == "echo":
+                    self.echo_msg = " ".join(cmd_list[1:])
                 else:
-                    print("Unsupported command: %s" % ' '.join(cmd_list))
+                    print("Unsupported command: %s" % " ".join(cmd_list))
             except IndexError:
                 pass
 
@@ -188,7 +193,9 @@ class GDBServerTool(object):
             status = 0
             error = ""
             try:
-                all_mbeds = ConnectHelper.get_sessions_for_all_connected_probes(blocking=False)
+                all_mbeds = ConnectHelper.get_sessions_for_all_connected_probes(
+                    blocking=False
+                )
             except Exception as e:
                 all_mbeds = []
                 status = 1
@@ -198,24 +205,24 @@ class GDBServerTool(object):
 
             boards = []
             obj = {
-                'pyocd_version' : __version__,
-                'version' : { 'major' : 1, 'minor' : 0 },
-                'status' : status,
-                'boards' : boards,
-                }
+                "pyocd_version": __version__,
+                "version": {"major": 1, "minor": 0},
+                "status": status,
+                "boards": boards,
+            }
 
             if status != 0:
-                obj['error'] = error
+                obj["error"] = error
 
             for mbed in all_mbeds:
                 d = {
-                    'unique_id' : mbed.probe.unique_id,
-                    'info' : mbed.board.description,
-                    'board_name' : mbed.board.name,
-                    'target' : mbed.board.target_type,
-                    'vendor_name' : mbed.probe.vendor_name,
-                    'product_name' : mbed.probe.product_name,
-                    }
+                    "unique_id": mbed.probe.unique_id,
+                    "info": mbed.board.description,
+                    "board_name": mbed.board.name,
+                    "target": mbed.board.target_type,
+                    "vendor_name": mbed.probe.vendor_name,
+                    "product_name": mbed.probe.product_name,
+                }
                 boards.append(d)
 
             print(json.dumps(obj, indent=4))
@@ -226,23 +233,23 @@ class GDBServerTool(object):
         if self.args.output_json:
             targets = []
             obj = {
-                'pyocd_version' : __version__,
-                'version' : { 'major' : 1, 'minor' : 0 },
-                'status' : 0,
-                'targets' : targets
-                }
+                "pyocd_version": __version__,
+                "version": {"major": 1, "minor": 0},
+                "status": 0,
+                "targets": targets,
+            }
 
             for name in SUPPORTED_TARGETS:
-                s = Session(None) # Create empty session
+                s = Session(None)  # Create empty session
                 t = target.TARGET[name](s)
                 d = {
-                    'name' : name,
-                    'part_number' : t.part_number,
-                    }
+                    "name": name,
+                    "part_number": t.part_number,
+                }
                 if t._svd_location is not None:
                     svdPath = t._svd_location.filename
                     if os.path.exists(svdPath):
-                        d['svd_path'] = svdPath
+                        d["svd_path"] = svdPath
                 targets.append(d)
 
             print(json.dumps(obj, indent=4))
@@ -257,15 +264,17 @@ class GDBServerTool(object):
         DAPAccess.set_args(self.args.daparg)
 
         if not self.args.no_deprecation_warning:
-            LOG.warning("pyocd-gdbserver is deprecated; please use the new combined pyocd tool.")
+            LOG.warning(
+                "pyocd-gdbserver is deprecated; please use the new combined pyocd tool."
+            )
 
         self.process_commands(self.args.commands)
 
         gdb = None
         gdbs = []
-        if self.args.list_all == True:
+        if self.args.list_all:
             self.list_boards()
-        elif self.args.list_targets == True:
+        elif self.args.list_targets:
             self.list_targets()
         else:
             try:
@@ -280,7 +289,8 @@ class GDBServerTool(object):
                     unique_id=self.args.board_id,
                     target_override=self.args.target_override,
                     frequency=self.args.frequency,
-                    **sessionOptions)
+                    **sessionOptions,
+                )
                 if session is None:
                     print("No board selected")
                     return 1
@@ -289,14 +299,20 @@ class GDBServerTool(object):
                     if self.args.elf:
                         session.board.target.elf = self.args.elf
                     for core_number, core in session.board.target.cores.items():
-                        if isinstance(session.board.target.cores[core_number], GenericMemAPTarget):
+                        if isinstance(
+                            session.board.target.cores[core_number], GenericMemAPTarget
+                        ):
                             continue
 
                         gdb = GDBServer(session, core=core_number)
                         # Only subscribe to the server for the first core, so echo messages aren't printed
                         # multiple times.
                         if not gdbs:
-                            session.subscribe(self.server_listening, GDBServer.GDBSERVER_START_LISTENING_EVENT, gdb)
+                            session.subscribe(
+                                self.server_listening,
+                                GDBServer.GDBSERVER_START_LISTENING_EVENT,
+                                gdb,
+                            )
                         session.gdbservers[core_number] = gdb
                         gdbs.append(gdb)
                         gdb.start()
@@ -307,7 +323,10 @@ class GDBServerTool(object):
                 for gdb in gdbs:
                     gdb.stop()
             except Exception as e:
-                LOG.error("uncaught exception: %s" % e, exc_info=Session.get_current().log_tracebacks)
+                LOG.error(
+                    "uncaught exception: %s" % e,
+                    exc_info=Session.get_current().log_tracebacks,
+                )
                 for gdb in gdbs:
                     gdb.stop()
                 return 1
@@ -315,8 +334,10 @@ class GDBServerTool(object):
         # Successful exit.
         return 0
 
+
 def main():
     sys.exit(GDBServerTool().run())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -15,11 +15,9 @@
 # limitations under the License.
 from __future__ import print_function
 
-import argparse, os, sys
-from time import sleep, time
-from random import randrange
-import math
 import argparse
+import os
+import sys
 import subprocess
 import json
 import traceback
@@ -27,17 +25,17 @@ import traceback
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parentdir)
 
-from pyocd import __version__
-from pyocd.core.helpers import ConnectHelper
-from pyocd.utility.conversion import float32_to_u32
-from test_util import Test, TestResult
-import logging
-from random import randrange
+from pyocd import __version__  # noqa: E402
+from pyocd.core.helpers import ConnectHelper  # noqa: E402
+from test_util import Test, TestResult  # noqa: E402
+import logging  # noqa: E402
+
 
 class JsonListsTestResult(TestResult):
     def __init__(self):
         super(JsonListsTestResult, self).__init__(None, None, None)
         self.name = "json_lists"
+
 
 class JsonListsTest(Test):
     def __init__(self):
@@ -58,41 +56,41 @@ class JsonListsTest(Test):
         result.test = self
         return result
 
-def json_lists_test(board_id, testing_standalone=False):
 
+def json_lists_test(board_id, testing_standalone=False):
     test_count = 0
     test_pass_count = 0
 
     def validate_basic_keys(data, minor_version=0):
         did_pass = True
 
-        print('pyocd_version', end=' ')
-        p = 'pyocd_version' in data
+        print("pyocd_version", end=" ")
+        p = "pyocd_version" in data
         if p:
-            p = data['pyocd_version'] == __version__
-        if p:
-            print("PASSED")
-        else:
-            did_pass = False
-            print("FAILED")
-
-        print('version', end=' ')
-        p = 'version' in data
-        if p:
-            v = data['version']
-            p = 'major' in v and 'minor' in v
-        if p:
-            p = v['major'] == 1 and v['minor'] == minor_version
+            p = data["pyocd_version"] == __version__
         if p:
             print("PASSED")
         else:
             did_pass = False
             print("FAILED")
 
-        print('status', end=' ')
-        p = 'status' in data
+        print("version", end=" ")
+        p = "version" in data
         if p:
-            p = data['status'] == 0
+            v = data["version"]
+            p = "major" in v and "minor" in v
+        if p:
+            p = v["major"] == 1 and v["minor"] == minor_version
+        if p:
+            print("PASSED")
+        else:
+            did_pass = False
+            print("FAILED")
+
+        print("status", end=" ")
+        p = "status" in data
+        if p:
+            p = data["status"] == 0
         if p:
             print("PASSED")
         else:
@@ -104,10 +102,10 @@ def json_lists_test(board_id, testing_standalone=False):
     def validate_boards(data):
         did_pass = True
 
-        print('boards', end=' ')
-        p = 'boards' in data and type(data['boards']) is list
+        print("boards", end=" ")
+        p = "boards" in data and type(data["boards"]) is list
         if p:
-            b = data['boards']
+            b = data["boards"]
         if p:
             print("PASSED")
         else:
@@ -121,16 +119,22 @@ def json_lists_test(board_id, testing_standalone=False):
         # in the return list and this test will fail.
         if testing_standalone:
             try:
-                all_sessions = ConnectHelper.get_sessions_for_all_connected_probes(blocking=False)
+                all_sessions = ConnectHelper.get_sessions_for_all_connected_probes(
+                    blocking=False
+                )
                 all_mbeds = [x.board for x in all_sessions]
                 p = len(all_mbeds) == len(b)
                 matching_boards = 0
                 if p:
                     for mbed in all_mbeds:
                         for brd in b:
-                            if mbed.unique_id == brd['unique_id']:
+                            if mbed.unique_id == brd["unique_id"]:
                                 matching_boards += 1
-                                p = 'info' in brd and 'target' in brd and 'board_name' in brd
+                                p = (
+                                    "info" in brd
+                                    and "target" in brd
+                                    and "board_name" in brd
+                                )
                                 if not p:
                                     break
                         if not p:
@@ -141,7 +145,7 @@ def json_lists_test(board_id, testing_standalone=False):
                 else:
                     did_pass = False
                     print("FAILED")
-            except Exception as e:
+            except Exception:
                 print("FAILED")
                 traceback.print_exc(file=sys.stdout)
                 did_pass = False
@@ -149,10 +153,12 @@ def json_lists_test(board_id, testing_standalone=False):
             # Check for required keys in all board info dicts.
             p = True
             for brd in b:
-                p = ('unique_id' in brd and
-                    'info' in brd and
-                    'target' in brd and
-                    'board_name' in brd)
+                p = (
+                    "unique_id" in brd
+                    and "info" in brd
+                    and "target" in brd
+                    and "board_name" in brd
+                )
                 if not p:
                     break
             if p:
@@ -166,12 +172,12 @@ def json_lists_test(board_id, testing_standalone=False):
     def validate_targets(data):
         did_pass = True
 
-        print('targets', end=' ')
-        p = 'targets' in data and type(data['targets']) is list
+        print("targets", end=" ")
+        p = "targets" in data and type(data["targets"]) is list
         if p:
-            targets = data['targets']
+            targets = data["targets"]
             for t in targets:
-                p = 'name' in t and 'part_number' in t
+                p = "name" in t and "part_number" in t
                 if not p:
                     break
         if p:
@@ -182,11 +188,10 @@ def json_lists_test(board_id, testing_standalone=False):
 
         return did_pass
 
-
     result = JsonListsTestResult()
 
     print("\n\n----- TESTING PROBES LIST -----")
-    out = subprocess.check_output(['pyocd', 'json', '--probes'])
+    out = subprocess.check_output(["pyocd", "json", "--probes"])
     data = json.loads(out)
     test_count += 2
     if validate_basic_keys(data, minor_version=1):
@@ -195,7 +200,7 @@ def json_lists_test(board_id, testing_standalone=False):
         test_pass_count += 1
 
     print("\n\n----- TESTING TARGETS LIST -----")
-    out = subprocess.check_output(['pyocd', 'json', '--targets'])
+    out = subprocess.check_output(["pyocd", "json", "--targets"])
     data = json.loads(out)
     test_count += 2
     if validate_basic_keys(data, minor_version=2):
@@ -205,7 +210,7 @@ def json_lists_test(board_id, testing_standalone=False):
 
     # Doesn't actually verify returned probes, simply makes sure it doesn't crash.
     print("\n\n----- TESTING BOARDS LIST -----")
-    out = subprocess.check_output(['pyocd', 'json', '--boards'])
+    out = subprocess.check_output(["pyocd", "json", "--boards"])
     data = json.loads(out)
     test_count += 1
     if validate_basic_keys(data, minor_version=1):
@@ -213,7 +218,7 @@ def json_lists_test(board_id, testing_standalone=False):
 
     # Doesn't actually verify returned features and options, simply makes sure it doesn't crash.
     print("\n\n----- TESTING FEATURES LIST -----")
-    out = subprocess.check_output(['pyocd', 'json', '--features'])
+    out = subprocess.check_output(["pyocd", "json", "--features"])
     data = json.loads(out)
     test_count += 1
     if validate_basic_keys(data, minor_version=1):
@@ -222,9 +227,12 @@ def json_lists_test(board_id, testing_standalone=False):
     result.passed = test_count == test_pass_count
     return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyocd json output test')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
+    parser = argparse.ArgumentParser(description="pyocd json output test")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)

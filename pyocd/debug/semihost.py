@@ -29,7 +29,7 @@ from typing import (IO, TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Un
 from typing_extensions import Literal
 
 from ..coresight.cortex_m import CortexM
-from ..core import (exceptions, session)
+from ..core import (exceptions)
 
 if TYPE_CHECKING:
     from .context import DebugContext

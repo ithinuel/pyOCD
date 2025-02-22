@@ -108,11 +108,11 @@ class RegisterCache(object):
         reading_cfbp = any(r for r in read_list if r in self.CFBP_REGS)
         reading_xpsr = any(r for r in read_list if r in self.XPSR_REGS)
         if reading_cfbp:
-            if not self.CFBP_INDEX in read_list:
+            if self.CFBP_INDEX not in read_list:
                 read_list.append(self.CFBP_INDEX)
             cfbp_index = read_list.index(self.CFBP_INDEX)
         if reading_xpsr:
-            if not self.XPSR_INDEX in read_list:
+            if self.XPSR_INDEX not in read_list:
                 read_list.append(self.XPSR_INDEX)
             xpsr_index = read_list.index(self.XPSR_INDEX)
         self._metrics.misses += len(read_list)

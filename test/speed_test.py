@@ -16,9 +16,8 @@
 # limitations under the License.
 from __future__ import print_function
 
-import os
 import sys
-from time import (sleep, time)
+from time import time
 from random import randrange
 import traceback
 import argparse
@@ -29,19 +28,16 @@ from pyocd.probe.pydapaccess import DAPAccess
 from pyocd.core.memory_map import MemoryType
 from pyocd.utility import conversion
 
-from test_util import (
-    Test,
-    TestResult,
-    get_session_options,
-    get_target_test_params
-    )
+from test_util import Test, TestResult, get_session_options, get_target_test_params
 
-_1MB = (1 * 1024 * 1024)
+_1MB = 1 * 1024 * 1024
+
 
 class SpeedTestResult(TestResult):
     def __init__(self):
         super(SpeedTestResult, self).__init__(None, None, None)
         self.name = "speed"
+
 
 class SpeedTest(Test):
     def __init__(self):
@@ -51,27 +47,33 @@ class SpeedTest(Test):
         format_str = "{:<15}{:>18}{:>18}{:>18}"
         result_list = filter(lambda x: isinstance(x, SpeedTestResult), result_list)
         print("\n\n------ Speed Test Performance ------", file=output_file)
-        print(format_str.format("Target", "RAM Read Speed", "RAM Write Speed", "ROM Read Speed"),
-              file=output_file)
+        print(
+            format_str.format(
+                "Target", "RAM Read Speed", "RAM Write Speed", "ROM Read Speed"
+            ),
+            file=output_file,
+        )
         print("", file=output_file)
         for result in result_list:
             if result.passed:
                 read_speed = "%.3f KB/s" % (float(result.read_speed) / float(1000))
                 write_speed = "%.3f KB/s" % (float(result.write_speed) / float(1000))
-                rom_read_speed = "%.3f KB/s" % (float(result.rom_read_speed) / float(1000))
+                rom_read_speed = "%.3f KB/s" % (
+                    float(result.rom_read_speed) / float(1000)
+                )
             else:
                 read_speed = "Fail"
                 write_speed = "Fail"
                 rom_read_speed = "Fail"
-            print(format_str.format(result.board,
-                                    read_speed, write_speed, rom_read_speed),
-                  file=output_file)
+            print(
+                format_str.format(
+                    result.board, read_speed, write_speed, rom_read_speed
+                ),
+                file=output_file,
+            )
         print("", file=output_file)
 
     def run(self, board):
-        passed = False
-        read_speed = None
-        write_speed = None
         try:
             result = self.test_function(board.unique_id)
         except Exception as e:
@@ -85,9 +87,10 @@ class SpeedTest(Test):
 
 
 def speed_test(board_id):
-    with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
+    with ConnectHelper.session_with_chosen_probe(
+        unique_id=board_id, **get_session_options()
+    ) as session:
         board = session.board
-        target_type = board.target_type
 
         memory_map = board.target.get_memory_map()
         ram_region = memory_map.get_default_region_of_type(MemoryType.RAM)
@@ -107,7 +110,7 @@ def speed_test(board_id):
         result = SpeedTestResult()
 
         test_params = get_target_test_params(session)
-        session.probe.set_clock(test_params['test_clock'])
+        session.probe.set_clock(test_params["test_clock"])
 
         test_config = "uncached 8-bit"
 
@@ -120,7 +123,9 @@ def speed_test(board_id):
             if width == 8:
                 target.write_memory_block8(test_addr, data)
             elif width == 32:
-                target.write_memory_block32(test_addr, conversion.byte_list_to_u32le_list(data))
+                target.write_memory_block32(
+                    test_addr, conversion.byte_list_to_u32le_list(data)
+                )
             target.flush()
             stop = time()
             diff = stop - start
@@ -131,12 +136,17 @@ def speed_test(board_id):
                 write_speed = test_size / diff
             if record_speed:
                 result.write_speed = write_speed
-            print("Writing %i byte took %.3f seconds: %.3f B/s" % (test_size, diff, write_speed))
+            print(
+                "Writing %i byte took %.3f seconds: %.3f B/s"
+                % (test_size, diff, write_speed)
+            )
             start = time()
             if width == 8:
                 block = target.read_memory_block8(test_addr, test_size)
             elif width == 32:
-                block = conversion.u32le_list_to_byte_list(target.read_memory_block32(test_addr, test_size // 4))
+                block = conversion.u32le_list_to_byte_list(
+                    target.read_memory_block32(test_addr, test_size // 4)
+                )
             target.flush()
             stop = time()
             diff = stop - start
@@ -147,16 +157,25 @@ def speed_test(board_id):
                 read_speed = test_size / diff
             if record_speed:
                 result.read_speed = read_speed
-            print("Reading %i byte took %.3f seconds: %.3f B/s" % (test_size, diff, read_speed))
+            print(
+                "Reading %i byte took %.3f seconds: %.3f B/s"
+                % (test_size, diff, read_speed)
+            )
             error = False
             if len(block) != len(data):
                 error = True
-                print("ERROR: read length (%d) != write length (%d)!" % (len(block), len(data)))
+                print(
+                    "ERROR: read length (%d) != write length (%d)!"
+                    % (len(block), len(data))
+                )
             if not error:
                 for i in range(len(block)):
-                    if (block[i] != data[i]):
+                    if block[i] != data[i]:
                         error = True
-                        print("ERROR: 0x%X, 0x%X, 0x%X!!!" % ((test_addr + i), block[i], data[i]))
+                        print(
+                            "ERROR: 0x%X, 0x%X, 0x%X!!!"
+                            % ((test_addr + i), block[i], data[i])
+                        )
             if error:
                 print("TEST FAILED")
             else:
@@ -169,9 +188,11 @@ def speed_test(board_id):
             test_size = rom_size
             start = time()
             if width == 8:
-                block = target.read_memory_block8(test_addr, test_size)
+                target.read_memory_block8(test_addr, test_size)
             elif width == 32:
-                block = conversion.u32le_list_to_byte_list(target.read_memory_block32(test_addr, test_size // 4))
+                conversion.u32le_list_to_byte_list(
+                    target.read_memory_block32(test_addr, test_size // 4)
+                )
             target.flush()
             stop = time()
             diff = stop - start
@@ -182,7 +203,10 @@ def speed_test(board_id):
                 read_speed = test_size / diff
             if record_speed:
                 result.rom_read_speed = read_speed
-            print("Reading %i byte took %.3f seconds: %.3f B/s" % (test_size, diff, read_speed))
+            print(
+                "Reading %i byte took %.3f seconds: %.3f B/s"
+                % (test_size, diff, read_speed)
+            )
             print("TEST PASSED")
             return True
 
@@ -232,10 +256,19 @@ def speed_test(board_id):
         result.passed = test_count == test_pass_count
         return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD speed test')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
-    parser.add_argument("-da", "--daparg", dest="daparg", nargs='+', help="Send setting to DAPAccess layer.")
+    parser = argparse.ArgumentParser(description="pyOCD speed test")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "-da",
+        "--daparg",
+        dest="daparg",
+        nargs="+",
+        help="Send setting to DAPAccess layer.",
+    )
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)

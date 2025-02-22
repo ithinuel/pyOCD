@@ -15,14 +15,13 @@
 # limitations under the License.
 
 import pytest
-import six
-from enum import Enum
 
-from pyocd.utility.notification import (Notification, Notifier)
+from pyocd.utility.notification import Notifier
 
 # Test both int and string events.
 EVENT_A = 1
 EVENT_B = "foo"
+
 
 class Subscriber(object):
     def __init__(self):
@@ -33,13 +32,16 @@ class Subscriber(object):
         self.was_called = True
         self.last_note = note
 
+
 @pytest.fixture
 def notifier():
     return Notifier()
 
+
 @pytest.fixture
 def subscriber():
     return Subscriber()
+
 
 class TestNotification(object):
     def test_basic_sub_and_send_a(self, notifier, subscriber):
@@ -48,7 +50,7 @@ class TestNotification(object):
         assert subscriber.was_called
         assert subscriber.last_note.event == EVENT_A
         assert subscriber.last_note.source == self
-        assert subscriber.last_note.data == None
+        assert subscriber.last_note.data is None
 
     def test_basic_sub_and_send_b(self, notifier, subscriber):
         notifier.subscribe(subscriber.cb, EVENT_B)
@@ -56,7 +58,7 @@ class TestNotification(object):
         assert subscriber.was_called
         assert subscriber.last_note.event == EVENT_B
         assert subscriber.last_note.source == self
-        assert subscriber.last_note.data == None
+        assert subscriber.last_note.data is None
 
     def test_unsub(self, notifier, subscriber):
         notifier.subscribe(subscriber.cb, EVENT_A)
@@ -76,12 +78,12 @@ class TestNotification(object):
         assert subscriber.was_called
         assert subscriber.last_note.event == EVENT_A
         assert subscriber.last_note.source == self
-        assert subscriber.last_note.data == None
+        assert subscriber.last_note.data is None
         notifier.notify(EVENT_B, self)
         assert subscriber.was_called
         assert subscriber.last_note.event == EVENT_B
         assert subscriber.last_note.source == self
-        assert subscriber.last_note.data == None
+        assert subscriber.last_note.data is None
 
     def test_diff_sub(self, notifier, subscriber):
         s2 = Subscriber()
@@ -98,7 +100,7 @@ class TestNotification(object):
         assert subscriber.was_called
         assert subscriber.last_note.event == EVENT_A
         assert subscriber.last_note.source == self
-        assert subscriber.last_note.data == None
+        assert subscriber.last_note.data is None
 
     def test_src_sub2(self, notifier, subscriber):
         notifier.subscribe(subscriber.cb, EVENT_A, source=self)
@@ -110,5 +112,3 @@ class TestNotification(object):
         notifier.unsubscribe(subscriber.cb)
         notifier.notify(EVENT_A, self)
         assert not subscriber.was_called
-
-

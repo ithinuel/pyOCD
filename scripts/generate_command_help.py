@@ -18,35 +18,32 @@
 import sys
 
 if sys.version_info[:2] < (3, 9):
-    print(f"This script requires Python 3.9 or later")
+    print("This script requires Python 3.9 or later")
     sys.exit(1)
 
 from pyocd.commands.base import (
     ALL_COMMANDS,
-    CommandBase,
     ValueBase,
-    )
+)
 
 # These modules must be imported in order to load the commands into the ALL_COMMANDS table.
-import pyocd.commands.commands
-import pyocd.commands.values
 
 ACCESS_DESC = {
-        'r': "read-only",
-        "w": "write-only",
-        "rw": "read-write",
-    }
+    "r": "read-only",
+    "w": "write-only",
+    "rw": "read-write",
+}
 
 GROUP_DOCS = {
-        'bringup': "These commands are meant to be used when starting up Commander in no-init mode. They are primarily useful for low-level debugging of debug infrastructure on a new chip.",
-        'symbols': "These commands require an ELF to be set.",
-    }
+    "bringup": "These commands are meant to be used when starting up Commander in no-init mode. They are primarily useful for low-level debugging of debug infrastructure on a new chip.",
+    "symbols": "These commands require an ELF to be set.",
+}
+
 
 def gen_command(info):
-    names = info['names']
-    usage = info['usage']
-    help = info['help']
-    extra_help = info.get('extra_help')
+    names = info["names"]
+    usage = info["usage"]
+    help = info["help"]
     print("""<tr><td>""")
     name_docs = []
     for name in names:
@@ -60,11 +57,11 @@ def gen_command(info):
     print("""</td></tr>""")
     print()
 
+
 def gen_value(info):
-    names = info['names']
-    access = info['access']
-    help = info['help']
-    extra_help = info.get('extra_help')
+    names = info["names"]
+    access = info["access"]
+    help = info["help"]
     print("""<tr><td>""")
     name_docs = []
     for name in names:
@@ -77,28 +74,27 @@ def gen_value(info):
     print("""</td></tr>""")
     print()
 
+
 def build_categories(commands):
     categories = {}
     for cmdlist in commands.values():
         for cmd in cmdlist:
-            categories.setdefault(cmd.INFO['category'], []).append(cmd)
+            categories.setdefault(cmd.INFO["category"], []).append(cmd)
     return categories
+
 
 def get_all_values(commands: dict[str, list[ValueBase]]) -> list[ValueBase]:
     """Converts dict of group name to list of commands"""
-    return [
-        c
-        for group_commands in commands.values()
-        for c in group_commands
-        ]
+    return [c for group_commands in commands.values() for c in group_commands]
+
 
 def gen_cmd_groups(commands):
     categories = build_categories(commands)
 
     for group in sorted(categories.keys()):
         # Filter out the base classes that have empty 'names'.
-        filtered_cmds = [c for c in categories[group] if c.INFO['names']]
-        group_cmds = sorted(filtered_cmds, key=lambda c: c.INFO['names'][0])
+        filtered_cmds = [c for c in categories[group] if c.INFO["names"]]
+        group_cmds = sorted(filtered_cmds, key=lambda c: c.INFO["names"][0])
 
         # Skip empty groups.
         if not group_cmds:
@@ -110,32 +106,35 @@ def gen_cmd_groups(commands):
         for cmd in group_cmds:
             gen_command(cmd.INFO)
 
+
 def gen_value_groups(commands: list[ValueBase]) -> None:
     # Filter out the base classes that have empty 'names'.
-    filtered_cmds = [c for c in commands if c.INFO['names']]
-    group_cmds = sorted(filtered_cmds, key=lambda c: c.INFO['names'][0])
+    filtered_cmds = [c for c in commands if c.INFO["names"]]
+    group_cmds = sorted(filtered_cmds, key=lambda c: c.INFO["names"][0])
 
-#         print(f"""<tr><td colspan="3"><b>{group.capitalize()}</b></td></tr>""")
+    #         print(f"""<tr><td colspan="3"><b>{group.capitalize()}</b></td></tr>""")
 
     for cmd in group_cmds:
         gen_value(cmd.INFO)
 
+
 def format_group_name(group: str) -> str:
-    return group.replace('_', ' ').capitalize()
+    return group.replace("_", " ").capitalize()
+
 
 def gen_command_docs(commands):
     nl = "\\"
     categories = build_categories(commands)
     for group in sorted(categories.keys()):
         # Filter out the base classes that have empty 'names'.
-        filtered_cmds = [c for c in categories[group] if c.INFO['names']]
-        group_cmds = sorted(filtered_cmds, key=lambda c: c.INFO['names'][0])
+        filtered_cmds = [c for c in categories[group] if c.INFO["names"]]
+        group_cmds = sorted(filtered_cmds, key=lambda c: c.INFO["names"][0])
 
         # Skip empty groups.
         if not group_cmds:
             continue
 
-        group_docs = GROUP_DOCS.get(group, '')
+        group_docs = GROUP_DOCS.get(group, "")
         print(f"""
 ### {format_group_name(group)}""")
         if group_docs:
@@ -144,57 +143,63 @@ def gen_command_docs(commands):
         for cmd in group_cmds:
             info = cmd.INFO
             print(f"""
-##### `{info['names'][0]}`
+##### `{info["names"][0]}`
 """)
-            if len(info['names']) > 1:
-                print(f"""**Aliases**: {', '.join("`%s`" % n for n in info['names'][1:])} """ + nl)
+            if len(info["names"]) > 1:
+                print(
+                    f"""**Aliases**: {", ".join("`%s`" % n for n in info["names"][1:])} """
+                    + nl
+                )
 
-            help = info['help']
-            if 'extra_help' in info:
-                help += " " + info['extra_help']
-            print(f"""**Usage**: {info['names'][0]} {info['usage']} {nl}
+            help = info["help"]
+            if "extra_help" in info:
+                help += " " + info["extra_help"]
+            print(f"""**Usage**: {info["names"][0]} {info["usage"]} {nl}
 {help}
 """)
+
 
 def gen_value_docs(commands: list[ValueBase]) -> None:
     nl = "\\"
     # Filter out the base classes that have empty 'names'.
-    filtered_cmds = [c for c in commands if c.INFO['names']]
-    group_cmds = sorted(filtered_cmds, key=lambda c: c.INFO['names'][0])
+    filtered_cmds = [c for c in commands if c.INFO["names"]]
+    group_cmds = sorted(filtered_cmds, key=lambda c: c.INFO["names"][0])
 
     for cmd in group_cmds:
         info = cmd.INFO
-        names = info['names']
+        names = info["names"]
         first_name = names[0]
-        access = info['access']
+        access = info["access"]
         access_desc = ACCESS_DESC[access]
-        help = info['help']
-        if 'extra_help' in info:
-            help += " " + info['extra_help']
+        help = info["help"]
+        if "extra_help" in info:
+            help += " " + info["extra_help"]
 
         print(f"""
 ##### `{first_name}`
 """)
         if len(names) > 1:
-            print(f"""**Aliases**: {', '.join("`%s`" % n for n in names[1:])} """ + nl)
+            print(f"""**Aliases**: {", ".join("`%s`" % n for n in names[1:])} """ + nl)
 
         print(f"**Access**: {access_desc} {nl}")
-        print(f"**Usage**: ", end='')
-        if 'r' in access:
-            print(f"show {first_name}", end='')
-        if access == 'rw':
-            print(", ", end='')
-        if 'w' in access:
-            print(f"set {first_name} VALUE", end='')
+        print("**Usage**: ", end="")
+        if "r" in access:
+            print(f"show {first_name}", end="")
+        if access == "rw":
+            print(", ", end="")
+        if "w" in access:
+            print(f"set {first_name} VALUE", end="")
         print(f" {nl}")
 
         print(help)
+
 
 def get_all_command_classes():
     klasses = set()
     for cmds in ALL_COMMANDS.values():
         klasses.update(cmds)
     return klasses
+
 
 def split_into_commands_and_values():
     commands = get_all_command_classes()
@@ -203,10 +208,11 @@ def split_into_commands_and_values():
     cmd_groups = {}
     value_groups = {}
     for cmd in cmd_classes:
-        cmd_groups.setdefault(cmd.INFO['group'], set()).add(cmd)
+        cmd_groups.setdefault(cmd.INFO["group"], set()).add(cmd)
     for val in value_classes:
-        value_groups.setdefault(val.INFO['group'], set()).add(val)
+        value_groups.setdefault(val.INFO["group"], set()).add(val)
     return cmd_groups, value_groups
+
 
 def main():
     all_cmds_by_group, all_values_by_group = split_into_commands_and_values()
@@ -252,7 +258,6 @@ Value details
 -------------""")
     gen_value_docs(all_values)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
-
-

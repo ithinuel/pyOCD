@@ -50,65 +50,142 @@ from pyocd.gdbserver.gdbserver import (
     unescape,
 )
 
+
 # pylint: disable=invalid-name
 class TestConversionUtilities(object):
-    @pytest.mark.parametrize(("w",), [
+    @pytest.mark.parametrize(
+        ("w",),
+        [
             (8,),
             (16,),
             (32,),
             (64,),
             (128,),
             (256,),
-        ])
+        ],
+    )
     def test_byte_list_to_nbit_le_list_empty(self, w):
         assert byte_list_to_nbit_le_list([], w) == []
 
-    @pytest.mark.parametrize(("w",), [
+    @pytest.mark.parametrize(
+        ("w",),
+        [
             (8,),
             (16,),
             (32,),
             (64,),
             (128,),
             (256,),
-        ])
-    def test_nbit_le_list_to_byte_list(self, w):
+        ],
+    )
+    def test_nbit_le_list_to_byte_list_empty(self, w):
         assert nbit_le_list_to_byte_list([], w) == []
 
-    @pytest.mark.parametrize(("w", "r"), [
+    @pytest.mark.parametrize(
+        ("w", "r"),
+        [
             (8, [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]),
             (16, [0x201, 0x403, 0x605, 0x807]),
             (32, [0x4030201, 0x8070605]),
             (64, [0x807060504030201]),
             (128, [0x807060504030201]),
             (256, [0x807060504030201]),
-        ])
+        ],
+    )
     def test_byte_list_to_nbit_le_list(self, w, r):
-        assert byte_list_to_nbit_le_list([1,2,3,4,5,6,7,8], w) == r
+        assert byte_list_to_nbit_le_list([1, 2, 3, 4, 5, 6, 7, 8], w) == r
 
-    @pytest.mark.parametrize(("w", "r"), [
+    @pytest.mark.parametrize(
+        ("w", "r"),
+        [
             (8, [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]),
             (16, [0x201, 0x403, 0x605, 0x807]),
             (32, [0x4030201, 0x8070605]),
             (64, [0x807060504030201]),
             (128, [0x55555555555555550807060504030201]),
             (256, [0x5555555555555555555555555555555555555555555555550807060504030201]),
-        ])
+        ],
+    )
     def test_byte_list_to_nbit_le_list_nz_pad(self, w, r):
-        assert byte_list_to_nbit_le_list([1,2,3,4,5,6,7,8], w, pad=0x55) == r
+        assert byte_list_to_nbit_le_list([1, 2, 3, 4, 5, 6, 7, 8], w, pad=0x55) == r
 
-    @pytest.mark.parametrize(("w", "i"), [
-            (8, [1,2,3,4,5,6,7,8]),
+    @pytest.mark.parametrize(
+        ("w", "i"),
+        [
+            (8, [1, 2, 3, 4, 5, 6, 7, 8]),
             (16, [0x201, 0x403, 0x605, 0x807]),
             (32, [0x4030201, 0x8070605]),
             (64, [0x807060504030201]),
-        ])
+        ],
+    )
     def test_nbit_le_list_to_byte_list(self, w, i):
-        assert nbit_le_list_to_byte_list(i, w) == [1,2,3,4,5,6,7,8]
+        assert nbit_le_list_to_byte_list(i, w) == [1, 2, 3, 4, 5, 6, 7, 8]
 
-    @pytest.mark.parametrize(("w", "i", "r"), [
-            (128, [0x55555555555555550807060504030201], [1,2,3,4,5,6,7,8,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55]),
-            (256, [0x555555555555555555555555555555550807060504030201], [1,2,3,4,5,6,7,8,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0,0,0,0,0,0,0,0]),
-        ])
+    @pytest.mark.parametrize(
+        ("w", "i", "r"),
+        [
+            (
+                128,
+                [0x55555555555555550807060504030201],
+                [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                ],
+            ),
+            (
+                256,
+                [0x555555555555555555555555555555550807060504030201],
+                [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0x55,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ],
+            ),
+        ],
+    )
     def test_nbit_le_list_to_byte_list_lg(self, w, i, r):
         assert nbit_le_list_to_byte_list(i, w) == r
 
@@ -133,13 +210,16 @@ class TestConversionUtilities(object):
         assert byte_list_to_u32le_list([1, 2, 3]) == [0x00030201]
         assert byte_list_to_u32le_list([1, 2, 3, 4, 5]) == [0x04030201, 0x00000005]
 
-        assert byte_list_to_u32le_list([1], pad=0xcc) == [0xcccccc01]
-        assert byte_list_to_u32le_list([1, 2, 3], pad=0xdd) == [0xdd030201]
-        assert byte_list_to_u32le_list([1, 2, 3, 4, 5], pad=0xff) == [0x04030201, 0xffffff05]
+        assert byte_list_to_u32le_list([1], pad=0xCC) == [0xCCCCCC01]
+        assert byte_list_to_u32le_list([1, 2, 3], pad=0xDD) == [0xDD030201]
+        assert byte_list_to_u32le_list([1, 2, 3, 4, 5], pad=0xFF) == [
+            0x04030201,
+            0xFFFFFF05,
+        ]
 
     def test_byte_list_to_u32le_list_bytearray(self):
-        assert byte_list_to_u32le_list(bytearray(b'abcd')) == [0x64636261]
-        assert byte_list_to_u32le_list(bytearray(b'a')) == [0x00000061]
+        assert byte_list_to_u32le_list(bytearray(b"abcd")) == [0x64636261]
+        assert byte_list_to_u32le_list(bytearray(b"a")) == [0x00000061]
 
     def test_u32leListToByteList(self):
         data = [
@@ -156,15 +236,15 @@ class TestConversionUtilities(object):
 
     def test_u16leListToByteList(self):
         data = [0x3412, 0xFEAB]
-        assert u16le_list_to_byte_list(data) == [
-            0x12,
-            0x34,
-            0xAB,
-            0xFE
-        ]
+        assert u16le_list_to_byte_list(data) == [0x12, 0x34, 0xAB, 0xFE]
 
     def test_byteListToU16leList(self):
-        data = [0x01, 0x00, 0xAB, 0xCD, ]
+        data = [
+            0x01,
+            0x00,
+            0xAB,
+            0xCD,
+        ]
         assert byte_list_to_u16le_list(data) == [
             0x0001,
             0xCDAB,
@@ -195,10 +275,10 @@ class TestConversionUtilities(object):
         assert hex16_to_u64le("0102ABCD171819EF") == 0x0102ABCD171819EF
 
     def test_uint_to_hex_le_odd_width(self):
-        assert uint_to_hex_le(0xd0102ABCD, 36) == "cdab02010d"
+        assert uint_to_hex_le(0xD0102ABCD, 36) == "cdab02010d"
 
     def test_hex_le_to_uint_odd_width(self):
-        assert hex_le_to_uint("0102ABCD0d", 36) == 0x0dCDAB0201
+        assert hex_le_to_uint("0102ABCD0d", 36) == 0x0DCDAB0201
 
     def test_byteToHex2(self):
         assert byte_to_hex2(0xC3) == "c3"
@@ -207,12 +287,14 @@ class TestConversionUtilities(object):
         assert hex_to_byte_list("ABCDEF1234") == [0xAB, 0xCD, 0xEF, 0x12, 0x34]
 
     def test_hexDecode(self):
-        assert hex_decode('ABCDEF1234') == b'\xab\xcd\xef\x12\x34'
+        assert hex_decode("ABCDEF1234") == b"\xab\xcd\xef\x12\x34"
 
     def test_hexEncode(self):
-        assert hex_encode(b'\xab\xcd\xef\x12\x34') == b'abcdef1234'
+        assert hex_encode(b"\xab\xcd\xef\x12\x34") == b"abcdef1234"
 
-    @pytest.mark.parametrize(("args", "result"), [
+    @pytest.mark.parametrize(
+        ("args", "result"),
+        [
             ((0, 1024), 0),
             ((1, 1024), 1024),
             ((0, 3), 0),
@@ -221,11 +303,14 @@ class TestConversionUtilities(object):
             ((9, 4), 12),
             ((13, 16), 16),
             ((13, 8), 16),
-        ])
+        ],
+    )
     def test_align_up(self, args, result):
         assert result == align_up(*args)
 
-    @pytest.mark.parametrize(("args", "result"), [
+    @pytest.mark.parametrize(
+        ("args", "result"),
+        [
             ((0, 1024), 0),
             ((1, 1024), 0),
             ((0, 3), 0),
@@ -234,58 +319,71 @@ class TestConversionUtilities(object):
             ((9, 4), 8),
             ((13, 16), 0),
             ((13, 8), 8),
-        ])
+        ],
+    )
     def test_align_down(self, args, result):
         assert result == align_down(*args)
 
+
 # Characters that must be escaped.
-ESCAPEES = (0x23, 0x24, 0x2a, 0x7d) # == ('#', '$', '}', '*')
+ESCAPEES = (0x23, 0x24, 0x2A, 0x7D)  # == ('#', '$', '}', '*')
+
 
 # Test the gdbserver binary data escape/unescape routines.
 class TestGdbEscape(object):
     # Verify all chars that shouldn't be escaped pass through unmodified.
-    @pytest.mark.parametrize("data",
-        [six.int2byte(x) for x in range(256) if (x not in ESCAPEES)])
+    @pytest.mark.parametrize(
+        "data", [six.int2byte(x) for x in range(256) if (x not in ESCAPEES)]
+    )
     def test_escape_passthrough(self, data):
         assert escape(data) == data
 
-    @pytest.mark.parametrize(("data", "expected"), [
-            (b'#', b'}\x03'),
-            (b'$', b'}\x04'),
-            (b'}', b'}]'),
-            (b'*', b'}\x0a')
-        ])
+    @pytest.mark.parametrize(
+        ("data", "expected"),
+        [(b"#", b"}\x03"), (b"$", b"}\x04"), (b"}", b"}]"), (b"*", b"}\x0a")],
+    )
     def test_escape_1(self, data, expected):
         assert escape(data) == expected
 
     def test_escape_2(self):
-        assert escape(b'1234#09*xyz') == b'1234}\x0309}\x0axyz'
+        assert escape(b"1234#09*xyz") == b"1234}\x0309}\x0axyz"
 
     # Verify all chars that shouldn't be escaped pass through unmodified.
-    @pytest.mark.parametrize("data",
-        [six.int2byte(x) for x in range(256) if (x not in ESCAPEES)])
+    @pytest.mark.parametrize(
+        "data", [six.int2byte(x) for x in range(256) if (x not in ESCAPEES)]
+    )
     def test_unescape_passthrough(self, data):
         assert unescape(data) == [six.byte2int(data)]
 
-    @pytest.mark.parametrize(("expected", "data"), [
-            (0x23, b'}\x03'),
-            (0x24, b'}\x04'),
-            (0x7d, b'}]'),
-            (0x2a, b'}\x0a')
-        ])
+    @pytest.mark.parametrize(
+        ("expected", "data"),
+        [(0x23, b"}\x03"), (0x24, b"}\x04"), (0x7D, b"}]"), (0x2A, b"}\x0a")],
+    )
     def test_unescape_1(self, data, expected):
         assert unescape(data) == [expected]
 
     def test_unescape_2(self):
-        assert unescape(b'1234}\x0309}\x0axyz') == \
-            [0x31, 0x32, 0x33, 0x34, 0x23, 0x30, 0x39, 0x2a, 0x78, 0x79, 0x7a]
+        assert unescape(b"1234}\x0309}\x0axyz") == [
+            0x31,
+            0x32,
+            0x33,
+            0x34,
+            0x23,
+            0x30,
+            0x39,
+            0x2A,
+            0x78,
+            0x79,
+            0x7A,
+        ]
+
 
 class TestPairwise(object):
     def test_empty(self):
         assert list(pairwise([])) == []
 
     def test_str(self):
-        assert list(pairwise('abcdef')) == [('a','b'), ('c','d'), ('e','f')]
+        assert list(pairwise("abcdef")) == [("a", "b"), ("c", "d"), ("e", "f")]
 
     def test_int(self):
         assert list(pairwise([1, 2, 3, 4, 5, 6])) == [(1, 2), (3, 4), (5, 6)]

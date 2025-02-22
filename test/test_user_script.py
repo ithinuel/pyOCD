@@ -1,18 +1,21 @@
 # Test user script.
 
-@command(help="test command")
+
+@command(help="test command")  # noqa: F821
 def testcmd(f: float, i: int, s: str):
     assert isinstance(f, float)
     assert isinstance(i, int)
     assert isinstance(s, str)
 
-@command("anothertestcmd", help="second test command")
+
+@command("anothertestcmd", help="second test command")  # noqa: F821
 def testcmd2(*args):
     assert isinstance(args, tuple)
     assert all(isinstance(s, str) for s in args)
 
 
 # Provides stub implementations of all hooks.
+
 
 def will_connect(board):
     """@brief Pre-init hook for the board.
@@ -22,6 +25,7 @@ def will_connect(board):
     """
     pass
 
+
 def did_connect(board):
     """@brief Post-initialization hook for the board.
     @param self
@@ -29,6 +33,7 @@ def did_connect(board):
     @return Ignored.
     """
     pass
+
 
 def will_init_target(target, init_sequence):
     """@brief Hook to review and modify init call sequence prior to execution.
@@ -40,6 +45,7 @@ def will_init_target(target, init_sequence):
     """
     pass
 
+
 def did_init_target(target):
     """@brief Post-initialization hook.
     @param self
@@ -47,6 +53,7 @@ def did_init_target(target):
     @return Ignored.
     """
     pass
+
 
 def will_start_debug_core(core):
     """@brief Hook to enable debug for the given core.
@@ -57,6 +64,7 @@ def will_start_debug_core(core):
     """
     pass
 
+
 def did_start_debug_core(core):
     """@brief Post-initialization hook.
     @param self
@@ -64,6 +72,7 @@ def did_start_debug_core(core):
     @return Ignored.
     """
     pass
+
 
 def will_stop_debug_core(core):
     """@brief Pre-cleanup hook for the core.
@@ -74,6 +83,7 @@ def will_stop_debug_core(core):
     """
     pass
 
+
 def did_stop_debug_core(core):
     """@brief Post-cleanup hook for the core.
     @param self
@@ -81,6 +91,7 @@ def did_stop_debug_core(core):
     @return Ignored.
     """
     pass
+
 
 def will_disconnect(target, resume):
     """@brief Pre-disconnect hook.
@@ -91,6 +102,7 @@ def will_disconnect(target, resume):
     """
     pass
 
+
 def did_disconnect(target, resume):
     """@brief Post-disconnect hook.
     @param self
@@ -98,6 +110,7 @@ def did_disconnect(target, resume):
     @param resume The value of the `disconnect_on_resume` option.
     @return Ignored."""
     pass
+
 
 def will_reset(core, reset_type):
     """@brief Pre-reset hook.
@@ -109,6 +122,7 @@ def will_reset(core, reset_type):
     """
     pass
 
+
 def did_reset(core, reset_type):
     """@brief Post-reset hook.
     @param self
@@ -117,6 +131,7 @@ def did_reset(core, reset_type):
     @return Ignored.
     """
     pass
+
 
 def set_reset_catch(core, reset_type):
     """@brief Hook to prepare target for halting on reset.
@@ -128,6 +143,7 @@ def set_reset_catch(core, reset_type):
     """
     pass
 
+
 def clear_reset_catch(core, reset_type):
     """@brief Hook to clean up target after a reset and halt.
     @param self
@@ -136,6 +152,7 @@ def clear_reset_catch(core, reset_type):
     @return Ignored.
     """
     pass
+
 
 def mass_erase(target):
     """@brief Hook to override mass erase.
@@ -147,6 +164,7 @@ def mass_erase(target):
     """
     pass
 
+
 def trace_start(target, mode):
     """@brief Hook to prepare for tracing the target.
     @param self
@@ -156,6 +174,7 @@ def trace_start(target, mode):
     """
     pass
 
+
 def trace_stop(target, mode):
     """@brief Hook to clean up after tracing the target.
     @param self
@@ -164,5 +183,3 @@ def trace_stop(target, mode):
     @return Ignored.
     """
     pass
-
-

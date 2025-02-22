@@ -16,7 +16,7 @@
 
 import pytest
 
-from .conftest import mock
+from unittest import mock
 
 from pyocd.core.exceptions import TransferError
 from pyocd.utility.autoflush import Autoflush

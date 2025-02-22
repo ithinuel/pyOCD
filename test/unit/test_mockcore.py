@@ -14,15 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-import logging
 
-from .mockcore import MockCore
 
-from pyocd.core import memory_map
 from pyocd.coresight.cortex_m_core_registers import index_for_reg
-from pyocd.utility import conversion
-from pyocd.utility import mask
 
 # @pytest.fixture(scope='function')
 # def mockcore():

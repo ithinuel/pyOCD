@@ -16,11 +16,7 @@
 # limitations under the License.
 from __future__ import print_function
 
-import os
-import sys
 from time import sleep
-from random import randrange
-import math
 import logging
 
 from pyocd.core.helpers import ConnectHelper

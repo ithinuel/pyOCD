@@ -16,18 +16,14 @@
 from __future__ import print_function
 
 import argparse
-import os
 import sys
-from time import (sleep, time)
+from time import sleep, time
 from random import randrange
 import math
-import argparse
 import traceback
 import logging
-from random import randrange
 
 from pyocd.core.target import Target
-from pyocd.coresight.cortex_m import CortexM
 from pyocd.gdbserver.context_facade import GDBDebugContextFacade
 from pyocd.core.helpers import ConnectHelper
 from pyocd.utility.conversion import float32_to_u32, u32_to_float32
@@ -42,9 +38,10 @@ from test_util import (
     get_session_options,
     get_target_test_params,
     get_test_binary_path,
-    )
+)
 
 TEST_COUNT = 20
+
 
 class CortexTestResult(TestResult):
     METRICS = [
@@ -55,7 +52,7 @@ class CortexTestResult(TestResult):
         "set_reg_context",
         "run_halt",
         "gdb_step",
-        ]
+    ]
 
     def __init__(self):
         super(CortexTestResult, self).__init__(None, None, None)
@@ -63,6 +60,7 @@ class CortexTestResult(TestResult):
         self.times = {}
         for metric in self.METRICS:
             self.times[metric] = -1.0
+
 
 class CortexTest(Test):
     def __init__(self):
@@ -75,7 +73,12 @@ class CortexTest(Test):
         for result in result_list:
             print("Target {}:".format(result.board), file=output_file)
             for metric in CortexTestResult.METRICS:
-                print("    {:<20} = {: 8.3f} ms".format(metric, result.times[metric] * 1000), file=output_file)
+                print(
+                    "    {:<20} = {: 8.3f} ms".format(
+                        metric, result.times[metric] * 1000
+                    ),
+                    file=output_file,
+                )
         print("", file=output_file)
 
     def run(self, board):
@@ -90,8 +93,10 @@ class CortexTest(Test):
         result.test = self
         return result
 
+
 def float_compare(f1, f2):
     return abs(f1 - f2) < 0.0001
+
 
 def test_function(session, function):
     session.probe.flush()
@@ -102,17 +107,19 @@ def test_function(session, function):
     stop = time()
     return (stop - start) / float(TEST_COUNT)
 
+
 def cortex_test(board_id):
-    with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
+    with ConnectHelper.session_with_chosen_probe(
+        unique_id=board_id, **get_session_options()
+    ) as session:
         board = session.board
-        target_type = board.target_type
 
         binary_file = get_test_binary_path(board.test_binary)
 
         test_params = get_target_test_params(session)
-        test_clock = test_params['test_clock']
-        addr_invalid = 0x3E000000 # Last 16MB of ARM SRAM region - typically empty
-        expect_invalid_access_to_fail = test_params['error_on_invalid_access']
+        test_clock = test_params["test_clock"]
+        addr_invalid = 0x3E000000  # Last 16MB of ARM SRAM region - typically empty
+        expect_invalid_access_to_fail = test_params["error_on_invalid_access"]
 
         memory_map = board.target.get_memory_map()
         ram_region = memory_map.get_default_region_of_type(MemoryType.RAM)
@@ -144,7 +151,6 @@ def cortex_test(board_id):
 
         print("PROGRAMMING COMPLETE")
 
-
         print("\n\n----- TESTING CORTEX-M PERFORMANCE -----")
         test_time = test_function(session, gdbFacade.get_t_response)
         result.times["get_t_response"] = test_time
@@ -159,6 +165,7 @@ def cortex_test(board_id):
         def set_remove_breakpoint():
             target.set_breakpoint(0)
             target.remove_breakpoint(0)
+
         test_time = test_function(session, set_remove_breakpoint)
         result.times["bp_add_remove"] = test_time
         print("Add and remove breakpoint:       %f" % test_time)
@@ -170,8 +177,10 @@ def cortex_test(board_id):
 
         # set_register_context
         context = gdbFacade.get_register_context()
+
         def set_register_context():
             gdbFacade.set_register_context(context)
+
         test_time = test_function(session, set_register_context)
         result.times["set_reg_context"] = test_time
         print("Function set_register_context:   %f" % test_time)
@@ -180,6 +189,7 @@ def cortex_test(board_id):
         def run_halt():
             target.resume()
             target.halt()
+
         test_time = test_function(session, run_halt)
         result.times["run_halt"] = test_time
         print("Resume and halt:                 %f" % test_time)
@@ -193,6 +203,7 @@ def cortex_test(board_id):
             target.halt()
             gdbFacade.get_t_response()
             target.remove_breakpoint(0)
+
         test_time = test_function(session, simulate_step)
         result.times["gdb_step"] = test_time
         print("Simulated GDB step:              %f" % test_time)
@@ -203,11 +214,21 @@ def cortex_test(board_id):
         print("TEST PASSED")
 
         print("\n\n------ Testing Reset Types ------")
+
         def reset_methods(fnc):
-            test_hw_reset = Target.ResetType.HW in target.selected_core.supported_reset_types
-            test_system_reset = Target.ResetType.SW_SYSTEM in target.selected_core.supported_reset_types
-            test_core_reset = Target.ResetType.SW_CORE in target.selected_core.supported_reset_types
-            test_emulated_reset = Target.ResetType.SW_EMULATED in target.selected_core.supported_reset_types
+            test_hw_reset = (
+                Target.ResetType.HW in target.selected_core.supported_reset_types
+            )
+            test_system_reset = (
+                Target.ResetType.SW_SYSTEM in target.selected_core.supported_reset_types
+            )
+            test_core_reset = (
+                Target.ResetType.SW_CORE in target.selected_core.supported_reset_types
+            )
+            test_emulated_reset = (
+                Target.ResetType.SW_EMULATED
+                in target.selected_core.supported_reset_types
+            )
 
             if test_hw_reset:
                 print("Hardware reset")
@@ -238,41 +259,49 @@ def cortex_test(board_id):
 
             if test_system_reset:
                 print("(Default) Software reset (SYSTEM)")
-                target.selected_core.default_software_reset_type = Target.ResetType.SW_SYSTEM
+                target.selected_core.default_software_reset_type = (
+                    Target.ResetType.SW_SYSTEM
+                )
                 fnc(reset_type=Target.ResetType.SW)
             if test_core_reset:
                 print("(Default) Software reset (CORE)")
-                target.selected_core.default_software_reset_type = Target.ResetType.SW_CORE
+                target.selected_core.default_software_reset_type = (
+                    Target.ResetType.SW_CORE
+                )
                 fnc(reset_type=Target.ResetType.SW)
             if test_emulated_reset:
                 print("(Default) Software reset (emulated)")
-                target.selected_core.default_software_reset_type = Target.ResetType.SW_EMULATED
+                target.selected_core.default_software_reset_type = (
+                    Target.ResetType.SW_EMULATED
+                )
                 fnc(reset_type=Target.ResetType.SW)
 
             if test_system_reset:
                 print("Software reset (option=default)")
                 target.selected_core.default_reset_type = Target.ResetType.SW
-                target.selected_core.default_software_reset_type = Target.ResetType.SW_SYSTEM
-                session.options['reset_type'] = 'default'
+                target.selected_core.default_software_reset_type = (
+                    Target.ResetType.SW_SYSTEM
+                )
+                session.options["reset_type"] = "default"
                 fnc(reset_type=None)
             if test_hw_reset:
                 print("Reset (option=hw)")
-                session.options['reset_type'] = 'hw'
+                session.options["reset_type"] = "hw"
                 fnc(reset_type=None)
             print("Software reset (option=sw)")
-            session.options['reset_type'] = 'sw'
+            session.options["reset_type"] = "sw"
             fnc(reset_type=None)
             if test_system_reset:
                 print("Software reset (option=system)")
-                session.options['reset_type'] = 'system'
+                session.options["reset_type"] = "system"
                 fnc(reset_type=None)
             if test_core_reset:
                 print("Software reset (option=core)")
-                session.options['reset_type'] = 'core'
+                session.options["reset_type"] = "core"
                 fnc(reset_type=None)
             if test_emulated_reset:
                 print("Software reset (option=emulated)")
-                session.options['reset_type'] = 'emulated'
+                session.options["reset_type"] = "emulated"
                 fnc(reset_type=None)
 
         reset_methods(target.reset)
@@ -282,7 +311,6 @@ def cortex_test(board_id):
         test_count += 1
         print("TEST PASSED")
 
-
         print("\n\n------ Testing Reset Halt ------")
         reset_methods(target.reset_and_halt)
 
@@ -291,12 +319,11 @@ def cortex_test(board_id):
         test_count += 1
         print("TEST PASSED")
 
-
         print("\n\n------ Testing Register Read/Write ------")
         print("Reading r0")
-        val = target.read_core_register('r0')
+        val = target.read_core_register("r0")
         origR0 = val
-        rawVal = target.read_core_register_raw('r0')
+        rawVal = target.read_core_register_raw("r0")
         test_count += 1
         if val == rawVal:
             test_pass_count += 1
@@ -305,9 +332,9 @@ def cortex_test(board_id):
             print("TEST FAILED")
 
         print("Writing r0")
-        target.write_core_register('r0', 0x12345678)
-        val = target.read_core_register('r0')
-        rawVal = target.read_core_register_raw('r0')
+        target.write_core_register("r0", 0x12345678)
+        val = target.read_core_register("r0")
+        rawVal = target.read_core_register_raw("r0")
         test_count += 1
         if val == 0x12345678 and rawVal == 0x12345678:
             test_pass_count += 1
@@ -316,9 +343,9 @@ def cortex_test(board_id):
             print("TEST FAILED")
 
         print("Raw writing r0")
-        target.write_core_register_raw('r0', 0x87654321)
-        val = target.read_core_register('r0')
-        rawVal = target.read_core_register_raw('r0')
+        target.write_core_register_raw("r0", 0x87654321)
+        val = target.read_core_register("r0")
+        rawVal = target.read_core_register_raw("r0")
         test_count += 1
         if val == 0x87654321 and rawVal == 0x87654321:
             test_pass_count += 1
@@ -327,9 +354,9 @@ def cortex_test(board_id):
             print("TEST FAILED")
 
         print("Read/write r0, r1, r2, r3")
-        origRegs = target.read_core_registers_raw(['r0', 'r1', 'r2', 'r3'])
-        target.write_core_registers_raw(['r0', 'r1', 'r2', 'r3'], [1, 2, 3, 4])
-        vals = target.read_core_registers_raw(['r0', 'r1', 'r2', 'r3'])
+        origRegs = target.read_core_registers_raw(["r0", "r1", "r2", "r3"])
+        target.write_core_registers_raw(["r0", "r1", "r2", "r3"], [1, 2, 3, 4])
+        vals = target.read_core_registers_raw(["r0", "r1", "r2", "r3"])
         passed = vals[0] == 1 and vals[1] == 2 and vals[2] == 3 and vals[3] == 4
         test_count += 1
         if passed:
@@ -340,12 +367,12 @@ def cortex_test(board_id):
 
         # Restore regs
         origRegs[0] = origR0
-        target.write_core_registers_raw(['r0', 'r1', 'r2', 'r3'], origRegs)
+        target.write_core_registers_raw(["r0", "r1", "r2", "r3"], origRegs)
 
         print("Verify exception is raised while core is running")
         target.resume()
         try:
-            val = target.read_core_register('r0')
+            val = target.read_core_register("r0")
         except exceptions.CoreRegisterAccessError:
             passed = True
         else:
@@ -359,7 +386,7 @@ def cortex_test(board_id):
 
         print("Verify failure to write core register while running raises exception")
         try:
-            target.write_core_register('r0', 0x1234)
+            target.write_core_register("r0", 0x1234)
         except exceptions.CoreRegisterAccessError:
             passed = True
         else:
@@ -376,11 +403,14 @@ def cortex_test(board_id):
 
         if target.selected_core.has_fpu:
             print("Reading s0")
-            val = target.read_core_register('s0')
-            rawVal = target.read_core_register_raw('s0')
+            val = target.read_core_register("s0")
+            rawVal = target.read_core_register_raw("s0")
             origRawS0 = rawVal
-            passed = isinstance(val, float) and isinstance(rawVal, int) \
-                        and float32_to_u32(val) == rawVal
+            passed = (
+                isinstance(val, float)
+                and isinstance(rawVal, int)
+                and float32_to_u32(val) == rawVal
+            )
             test_count += 1
             if passed:
                 test_pass_count += 1
@@ -389,21 +419,26 @@ def cortex_test(board_id):
                 print("TEST FAILED")
 
             print("Writing s0")
-            target.write_core_register('s0', math.pi)
-            val = target.read_core_register('s0')
-            rawVal = target.read_core_register_raw('s0')
-            passed = float_compare(val, math.pi) and float_compare(u32_to_float32(rawVal), math.pi)
+            target.write_core_register("s0", math.pi)
+            val = target.read_core_register("s0")
+            rawVal = target.read_core_register_raw("s0")
+            passed = float_compare(val, math.pi) and float_compare(
+                u32_to_float32(rawVal), math.pi
+            )
             test_count += 1
             if passed:
                 test_pass_count += 1
                 print("TEST PASSED")
             else:
-                print("TEST FAILED (%f==%f, 0x%08x->%f)" % (val, math.pi, rawVal, u32_to_float32(rawVal)))
+                print(
+                    "TEST FAILED (%f==%f, 0x%08x->%f)"
+                    % (val, math.pi, rawVal, u32_to_float32(rawVal))
+                )
 
             print("Raw writing s0")
             x = float32_to_u32(32.768)
-            target.write_core_register_raw('s0', x)
-            val = target.read_core_register('s0')
+            target.write_core_register_raw("s0", x)
+            val = target.read_core_register("s0")
             passed = float_compare(val, 32.768)
             test_count += 1
             if passed:
@@ -415,24 +450,30 @@ def cortex_test(board_id):
             print("Read/write s0, s1")
             _1p1 = float32_to_u32(1.1)
             _2p2 = float32_to_u32(2.2)
-            origRegs = target.read_core_registers_raw(['s0', 's1'])
-            target.write_core_registers_raw(['s0', 's1'], [_1p1, _2p2])
-            vals = target.read_core_registers_raw(['s0', 's1'])
-            s0 = target.read_core_register('s0')
-            s1 = target.read_core_register('s1')
-            passed = vals[0] == _1p1 and float_compare(s0, 1.1) \
-                        and vals[1] == _2p2 and float_compare(s1, 2.2)
+            origRegs = target.read_core_registers_raw(["s0", "s1"])
+            target.write_core_registers_raw(["s0", "s1"], [_1p1, _2p2])
+            vals = target.read_core_registers_raw(["s0", "s1"])
+            s0 = target.read_core_register("s0")
+            s1 = target.read_core_register("s1")
+            passed = (
+                vals[0] == _1p1
+                and float_compare(s0, 1.1)
+                and vals[1] == _2p2
+                and float_compare(s1, 2.2)
+            )
             test_count += 1
             if passed:
                 test_pass_count += 1
                 print("TEST PASSED")
             else:
-                print("TEST FAILED (0x%08x==0x%08x, %f==%f, 0x%08x==0x%08x, %f==%f)" \
-                    % (vals[0], _1p1, s0, 1.1, vals[1], _2p2, s1, 2.2))
+                print(
+                    "TEST FAILED (0x%08x==0x%08x, %f==%f, 0x%08x==0x%08x, %f==%f)"
+                    % (vals[0], _1p1, s0, 1.1, vals[1], _2p2, s1, 2.2)
+                )
 
             # Restore s0
             origRegs[0] = origRawS0
-            target.write_core_registers_raw(['s0', 's1'], origRegs)
+            target.write_core_registers_raw(["s0", "s1"], origRegs)
 
         print("Verify that all listed core registers can be accessed")
 
@@ -453,13 +494,17 @@ def cortex_test(board_id):
                 target.write_core_register_raw(r.name, new_value)
                 read_val = target.read_core_register_raw(r.name)
                 if read_val != new_value:
-                    print(f"Failed to change value of register {r.name} to {new_value:#x}; read {read_val:#x}")
+                    print(
+                        f"Failed to change value of register {r.name} to {new_value:#x}; read {read_val:#x}"
+                    )
                     did_pass = False
 
                 target.write_core_register_raw(r.name, original_val)
                 read_val = target.read_core_register_raw(r.name)
                 if read_val != original_val:
-                    print(f"Failed to restore value of register {r.name} back to original {original_val:#x}; read {read_val:#x}")
+                    print(
+                        f"Failed to restore value of register {r.name} back to original {original_val:#x}; read {read_val:#x}"
+                    )
                     did_pass = False
             except exceptions.CoreRegisterAccessError:
                 did_pass = False
@@ -472,32 +517,34 @@ def cortex_test(board_id):
 
             # Decide on a new value, ensuring it changes and taking into account register specifics.
             r_mask = (1 << r.bitsize) - 1
-            if 'sp' in r.name:
+            if "sp" in r.name:
                 r_mask &= ~0x3
-            elif r.name == 'pc':
+            elif r.name == "pc":
                 r_mask &= ~0x1
-            elif 'xpsr' in r.name:
-                r_mask = 0xd0000000
-            elif 'control' == r.name:
+            elif "xpsr" in r.name:
+                r_mask = 0xD0000000
+            elif "control" == r.name:
                 # SPSEL is available on all cores.
                 r_mask = 0x2
-            elif r.name in ('primask', 'faultmask'):
+            elif r.name in ("primask", "faultmask"):
                 r_mask = 0x1
-            elif r.name == 'basepri':
+            elif r.name == "basepri":
                 r_mask = 0x80
-            elif r.name == 'fpscr':
+            elif r.name == "fpscr":
                 # v7-M bits
-                r_mask = 0xf7c0009f
-            new_value = 0xdeadbeef & r_mask
+                r_mask = 0xF7C0009F
+            new_value = 0xDEADBEEF & r_mask
 
             # Skip write tests on some regs:
             # - combined CFBP
             # - PSR variants not including XPSR
             # - all _NS and _S variants
-            if ((r.name in ('cfbp',))
-                    or (('psr' in r.name) and (r.name != 'xpsr'))
-                    or ('_ns' in r.name) or ('_s' in r.name)
-                    ):
+            if (
+                (r.name in ("cfbp",))
+                or (("psr" in r.name) and (r.name != "xpsr"))
+                or ("_ns" in r.name)
+                or ("_s" in r.name)
+            ):
                 test_write = False
 
             reg_count += 1
@@ -509,7 +556,10 @@ def cortex_test(board_id):
             test_pass_count += 1
             print("TEST PASSED (%i registers)" % reg_count)
         else:
-            print("TEST FAILED (%i registers, %i failed)" % (reg_count, reg_count - passed_reg_count))
+            print(
+                "TEST FAILED (%i registers, %i failed)"
+                % (reg_count, reg_count - passed_reg_count)
+            )
 
         print("\n\n------ Testing Invalid Memory Access Recovery ------")
         memory_access_pass = True
@@ -541,7 +591,10 @@ def cortex_test(board_id):
 
         data = [0x00] * 0x1000
         try:
-            print("writing 0x%08x bytes at invalid address 0x%08x" % (len(data), addr_invalid))
+            print(
+                "writing 0x%08x bytes at invalid address 0x%08x"
+                % (len(data), addr_invalid)
+            )
             target.write_memory_block8(addr_invalid, data)
             target.flush()
             # If no exception is thrown the tests fails except on nrf51 where invalid addresses read as 0
@@ -555,7 +608,10 @@ def cortex_test(board_id):
 
         data = [0x00] * 0x1000
         try:
-            print("writing 0x%08x bytes at invalid address 0x%08x" % (len(data), addr_invalid + 1))
+            print(
+                "writing 0x%08x bytes at invalid address 0x%08x"
+                % (len(data), addr_invalid + 1)
+            )
             target.write_memory_block8(addr_invalid + 1, data)
             target.flush()
             # If no exception is thrown the tests fails except on nrf51 where invalid addresses read as 0
@@ -608,7 +664,10 @@ def cortex_test(board_id):
             if same(orig8x2, filtered):
                 print("2 byte unaligned passed")
             else:
-                print("2 byte unaligned failed (read %x-%x, expected %x-%x)" % (filtered[0], filtered[1], orig8x2[0], orig8x2[1]))
+                print(
+                    "2 byte unaligned failed (read %x-%x, expected %x-%x)"
+                    % (filtered[0], filtered[1], orig8x2[0], orig8x2[1])
+                )
                 test_passed = False
 
             for now in (True, False):
@@ -618,7 +677,10 @@ def cortex_test(board_id):
                 if filtered == orig8:
                     print("8-bit passed [now=%s]" % now)
                 else:
-                    print("8-bit failed [now=%s] (read %x, expected %x)" % (now, filtered, orig8))
+                    print(
+                        "8-bit failed [now=%s] (read %x, expected %x)"
+                        % (now, filtered, orig8)
+                    )
                     test_passed = False
 
                 filtered = target.read16(addr & ~1, now)
@@ -627,7 +689,10 @@ def cortex_test(board_id):
                 if filtered == orig16:
                     print("16-bit passed [now=%s]" % now)
                 else:
-                    print("16-bit failed [now=%s] (read %x, expected %x)" % (now, filtered, orig16))
+                    print(
+                        "16-bit failed [now=%s] (read %x, expected %x)"
+                        % (now, filtered, orig16)
+                    )
                     test_passed = False
 
                 filtered = target.read32(addr & ~3, now)
@@ -636,14 +701,20 @@ def cortex_test(board_id):
                 if filtered == orig32:
                     print("32-bit passed [now=%s]" % now)
                 else:
-                    print("32-bit failed [now=%s] (read %x, expected %x)" % (now, filtered, orig32))
+                    print(
+                        "32-bit failed [now=%s] (read %x, expected %x)"
+                        % (now, filtered, orig32)
+                    )
                     test_passed = False
 
             filtered = target.read_memory_block32(addr & ~3, 1)
             if same(filtered, origAligned32):
                 print("32-bit aligned passed")
             else:
-                print("32-bit aligned failed (read %x, expected %x)" % (filtered[0], origAligned32[0]))
+                print(
+                    "32-bit aligned failed (read %x, expected %x)"
+                    % (filtered[0], origAligned32[0])
+                )
                 test_passed = False
             return test_passed
 
@@ -674,9 +745,12 @@ def cortex_test(board_id):
         result.passed = test_count == test_pass_count
         return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD cpu test')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
+    parser = argparse.ArgumentParser(description="pyOCD cpu test")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)

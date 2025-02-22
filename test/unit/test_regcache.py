@@ -15,15 +15,11 @@
 # limitations under the License.
 
 import pytest
-import logging
 
 from pyocd.cache.register import RegisterCache
 from pyocd.debug.context import DebugContext
 from pyocd.coresight.cortex_m import CortexM
 from pyocd.coresight.cortex_m_core_registers import CortexMCoreRegisterInfo
-from pyocd.core import memory_map
-from pyocd.utility import conversion
-from pyocd.utility import mask
 
 @pytest.fixture(scope='function')
 def regcache(mockcore):

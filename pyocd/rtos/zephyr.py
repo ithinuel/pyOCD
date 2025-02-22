@@ -324,7 +324,7 @@ class ZephyrThreadProvider(ThreadProvider):
     def event_handler(self, notification):
         if notification.event == Target.Event.POST_RESET:
             LOG.debug("Invalidating threads list: %s" % (repr(notification)))
-            self.invalidate();
+            self.invalidate()
 
         elif notification.event == Target.Event.POST_FLASH_PROGRAM:
             self._update()

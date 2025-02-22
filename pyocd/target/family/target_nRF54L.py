@@ -18,22 +18,9 @@
 
 import logging
 from time import sleep
-import os
-import re
-from zipfile import ZipFile
-from tempfile import TemporaryDirectory
-from intelhex import IntelHex
 
-from ...core import exceptions
-from ...core.memory_map import FlashRegion
-from ...core.target import Target
 from ...coresight.coresight_target import CoreSightTarget
-from ...flash.eraser import FlashEraser
-from ...flash.file_programmer import FileProgrammer
 from ...utility.timeout import Timeout
-from ...utility.progress import print_progress
-from ...commands.base import CommandBase
-from ...commands.execution_context import CommandSet
 
 AHB_AP_NUM = 0x0
 AUX_AHB_AP_NUM = 0x1
@@ -135,9 +122,9 @@ class NRF54L(CoreSightTarget):
 
         target_id = self.dp.read_dp(0x24)
         if target_id & 0xFFF != 0x289:
-            LOG.error(f"This doesn't look like a Nordic Semiconductor device!")
+            LOG.error("This doesn't look like a Nordic Semiconductor device!")
         if target_id & 0xF0000 != 0xC0000:
-            LOG.error(f"This doesn't look like an nRF54L device!")
+            LOG.error("This doesn't look like an nRF54L device!")
 
         if not self.ap_is_enabled():
             if self.session.options.get('auto_unlock'):

@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from ..core.soc_target import SoCTarget
     from ..board.board import Board
     from ..coresight.ap import (APAddressBase, AccessPort)
-    from ..coresight.coresight_target import CoreSightTarget
     from ..probe.debug_probe import DebugProbe
 
 LOG = logging.getLogger(__name__)
@@ -66,8 +65,6 @@ class CommandSet:
         # done lazily because the commands import lots of modules from pyocd that would cause import
         # cycles otherwise.
         if not cls.DID_LOAD_COMMAND_MODULES:
-            from . import commands
-            from . import values
             cls.DID_LOAD_COMMAND_MODULES = True
 
     @property

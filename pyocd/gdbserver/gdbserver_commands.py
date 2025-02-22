@@ -218,7 +218,7 @@ class RTTCommand(CommandBase):
             except exceptions.RTTError as e:
                 raise exceptions.CommandError(str(e)) from e
 
-            self.context.write(f"Found RTT control block.")
+            self.context.write("Found RTT control block.")
         elif self.action == "stop":
             if gdbserver.rtt_server is not None:
                 gdbserver.rtt_server.stop()

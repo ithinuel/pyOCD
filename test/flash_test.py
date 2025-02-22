@@ -16,21 +16,14 @@
 from __future__ import print_function
 
 import argparse
-import os
 import sys
-from time import (sleep, time)
-from random import randrange
-import math
 import struct
 import traceback
-import argparse
 
 from pyocd.core.helpers import ConnectHelper
 from pyocd.probe.pydapaccess import DAPAccess
-from pyocd.utility.conversion import float32_to_u32
-from pyocd.utility.mask import (invert32, same)
+from pyocd.utility.mask import invert32, same
 from pyocd.core.memory_map import MemoryType
-from pyocd.flash.flash import Flash
 from pyocd.flash.builder import FlashBuilder
 from pyocd.utility.progress import print_progress
 
@@ -40,14 +33,15 @@ from test_util import (
     get_session_options,
     get_target_test_params,
     get_test_binary_path,
-    )
+)
+
+import logging
 
 addr = 0
 size = 0
 
 board = None
 
-import logging
 
 class FlashTestResult(TestResult):
     def __init__(self):
@@ -60,17 +54,22 @@ class FlashTestResult(TestResult):
         self.analyze_rate = None
         self.chip_erase_rate = None
 
+
 class FlashTest(Test):
     def __init__(self):
         super(FlashTest, self).__init__("Flash Test", flash_test)
 
     def print_perf_info(self, result_list, output_file=None):
-        result_list = list(filter(lambda x: isinstance(x, FlashTestResult), result_list))
+        result_list = list(
+            filter(lambda x: isinstance(x, FlashTestResult), result_list)
+        )
 
         print("\n\n------ Analyzer Performance ------", file=output_file)
         perf_format_str = "{:<10}{:<12}{:<18}{:<18}"
-        print(perf_format_str.format("Target", "Analyzer", "Rate", "Time"),
-              file=output_file)
+        print(
+            perf_format_str.format("Target", "Analyzer", "Rate", "Time"),
+            file=output_file,
+        )
         print("", file=output_file)
         for result in result_list:
             if result.board is None or result.analyze is None:
@@ -81,17 +80,22 @@ class FlashTest(Test):
             else:
                 analyze_rate = "Fail"
                 analyze_time = "Fail"
-            print(perf_format_str.format(result.board,
-                                         result.analyze, analyze_rate,
-                                         analyze_time),
-                  file=output_file)
+            print(
+                perf_format_str.format(
+                    result.board, result.analyze, analyze_rate, analyze_time
+                ),
+                file=output_file,
+            )
         print("", file=output_file)
 
         print("\n\n------ Test Rate ------", file=output_file)
         rate_format_str = "{:<10}{:<20}{:<20}{:<20}"
-        print(rate_format_str.format("Target", "Chip Erase", "Page Erase",
-                                     "Page Erase (Same data)"),
-              file=output_file)
+        print(
+            rate_format_str.format(
+                "Target", "Chip Erase", "Page Erase", "Page Erase (Same data)"
+            ),
+            file=output_file,
+        )
         print("", file=output_file)
         for result in result_list:
             if result.board is None:
@@ -99,15 +103,19 @@ class FlashTest(Test):
             if result.passed:
                 chip_erase_rate = "%.3f KB/s" % (result.chip_erase_rate / float(1000))
                 page_erase_rate = "%.3f KB/s" % (result.page_erase_rate / float(1000))
-                page_erase_rate_same = "%.3f KB/s" % (result.page_erase_rate_same / float(1000))
+                page_erase_rate_same = "%.3f KB/s" % (
+                    result.page_erase_rate_same / float(1000)
+                )
             else:
                 chip_erase_rate = "Fail"
                 page_erase_rate = "Fail"
                 page_erase_rate_same = "Fail"
-            print(rate_format_str.format(result.board,
-                                         chip_erase_rate, page_erase_rate,
-                                         page_erase_rate_same),
-                  file=output_file)
+            print(
+                rate_format_str.format(
+                    result.board, chip_erase_rate, page_erase_rate, page_erase_rate_same
+                ),
+                file=output_file,
+            )
         print("", file=output_file)
 
     def run(self, board):
@@ -124,27 +132,26 @@ class FlashTest(Test):
 
 
 def flash_test(board_id):
-    with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
+    with ConnectHelper.session_with_chosen_probe(
+        unique_id=board_id, **get_session_options()
+    ) as session:
         board = session.board
-        target_type = board.target_type
 
         memory_map = board.target.get_memory_map()
-        ram_region = memory_map.get_default_region_of_type(MemoryType.RAM)
-
-        ram_start = ram_region.start
-        ram_size = ram_region.length
 
         target = board.target
 
         test_params = get_target_test_params(session)
-        session.probe.set_clock(test_params['test_clock'])
+        session.probe.set_clock(test_params["test_clock"])
 
         test_pass_count = 0
         test_count = 0
         result = FlashTestResult()
 
         # Test each flash region separately.
-        for rom_region in memory_map.iter_matching_regions(type=MemoryType.FLASH, is_testable=True):
+        for rom_region in memory_map.iter_matching_regions(
+            type=MemoryType.FLASH, is_testable=True
+        ):
             rom_start = rom_region.start
             rom_size = rom_region.length
 
@@ -153,9 +160,12 @@ def flash_test(board_id):
 
             # This can be any value, as long as it's not the erased byte value. We take the
             # inverse of the erased value so that for most flash, the unerased value is 0x00.
-            unerasedValue = invert32(flash.region.erased_byte_value) & 0xff
+            unerasedValue = invert32(flash.region.erased_byte_value) & 0xFF
 
-            print("\n\n===== Testing flash region '%s' from 0x%08x to 0x%08x ====" % (rom_region.name, rom_region.start, rom_region.end))
+            print(
+                "\n\n===== Testing flash region '%s' from 0x%08x to 0x%08x ===="
+                % (rom_region.name, rom_region.start, rom_region.end)
+            )
 
             binary_file = get_test_binary_path(board.test_binary)
             with open(binary_file, "rb") as f:
@@ -192,9 +202,14 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Basic Page Erase ------")
-            info = flash.flash_block(addr, data, False, "sector", progress_cb=print_progress())
+            info = flash.flash_block(
+                addr, data, False, "sector", progress_cb=print_progress()
+            )
             data_flashed = target.read_memory_block8(addr, size)
-            if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE:
+            if (
+                same(data_flashed, data)
+                and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE
+            ):
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -202,9 +217,14 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Basic Chip Erase ------")
-            info = flash.flash_block(addr, data, False, "chip", progress_cb=print_progress())
+            info = flash.flash_block(
+                addr, data, False, "chip", progress_cb=print_progress()
+            )
             data_flashed = target.read_memory_block8(addr, size)
-            if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_CHIP_ERASE:
+            if (
+                same(data_flashed, data)
+                and info.program_type is FlashBuilder.FLASH_CHIP_ERASE
+            ):
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -212,9 +232,14 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Smart Page Erase ------")
-            info = flash.flash_block(addr, data, True, "sector", progress_cb=print_progress())
+            info = flash.flash_block(
+                addr, data, True, "sector", progress_cb=print_progress()
+            )
             data_flashed = target.read_memory_block8(addr, size)
-            if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE:
+            if (
+                same(data_flashed, data)
+                and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE
+            ):
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -222,9 +247,14 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Smart Chip Erase ------")
-            info = flash.flash_block(addr, data, True, "chip", progress_cb=print_progress())
+            info = flash.flash_block(
+                addr, data, True, "chip", progress_cb=print_progress()
+            )
             data_flashed = target.read_memory_block8(addr, size)
-            if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_CHIP_ERASE:
+            if (
+                same(data_flashed, data)
+                and info.program_type is FlashBuilder.FLASH_CHIP_ERASE
+            ):
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -236,7 +266,9 @@ def flash_test(board_id):
             print("\n------ Test Basic Page Erase (Entire region) ------")
             new_data = list(data)
             new_data.extend(unused * [0x77])
-            info = flash.flash_block(addr, new_data, False, "sector", progress_cb=print_progress())
+            info = flash.flash_block(
+                addr, new_data, False, "sector", progress_cb=print_progress()
+            )
             if info.program_type == FlashBuilder.FLASH_SECTOR_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
@@ -247,7 +279,9 @@ def flash_test(board_id):
 
             print("\n------ Test Fast Verify ------")
             if flash.get_flash_info().crc_supported:
-                info = flash.flash_block(addr, new_data, progress_cb=print_progress(), fast_verify=True)
+                info = flash.flash_block(
+                    addr, new_data, progress_cb=print_progress(), fast_verify=True
+                )
                 if info.analyze_type == FlashBuilder.FLASH_ANALYSIS_CRC32:
                     print("TEST PASSED")
                     test_pass_count += 1
@@ -263,7 +297,10 @@ def flash_test(board_id):
             new_data = [0x55] * page_size * 2
             info = flash.flash_block(addr, new_data, progress_cb=print_progress())
             data_flashed = target.read_memory_block8(addr, len(new_data))
-            if same(data_flashed, new_data) and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE:
+            if (
+                same(data_flashed, new_data)
+                and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE
+            ):
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -274,7 +311,7 @@ def flash_test(board_id):
             addr = rom_start + rom_size // 2
             page_size = flash.get_page_info(addr).size
             more_data = [0x33] * page_size * 2
-            addr = (rom_start + rom_size // 2) + 1 #cover multiple pages
+            addr = (rom_start + rom_size // 2) + 1  # cover multiple pages
             fb = flash.get_flash_builder()
             fb.add_data(rom_start, data)
             fb.add_data(addr, more_data)
@@ -290,7 +327,7 @@ def flash_test(board_id):
 
             print("\n------ Test Overlapping Blocks ------")
             test_pass = False
-            addr = (rom_start + rom_size // 2) #cover multiple pages
+            addr = rom_start + rom_size // 2  # cover multiple pages
             page_size = flash.get_page_info(addr).size
             new_data = [0x33] * page_size
             fb = flash.get_flash_builder()
@@ -341,37 +378,47 @@ def flash_test(board_id):
             if rom_start == flash_info.rom_start:
                 print("\n------ Test Chip Erase Decision ------")
                 new_data = list(data)
-                new_data.extend([flash.region.erased_byte_value] * unused) # Pad with erased value
+                new_data.extend(
+                    [flash.region.erased_byte_value] * unused
+                )  # Pad with erased value
                 data_size = len(new_data)
                 info = flash.flash_block(addr, new_data, progress_cb=print_progress())
                 print(f"Selected erase type is {info.program_type}")
-                print(f"Total byte count = {info.total_byte_count} (expected {data_size})")
+                print(
+                    f"Total byte count = {info.total_byte_count} (expected {data_size})"
+                )
                 if info.total_byte_count == data_size:
                     print("TEST PASSED")
                     test_pass_count += 1
-                    result.chip_erase_rate_erased = float(len(new_data)) / float(info.program_time)
+                    result.chip_erase_rate_erased = float(len(new_data)) / float(
+                        info.program_time
+                    )
                 else:
                     print("TEST FAILED")
                 test_count += 1
 
                 print("\n------ Test Chip Erase Decision 2 ------")
                 new_data = list(data)
-                new_data.extend([unerasedValue] * unused) # Pad with unerased value
+                new_data.extend([unerasedValue] * unused)  # Pad with unerased value
                 data_size = len(new_data)
                 info = flash.flash_block(addr, new_data, progress_cb=print_progress())
                 print(f"Selected erase type is {info.program_type}")
-                print(f"Total byte count = {info.total_byte_count} (expected {data_size})")
+                print(
+                    f"Total byte count = {info.total_byte_count} (expected {data_size})"
+                )
                 if info.total_byte_count == data_size:
                     print("TEST PASSED")
                     test_pass_count += 1
-                    result.chip_erase_rate = float(len(new_data)) / float(info.program_time)
+                    result.chip_erase_rate = float(len(new_data)) / float(
+                        info.program_time
+                    )
                 else:
                     print("TEST FAILED")
                 test_count += 1
 
             print("\n------ Test Page Erase Decision ------")
             new_data = list(data)
-            new_data.extend([unerasedValue] * unused) # Pad with unerased value
+            new_data.extend([unerasedValue] * unused)  # Pad with unerased value
             data_size = len(new_data)
             info = flash.flash_block(addr, new_data, progress_cb=print_progress())
             print(f"Selected erase type is {info.program_type}")
@@ -379,7 +426,9 @@ def flash_test(board_id):
             if info.total_byte_count == data_size:
                 print("TEST PASSED")
                 test_pass_count += 1
-                result.page_erase_rate_same = float(len(new_data)) / float(info.program_time)
+                result.page_erase_rate_same = float(len(new_data)) / float(
+                    info.program_time
+                )
                 result.analyze = info.analyze_type
                 result.analyze_time = info.analyze_time
                 result.analyze_rate = float(len(new_data)) / float(info.analyze_time)
@@ -391,7 +440,9 @@ def flash_test(board_id):
             new_data = list(data)
             size_same = unused * 5 // 6
             size_differ = unused - size_same
-            new_data.extend([unerasedValue] * size_same) # Pad 5/6 with unerased value and 1/6 with 0x55
+            new_data.extend(
+                [unerasedValue] * size_same
+            )  # Pad 5/6 with unerased value and 1/6 with 0x55
             new_data.extend([0x55] * size_differ)
             data_size = len(new_data)
             info = flash.flash_block(addr, new_data, progress_cb=print_progress())
@@ -416,10 +467,19 @@ def flash_test(board_id):
         result.passed = test_count == test_pass_count
         return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD flash test')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
-    parser.add_argument("-da", "--daparg", dest="daparg", nargs='+', help="Send setting to DAPAccess layer.")
+    parser = argparse.ArgumentParser(description="pyOCD flash test")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "-da",
+        "--daparg",
+        dest="daparg",
+        nargs="+",
+        help="Send setting to DAPAccess layer.",
+    )
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)
@@ -429,4 +489,3 @@ if __name__ == "__main__":
     test = FlashTest()
     result = [test.run(session.board)]
     test.print_perf_info(result)
-

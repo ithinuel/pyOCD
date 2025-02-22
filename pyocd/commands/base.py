@@ -179,7 +179,7 @@ class CommandBase(metaclass=CommandMeta):
                 self.context.writei("[%s,%d] = 0x%08x", arg, offset, value)
 
             return value
-        except ValueError as err:
+        except ValueError:
             raise exceptions.CommandError("invalid argument '{}'".format(arg)) from None
 
     @classmethod

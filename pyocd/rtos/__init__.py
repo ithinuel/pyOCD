@@ -22,8 +22,17 @@ from .zephyr import ZephyrThreadProvider
 from .rtx5 import RTX5ThreadProvider
 from ..core.plugin import load_plugin_classes_of_type
 
+__all__ = [
+    "ThreadProvider",
+    "ArgonThreadProvider",
+    "FreeRTOSThreadProvider",
+    "ZephyrThreadProvider",
+    "RTX5ThreadProvider",
+    "RTOS",
+]
+
 ## @brief Dictionary of loaded RTOS plugins, indexed by name.
 RTOS = {}
 
 # Load RTOS plugins when this module is loaded.
-load_plugin_classes_of_type('pyocd.rtos', RTOS, ThreadProvider)
+load_plugin_classes_of_type("pyocd.rtos", RTOS, ThreadProvider)

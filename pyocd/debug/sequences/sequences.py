@@ -28,11 +28,11 @@ from enum import Enum
 from inspect import signature
 from lark.lexer import Token as LarkToken
 from lark.tree import Tree as LarkTree
-from typing import (Any, Iterator, cast, List, Optional, Union, TYPE_CHECKING)
+from typing import Any, Iterator, cast, List, Optional, Union, TYPE_CHECKING
 from typing_extensions import Self
 
 from ...core import exceptions
-from ...coresight.ap import (APv1Address, APv2Address)
+from ...coresight.ap import APv1Address, APv2Address
 from ...utility.graph import GraphNode
 from ...utility.mask import bit_invert
 from ...utility.timeout import Timeout
@@ -50,18 +50,23 @@ TRACE.setLevel(logging.CRITICAL)
 
 NodeType = Union[LarkTree, LarkToken, int]
 
+
 class DebugSequenceError(exceptions.Error):
     pass
+
 
 class DebugSequenceSemanticError(DebugSequenceError):
     pass
 
+
 class DebugSequenceRuntimeError(exceptions.Error):
     pass
+
 
 def _is_token(tok: Any, typename: str) -> bool:
     """@brief Test whether a node is a specific type of token."""
     return isinstance(tok, LarkToken) and tok.type == typename
+
 
 class _ConvertLiterals(lark.visitors.Transformer):
     """@brief Transformer to convert integer literal tokens to integers.
@@ -69,23 +74,27 @@ class _ConvertLiterals(lark.visitors.Transformer):
     Running this transformer during the parse is more efficient than handling it post-parse
     such as during optimization.
     """
-    def INTLIT(self, tok: LarkToken) -> int: # pylint: disable=invalid-name
-        return int(tok.value.upper().rstrip('U'), base=0)
+
+    def INTLIT(self, tok: LarkToken) -> int:  # pylint: disable=invalid-name
+        return int(tok.value.upper().rstrip("U"), base=0)
 
     def STRLIT(self, tok: LarkToken) -> LarkToken:
         tok.value = tok.value.strip('"')
         return tok
 
+
 class Parser:
     """@brief Debug sequence statement parser."""
 
     ## Shared parser object.
-    _parser = lark.lark.Lark.open("sequences.lark",
-                        rel_to=__file__,
-                        parser="lalr",
-                        maybe_placeholders=True,
-                        propagate_positions=True,
-                        transformer=_ConvertLiterals())
+    _parser = lark.lark.Lark.open(
+        "sequences.lark",
+        rel_to=__file__,
+        parser="lalr",
+        maybe_placeholders=True,
+        propagate_positions=True,
+        transformer=_ConvertLiterals(),
+    )
 
     @classmethod
     def parse(cls, data: str) -> LarkTree:
@@ -98,6 +107,7 @@ class Parser:
         except lark.exceptions.UnexpectedInput as e:
             message = str(e) + "\n\nContext: " + e.get_context(data, 40)
             raise exceptions.Error(message) from e
+
 
 class DebugSequenceExecutionContext:
     """@brief Context for running debug sequences.
@@ -125,7 +135,9 @@ class DebugSequenceExecutionContext:
         """
         return cls._thread_local_contexts.context
 
-    def __init__(self, session: Session, delegate: DebugSequenceDelegate, pname: Optional[str]) -> None:
+    def __init__(
+        self, session: Session, delegate: DebugSequenceDelegate, pname: Optional[str]
+    ) -> None:
         """@brief Constructor.
 
         @param self
@@ -204,7 +216,9 @@ class DebugSequenceExecutionContext:
                 return elem.node
 
         # Ooh, not good..
-        assert False, "invalid state: no debug sequence on active debug sequence execute context stack"
+        assert False, (
+            "invalid state: no debug sequence on active debug sequence execute context stack"
+        )
 
     def _push(self, node: DebugSequenceNode, scope: Scope) -> None:
         """@brief Context stack push operation.
@@ -248,8 +262,14 @@ class DebugSequenceExecutionContext:
         try:
             return self.current_scope.get(name)
         except KeyError as err:
-            LOG.debug("debug sequence reference to undefined variable %s... %s", name, self.current_scope.dump())
-            raise DebugSequenceRuntimeError(f"reference to undefined variable {name}") from err
+            LOG.debug(
+                "debug sequence reference to undefined variable %s... %s",
+                name,
+                self.current_scope.dump(),
+            )
+            raise DebugSequenceRuntimeError(
+                f"reference to undefined variable {name}"
+            ) from err
 
     def __enter__(self) -> Self:
         """@brief Make this context the active one for the current thread."""
@@ -260,6 +280,7 @@ class DebugSequenceExecutionContext:
         """@brief Clear the current thread's active context."""
         assert self._thread_local_contexts.context == self
         del self._thread_local_contexts.context
+
 
 class DebugSequenceNode(GraphNode):
     """@brief Common base class for debug sequence nodes."""
@@ -284,6 +305,7 @@ class DebugSequenceNode(GraphNode):
         """@brief Execute all child nodes."""
         for node in self.children:
             cast(DebugSequenceNode, node).execute(context)
+
 
 class DebugSequence(DebugSequenceNode):
     """@brief Named debug sequence.
@@ -327,18 +349,18 @@ class DebugSequence(DebugSequenceNode):
     """
 
     ## Special predefined variables that are read-write and propagate to sub-sequences.
-    _SPECIAL_VARS = ['__dp', '__ap', '__apid', '__errorcontrol']
+    _SPECIAL_VARS = ["__dp", "__ap", "__apid", "__errorcontrol"]
 
     ## Predefined variables that are read-write, but do not propagate.
-    _WRITABLE_PREDEFINED = ['__Result']
+    _WRITABLE_PREDEFINED = ["__Result"]
 
     def __init__(
-            self,
-            name: str,
-            is_enabled: bool = True,
-            pname: Optional[str] = None,
-            info: str = ""
-            ) -> None:
+        self,
+        name: str,
+        is_enabled: bool = True,
+        pname: Optional[str] = None,
+        info: str = "",
+    ) -> None:
         super().__init__(info)
         self._name = name
         self._is_enabled = is_enabled
@@ -364,43 +386,51 @@ class DebugSequence(DebugSequenceNode):
         scope = Scope(parent=context.delegate.get_root_scope(context), name=self.name)
 
         # Writable result.
-        scope.set('__Result', 0)
+        scope.set("__Result", 0)
 
         # Propagate specials if there is a sequence that called us.
         if context.has_current_sequence:
             scope.copy_variables(context.current_scope, self._SPECIAL_VARS)
         # Otherwise just fill in the defaults.
         else:
-            scope.set('__errorcontrol', 0)
+            scope.set("__errorcontrol", 0)
 
             # Convert the default AP address to __ap and __apid variables. If the AP is v1 then
             # __ap is set, for v2 __apid is set. The other variable gets set to 0.
             default_ap_address = context.default_ap
-            scope.set('__dp', default_ap_address.dp_index) # We still only support one DP.
-            scope.set('__ap', default_ap_address.nominal_address
-                                if isinstance(default_ap_address, APv1Address)
-                                else 0)
-            scope.set('__apid',  default_ap_address.nominal_address
-                                    if isinstance(default_ap_address, APv2Address)
-                                    else 0)
+            scope.set(
+                "__dp", default_ap_address.dp_index
+            )  # We still only support one DP.
+            scope.set(
+                "__ap",
+                default_ap_address.nominal_address
+                if isinstance(default_ap_address, APv1Address)
+                else 0,
+            )
+            scope.set(
+                "__apid",
+                default_ap_address.nominal_address
+                if isinstance(default_ap_address, APv2Address)
+                else 0,
+            )
 
         # Generate __protocol value.
         protocol = delegate.get_protocol()
-        scope.set('__protocol', protocol, readonly=True)
+        scope.set("__protocol", protocol, readonly=True)
 
         # Generate __connection value.
         connection = delegate.get_connection_type()
-        scope.set('__connection', connection, readonly=True)
+        scope.set("__connection", connection, readonly=True)
 
         # Generate __traceout value.
         traceout = delegate.get_traceout()
-        scope.set('__traceout', traceout, readonly=True)
+        scope.set("__traceout", traceout, readonly=True)
 
         # Flash algorithm sequence parameters.
-        scope.set('__FlashOp', 0, readonly=True)
-        scope.set('__FlashAddr', 0, readonly=True)
-        scope.set('__FlashLen', 0, readonly=True)
-        scope.set('__FlashArg', 0, readonly=True)
+        scope.set("__FlashOp", 0, readonly=True)
+        scope.set("__FlashAddr", 0, readonly=True)
+        scope.set("__FlashLen", 0, readonly=True)
+        scope.set("__FlashArg", 0, readonly=True)
         return scope
 
     def execute(self, context: DebugSequenceExecutionContext) -> Optional[Scope]:
@@ -414,16 +444,19 @@ class DebugSequence(DebugSequenceNode):
         return scope
 
     def __eq__(self, o: object) -> bool:
-        return (isinstance(o, DebugSequence)
-                and self.name == o.name
-                and self.pname == o.pname
-                and self.is_enabled == o.is_enabled)
+        return (
+            isinstance(o, DebugSequence)
+            and self.name == o.name
+            and self.pname == o.pname
+            and self.is_enabled == o.is_enabled
+        )
 
     def __hash__(self) -> int:
         return hash((self.name, self.pname, self.is_enabled))
 
     def __repr__(self):
         return f"<{type(self).__name__}@{id(self):x} {self.name} enabled={self.is_enabled} pname={self.pname}>"
+
 
 class Control(DebugSequenceNode):
     """@brief Base class for control nodes of debug sequences.
@@ -435,7 +468,13 @@ class Control(DebugSequenceNode):
         IF = 1
         WHILE = 2
 
-    def __init__(self, control_type: ControlType, predicate: str, info: str = "", timeout_µs: int = 0) -> None:
+    def __init__(
+        self,
+        control_type: ControlType,
+        predicate: str,
+        info: str = "",
+        timeout_µs: int = 0,
+    ) -> None:
         """@brief Constructor.
         @param self The control object.
         @param control_type One of the #ControlType enums that selects between if- and while-type.
@@ -454,10 +493,7 @@ class Control(DebugSequenceNode):
         """@brief Run the sequence."""
         # Get our scope and interpreter objects.
         parent_scope = context.current_scope
-        scope = Scope(
-            parent_scope,
-            name=f"{parent_scope.name}.{self._type.name}"
-            )
+        scope = Scope(parent_scope, name=f"{parent_scope.name}.{self._type.name}")
         interp = Interpreter(self._ast, scope, context)
 
         # Push our new scope.
@@ -480,12 +516,15 @@ class Control(DebugSequenceNode):
                 # For a while control, re-evaluate the predicate.
                 elif self._type == self.ControlType.WHILE:
                     result = interp.execute()
-                    TRACE.debug("%s(%s): pred=%d", self._type.name, self._predicate, result)
+                    TRACE.debug(
+                        "%s(%s): pred=%d", self._type.name, self._predicate, result
+                    )
 
         return scope
 
     def __repr__(self):
         return f"<{type(self).__name__}@{id(self):x} {self._ast.pretty()}>"
+
 
 class WhileControl(Control):
     """@brief Looping debug sequence node."""
@@ -493,11 +532,13 @@ class WhileControl(Control):
     def __init__(self, predicate: str, info: str = "", timeout: int = 0) -> None:
         super().__init__(self.ControlType.WHILE, predicate, info, timeout)
 
+
 class IfControl(Control):
     """@brief Conditional debug sequence node."""
 
     def __init__(self, predicate: str, info: str = "", timeout: int = 0) -> None:
         super().__init__(self.ControlType.IF, predicate, info, timeout)
+
 
 class Block(DebugSequenceNode):
     """@brief Block of debug sequence statements.
@@ -529,6 +570,7 @@ class Block(DebugSequenceNode):
         atomic_str = " atomic" if self._is_atomic else ""
         return f"<{type(self).__name__}@{id(self):x}{atomic_str} {self._ast.pretty()}>"
 
+
 # Using Any type for the methods of this class is a workaround for LarkToken not being
 # handled or inferred correctly, since Lark doesn't have annotations.
 class _ConstantFolder(lark.visitors.Transformer):
@@ -549,7 +591,7 @@ class _ConstantFolder(lark.visitors.Transformer):
             elif predicate == 0:
                 return false_expr
 
-        return LarkTree('ternary_expr', children)
+        return LarkTree("ternary_expr", children)
 
     def binary_expr(self, children: Any) -> Any:
         left = children[0]
@@ -565,41 +607,41 @@ class _ConstantFolder(lark.visitors.Transformer):
         # Fold binary expressions with a left operand of zero.
         elif self._is_intlit(right) and right == 0:
             # Operators whose result will be the left operand unmodified.
-            if op in ('+', '-', '|', '^', '<<', '>>', '||'):
+            if op in ("+", "-", "|", "^", "<<", ">>", "||"):
                 # TRACE.debug("opt: x %s 0 -> x", op)
                 return left
             # Operators whose result will be zero.
-            elif op in ('*', '/', '%', '&', '&&'):
+            elif op in ("*", "/", "%", "&", "&&"):
                 # TRACE.debug("opt: x %s 0 -> 0", op)
                 return 0
 
         # Fold binary expression with a right operand of zero.
         elif self._is_intlit(left) and left == 0:
             # Operators whose result will be the right operand unmodified.
-            if op in ('+', '-', '|', '^', '||'):
+            if op in ("+", "-", "|", "^", "||"):
                 # TRACE.debug("opt: 0 %s x -> x", op)
                 return right
             # Operators whose result will be zero.
-            elif op in ('*', '/', '%', '&', '<<', '>>', '&&'):
+            elif op in ("*", "/", "%", "&", "<<", ">>", "&&"):
                 # TRACE.debug("opt: 0 %s x -> 0", op)
                 return 0
 
         # Fold binary expressions with a left operand of 1.
         elif self._is_intlit(right) and right == 1:
             # Operators whose result will be the left operand unmodified.
-            if op in ('*', '/'):
+            if op in ("*", "/"):
                 # TRACE.debug("opt: x %s 1 -> x", op)
                 return left
             # Operators whose result will be one.
-            elif op in ('||',):
+            elif op in ("||",):
                 # TRACE.debug("opt: x %s 1 -> 1", op)
                 return 1
             # Operators whose result will be zero.
-            elif op in ('%',):
+            elif op in ("%",):
                 # TRACE.debug("opt: x %s 1 -> 0", op)
                 return 0
 
-        return LarkTree('binary_expr', children)
+        return LarkTree("binary_expr", children)
 
     def unary_expr(self, children: Any) -> Any:
         op = children[0].value
@@ -611,39 +653,41 @@ class _ConstantFolder(lark.visitors.Transformer):
             # TRACE.debug("opt: %s %#x -> %#x", op, arg, result)
             return result
 
-        return LarkTree('unary_expr', children)
+        return LarkTree("unary_expr", children)
+
 
 ## Lambdas for evaluating binary operators.
 #
 # Note that divide and modulo by 0 just results in 0 rather than an exception.
 _BINARY_OPS = {
-    '+':    lambda l, r: l + r,
-    '-':    lambda l, r: l - r,
-    '*':    lambda l, r: l * r,
-    '/':    lambda l, r: 0 if (r == 0) else (l // r),
-    '%':    lambda l, r: 0 if (r == 0) else (l % r),
-    '&':    lambda l, r: l & r,
-    '|':    lambda l, r: l | r,
-    '^':    lambda l, r: l ^ r,
-    '<<':   lambda l, r: l << r,
-    '>>':   lambda l, r: l >> r,
-    '&&':   lambda l, r: int(bool(l) & bool(r)), # implement C-style AND
-    '||':   lambda l, r: int(bool(l) | bool(r)), # implement C-style OR
-    '==':   lambda l, r: int(l == r),
-    '!=':   lambda l, r: int(l != r),
-    '>':    lambda l, r: int(l > r),
-    '>=':   lambda l, r: int(l >= r),
-    '<':    lambda l, r: int(l < r),
-    '<=':   lambda l, r: int(l <= r),
-    }
+    "+": lambda left, right: left + right,
+    "-": lambda left, right: left - right,
+    "*": lambda left, right: left * right,
+    "/": lambda left, right: 0 if (right == 0) else (left // right),
+    "%": lambda left, right: 0 if (right == 0) else (left % right),
+    "&": lambda left, right: left & right,
+    "|": lambda left, right: left | right,
+    "^": lambda left, right: left ^ right,
+    "<<": lambda left, right: left << right,
+    ">>": lambda left, right: left >> right,
+    "&&": lambda left, right: int(bool(left) & bool(right)),  # implement C-style AND
+    "||": lambda left, right: int(bool(left) | bool(right)),  # implement C-style OR
+    "==": lambda left, right: int(left == right),
+    "!=": lambda left, right: int(left != right),
+    ">": lambda left, right: int(left > right),
+    ">=": lambda left, right: int(left >= right),
+    "<": lambda left, right: int(left < right),
+    "<=": lambda left, right: int(left <= right),
+}
 
 ## Lambdas for evaluating unary operators.
 _UNARY_OPS = {
-    '~':    lambda v: bit_invert(v, width=64),
-    '!':    lambda v: int(not v),
-    '+':    lambda v: v,
-    '-':    lambda v: (-v) & 0xffffffffffffffff, # Mask to get unsigned two's complement.
-    }
+    "~": lambda v: bit_invert(v, width=64),
+    "!": lambda v: int(not v),
+    "+": lambda v: v,
+    "-": lambda v: (-v) & 0xFFFFFFFFFFFFFFFF,  # Mask to get unsigned two's complement.
+}
+
 
 class SemanticChecker:
     """@brief Check the semantics of debug sequence statements."""
@@ -651,7 +695,9 @@ class SemanticChecker:
     class _SemanticsVisitor(lark.visitors.Visitor):
         """@brief Visitor for performing semantic checks of debug sequence statements."""
 
-        def __init__(self, scope: Scope, context: DebugSequenceExecutionContext) -> None:
+        def __init__(
+            self, scope: Scope, context: DebugSequenceExecutionContext
+        ) -> None:
             super().__init__()
             self._scope = scope
             self._context = context
@@ -660,36 +706,39 @@ class SemanticChecker:
 
         def decl_stmt(self, tree: LarkTree) -> None:
             # Record the declared variable name.
-            assert _is_token(tree.children[0], 'IDENT')
+            assert _is_token(tree.children[0], "IDENT")
             assert isinstance(tree.children[0], LarkToken)
             name = tree.children[0].value
             self._declared_variables.add(name)
 
             # Disallow assigning expressions consisting of only a string.
-            if _is_token(tree.children[1], 'STRLIT'):
+            if _is_token(tree.children[1], "STRLIT"):
                 raise DebugSequenceSemanticError(
-                        f"line {tree.meta.line}: cannot store a string to variable '{name}'")
+                    f"line {tree.meta.line}: cannot store a string to variable '{name}'"
+                )
 
         def assign_expr(self, tree: LarkTree) -> None:
             # Assigned variable must have been previously declared.
             # TODO disabled until declarations are fully tracked in scopes.
-            assert _is_token(tree.children[0], 'IDENT')
+            assert _is_token(tree.children[0], "IDENT")
             assert isinstance(tree.children[0], LarkToken)
             name = tree.children[0].value
-#             if name not in self._declared_variables:
-#                 raise DebugSequenceSemanticError(
-#                         f"line {tree.meta.line}: attempt to set undeclared variable '{name}'")
+            #             if name not in self._declared_variables:
+            #                 raise DebugSequenceSemanticError(
+            #                         f"line {tree.meta.line}: attempt to set undeclared variable '{name}'")
 
             # Disallow assigning expressions consisting of only a string.
-            if _is_token(tree.children[2], 'STRLIT'):
+            if _is_token(tree.children[2], "STRLIT"):
                 raise DebugSequenceSemanticError(
-                        f"line {tree.meta.line}: cannot store a string to variable '{name}'")
+                    f"line {tree.meta.line}: cannot store a string to variable '{name}'"
+                )
 
         def expr_stmt(self, tree: LarkTree) -> None:
             # Disallow statements consisting of only a string.
-            if _is_token(tree.children[0], 'STRLIT'):
+            if _is_token(tree.children[0], "STRLIT"):
                 raise DebugSequenceSemanticError(
-                        f"line {tree.meta.line}: expression statements consisting of only a string are invalid")
+                    f"line {tree.meta.line}: expression statements consisting of only a string are invalid"
+                )
 
         def fncall(self, tree: LarkTree) -> None:
             fn_name = tree.children[0]
@@ -703,7 +752,9 @@ class SemanticChecker:
             try:
                 impl = getattr(self._fns, fn_name)
             except AttributeError:
-                raise DebugSequenceSemanticError(f"line {tree.meta.line}: call to unknown function '{fn_name}'")
+                raise DebugSequenceSemanticError(
+                    f"line {tree.meta.line}: call to unknown function '{fn_name}'"
+                )
 
             # Get the function's signature.
             sig = signature(impl)
@@ -725,7 +776,8 @@ class SemanticChecker:
                 # Check arg count.
                 if param_count > arg_count:
                     raise DebugSequenceSemanticError(
-                            f"line {tree.meta.line}: function '{fn_name}' is passed too few arguments")
+                        f"line {tree.meta.line}: function '{fn_name}' is passed too few arguments"
+                    )
 
                 # Check argument types.
                 #
@@ -736,21 +788,27 @@ class SemanticChecker:
                 arg_node = tree.children[param_count]
 
                 # str params require a literal string arg.
-                if param.annotation == 'str' and not _is_token(arg_node, 'STRLIT'):
+                if param.annotation == "str" and not _is_token(arg_node, "STRLIT"):
                     raise DebugSequenceSemanticError(
-                            f"line {tree.meta.line}: function '{fn_name}' parameter '{param.name}' "
-                            "requires a string argument")
+                        f"line {tree.meta.line}: function '{fn_name}' parameter '{param.name}' "
+                        "requires a string argument"
+                    )
                 # int params require either a literal int or an expression tree.
-                elif param.annotation == 'int' and not \
-                        (isinstance(arg_node, int) or _is_token(arg_node, 'IDENT') or isinstance(arg_node, LarkTree)):
+                elif param.annotation == "int" and not (
+                    isinstance(arg_node, int)
+                    or _is_token(arg_node, "IDENT")
+                    or isinstance(arg_node, LarkTree)
+                ):
                     raise DebugSequenceSemanticError(
-                            f"line {tree.meta.line}: function '{fn_name}' parameter '{param.name}' "
-                            "requires an integer argument")
+                        f"line {tree.meta.line}: function '{fn_name}' parameter '{param.name}' "
+                        "requires an integer argument"
+                    )
 
             # Check for more args than parameters.
             if (param_count < arg_count) and not has_varargs:
                 raise DebugSequenceSemanticError(
-                        f"line {tree.meta.line}: function '{fn_name}' is passed too many arguments")
+                    f"line {tree.meta.line}: function '{fn_name}' is passed too many arguments"
+                )
 
             # Function-specific checks.
             if fn_name == "Sequence":
@@ -759,11 +817,16 @@ class SemanticChecker:
                 name = tree.children[1].value
 
                 # Look for a sequence with the given name.
-                if not self._context.delegate.has_sequence_with_name(name, self._context.pname):
+                if not self._context.delegate.has_sequence_with_name(
+                    name, self._context.pname
+                ):
                     raise DebugSequenceSemanticError(
-                            f"line {tree.meta.line}: attempt to call undefined sequence '{name}'")
+                        f"line {tree.meta.line}: attempt to call undefined sequence '{name}'"
+                    )
 
-    def __init__(self, tree: LarkTree, scope: Scope, context: DebugSequenceExecutionContext) -> None:
+    def __init__(
+        self, tree: LarkTree, scope: Scope, context: DebugSequenceExecutionContext
+    ) -> None:
         """@brief Constructor.
 
         @param self This object.
@@ -783,6 +846,7 @@ class SemanticChecker:
         visitor = self._SemanticsVisitor(self._scope, self._context)
         visitor.visit(self._tree)
 
+
 class Interpreter:
     """@brief Interpreting for debug sequence ASTs.
 
@@ -795,7 +859,9 @@ class Interpreter:
     class _InterpreterVisitor(lark.visitors.Interpreter):
         """@brief Visitor for interpreting sequence trees."""
 
-        def __init__(self, scope: Scope, context: DebugSequenceExecutionContext) -> None:
+        def __init__(
+            self, scope: Scope, context: DebugSequenceExecutionContext
+        ) -> None:
             super().__init__()
             self._scope = scope
             self._context = context
@@ -806,24 +872,42 @@ class Interpreter:
             values = self.visit_children(tree)
             return values.pop() if len(values) else None
 
-        def _log_children(self, name: str, children: List) -> None: # pragma: no cover
-            LOG.info('%s: %s', name, [(("Node: %s" % c.data) if hasattr(c, 'data') else ("%s=%s" % (c.type, c.value))) for c in children])
+        def _log_children(self, name: str, children: List) -> None:  # pragma: no cover
+            LOG.info(
+                "%s: %s",
+                name,
+                [
+                    (
+                        ("Node: %s" % c.data)
+                        if hasattr(c, "data")
+                        else ("%s=%s" % (c.type, c.value))
+                    )
+                    for c in children
+                ],
+            )
 
         def decl_stmt(self, tree: LarkTree) -> None:
             values = self.visit_children(tree)
 
-            assert _is_token(values[0], 'IDENT')
+            assert _is_token(values[0], "IDENT")
             name = values[0].value
             # Handle __var declarations with no initialiser expression. Even though this is disallowed
             # by the specification, it appears in some DFPs, including some of NXP's.
             if values[1] is None:
                 value = 0
 
-                TRACE.debug("(line %d): decl %s = 0", getattr(tree.meta, 'line', 0), name)
+                TRACE.debug(
+                    "(line %d): decl %s = 0", getattr(tree.meta, "line", 0), name
+                )
             else:
                 value = self._get_atom(values[1])
 
-                TRACE.debug("(line %d): decl %s = %s", getattr(tree.meta, 'line', 0), name, self._format_atom(values[1]))
+                TRACE.debug(
+                    "(line %d): decl %s = %s",
+                    getattr(tree.meta, "line", 0),
+                    name,
+                    self._format_atom(values[1]),
+                )
 
             self._scope.set(name, value)
 
@@ -834,12 +918,18 @@ class Interpreter:
             op = values[1].value
             value = self._get_atom(values[2])
 
-            TRACE.debug("(line %d): %s %s %s", getattr(tree.meta, 'line', 0), name, op, self._format_atom(values[2]))
+            TRACE.debug(
+                "(line %d): %s %s %s",
+                getattr(tree.meta, "line", 0),
+                name,
+                op,
+                self._format_atom(values[2]),
+            )
 
             # Handle compound assignment operators.
-            if op != '=':
+            if op != "=":
                 left = self._scope.get(name)
-                op = op.rstrip('=')
+                op = op.rstrip("=")
                 value = _BINARY_OPS[op](left, value)
 
             self._scope.set(name, value)
@@ -850,7 +940,11 @@ class Interpreter:
         def expr_stmt(self, tree: LarkTree) -> int:
             values = self.visit_children(tree)
             expr_value = values.pop()
-            TRACE.debug("(line %d): expr stmt = %s", getattr(tree.meta, 'line', 0), self._format_atom(expr_value))
+            TRACE.debug(
+                "(line %d): expr stmt = %s",
+                getattr(tree.meta, "line", 0),
+                self._format_atom(expr_value),
+            )
             return self._get_atom(expr_value)
 
         def ternary_expr(self, tree: LarkTree) -> int:
@@ -859,19 +953,23 @@ class Interpreter:
             predicate = self._get_atom(values[0])
 
             if not isinstance(predicate, int):
-                raise DebugSequenceSemanticError("ternary expression predicate is not an integer")
+                raise DebugSequenceSemanticError(
+                    "ternary expression predicate is not an integer"
+                )
 
             if predicate != 0:
                 result = self._get_atom(values[1])
             else:
                 result = self._get_atom(values[2])
 
-            TRACE.debug("(line %s): %s ? %s : %s -> %s",
-                    getattr(tree.meta, 'line', 0),
-                    self._format_atom(values[0]),
-                    self._format_atom(values[1]),
-                    self._format_atom(values[2]),
-                    hex(result))
+            TRACE.debug(
+                "(line %s): %s ? %s : %s -> %s",
+                getattr(tree.meta, "line", 0),
+                self._format_atom(values[0]),
+                self._format_atom(values[1]),
+                self._format_atom(values[2]),
+                hex(result),
+            )
 
             return result
 
@@ -884,8 +982,14 @@ class Interpreter:
 
             result = _BINARY_OPS[op](left, right)
 
-            TRACE.debug("(line %s): %s %s %s -> %s", getattr(tree.meta, 'line', 0),
-                    self._format_atom(values[0]), op, self._format_atom(values[2]), hex(result))
+            TRACE.debug(
+                "(line %s): %s %s %s -> %s",
+                getattr(tree.meta, "line", 0),
+                self._format_atom(values[0]),
+                op,
+                self._format_atom(values[2]),
+                hex(result),
+            )
             return result
 
         def unary_expr(self, tree: LarkTree) -> int:
@@ -896,8 +1000,13 @@ class Interpreter:
 
             result = _UNARY_OPS[op](value)
 
-            TRACE.debug("(line %s): %s %s -> %s", getattr(tree.meta, 'line', 0), op, self._format_atom(values[1]),
-                hex(result))
+            TRACE.debug(
+                "(line %s): %s %s -> %s",
+                getattr(tree.meta, "line", 0),
+                op,
+                self._format_atom(values[1]),
+                hex(result),
+            )
 
             return result
 
@@ -909,8 +1018,12 @@ class Interpreter:
             # Case-insensitive match.
             fn_name = fn_name.lower()
 
-            TRACE.debug("(line %d): fn %s (%s) ...", getattr(tree.meta, 'line', 0), fn_name,
-                ", ".join(self._format_atom(a) for a in values[1:]))
+            TRACE.debug(
+                "(line %d): fn %s (%s) ...",
+                getattr(tree.meta, "line", 0),
+                fn_name,
+                ", ".join(self._format_atom(a) for a in values[1:]),
+            )
 
             # Should have already verified the function name.
             impl = getattr(self._fns, fn_name)
@@ -918,50 +1031,74 @@ class Interpreter:
             if result is None:
                 result = 0
 
-            TRACE.debug("(line %d): fn %s () returned %s", getattr(tree.meta, 'line', 0), fn_name, hex(result))
+            TRACE.debug(
+                "(line %d): fn %s () returned %s",
+                getattr(tree.meta, "line", 0),
+                fn_name,
+                hex(result),
+            )
             return result
 
         def _get_atom(self, node: NodeType) -> int:
             if isinstance(node, LarkTree):
-                raise DebugSequenceSemanticError(f"expected atom but found an expression tree of type {node.data}")
+                raise DebugSequenceSemanticError(
+                    f"expected atom but found an expression tree of type {node.data}"
+                )
             elif isinstance(node, LarkToken):
-                if node.type == 'IDENT':
+                if node.type == "IDENT":
                     try:
                         return self._scope.get(node.value)
                     except KeyError as err:
-                        LOG.debug("debug sequence reference to undefined variable %s... %s",
-                                node.value, self._scope.dump())
-                        raise DebugSequenceSemanticError(f"reference to undefined variable {node.value}") from err
-                elif node.type in ('INTLIT', 'STRLIT'):
+                        LOG.debug(
+                            "debug sequence reference to undefined variable %s... %s",
+                            node.value,
+                            self._scope.dump(),
+                        )
+                        raise DebugSequenceSemanticError(
+                            f"reference to undefined variable {node.value}"
+                        ) from err
+                elif node.type in ("INTLIT", "STRLIT"):
                     return node.value
                 else:
-                    raise DebugSequenceSemanticError(f"unexpected literal type {node.type}")
+                    raise DebugSequenceSemanticError(
+                        f"unexpected literal type {node.type}"
+                    )
             elif isinstance(node, int):
                 return node
             else:
-                raise DebugSequenceSemanticError("unexpected node type when expecting atom")
+                raise DebugSequenceSemanticError(
+                    "unexpected node type when expecting atom"
+                )
 
         def _format_atom(self, node: NodeType) -> str:
             """@brief Format an atom for trace logging."""
             if isinstance(node, LarkToken):
-                if node.type == 'IDENT':
+                if node.type == "IDENT":
                     try:
                         return node.value + "{" + hex(self._scope.get(node.value)) + "}"
                     except KeyError:
-                        TRACE.debug("reference to undefined variable %s... %s", node.value, self._scope.dump())
+                        TRACE.debug(
+                            "reference to undefined variable %s... %s",
+                            node.value,
+                            self._scope.dump(),
+                        )
                         return node.value + "{undefined}"
-                elif node.type == 'INTLIT':
+                elif node.type == "INTLIT":
                     return hex(node.value)
-                elif node.type == 'STRLIT':
+                elif node.type == "STRLIT":
                     return f"'{node.value}'"
                 else:
-                    raise DebugSequenceSemanticError(f"unexpected literal type {node.type}")
+                    raise DebugSequenceSemanticError(
+                        f"unexpected literal type {node.type}"
+                    )
             elif isinstance(node, int):
                 return hex(node)
             else:
                 return f"?<{type(node).__class__}>?"
 
-    def __init__(self, tree: LarkTree, scope: Scope, context: DebugSequenceExecutionContext) -> None:
+    def __init__(
+        self, tree: LarkTree, scope: Scope, context: DebugSequenceExecutionContext
+    ) -> None:
         """@brief Constructor.
 
         The provided AST is semantically checked and optimized.
@@ -991,4 +1128,3 @@ class Interpreter:
         """
         visitor = self._InterpreterVisitor(self._scope, self._context)
         return visitor.visit(self._tree)
-

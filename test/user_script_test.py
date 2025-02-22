@@ -23,7 +23,6 @@ import logging
 
 from pyocd.core.helpers import ConnectHelper
 from pyocd.probe.pydapaccess import DAPAccess
-from pyocd.core.memory_map import MemoryType
 from pyocd.commands.execution_context import CommandExecutionContext
 
 from test_util import (
@@ -31,16 +30,17 @@ from test_util import (
     TestResult,
     get_session_options,
     get_target_test_params,
-    get_test_binary_path,
     TEST_DIR,
-    )
+)
 
 TEST_USER_SCRIPT = os.path.join(TEST_DIR, "test_user_script.py")
+
 
 class UserScriptTestResult(TestResult):
     def __init__(self):
         super(UserScriptTestResult, self).__init__(None, None, None)
         self.name = "user_script"
+
 
 class UserScriptTest(Test):
     def __init__(self):
@@ -58,19 +58,15 @@ class UserScriptTest(Test):
         result.test = self
         return result
 
+
 def user_script_test(board_id):
     with ConnectHelper.session_with_chosen_probe(
-            unique_id=board_id, user_script=TEST_USER_SCRIPT, **get_session_options()) as session:
-        board = session.board
+        unique_id=board_id, user_script=TEST_USER_SCRIPT, **get_session_options()
+    ) as session:
         target = session.target
 
         test_params = get_target_test_params(session)
-        session.probe.set_clock(test_params['test_clock'])
-
-        memory_map = target.get_memory_map()
-        boot_region = memory_map.get_boot_memory()
-        ram_region = memory_map.get_default_region_of_type(MemoryType.RAM)
-        binary_file = get_test_binary_path(board.test_binary)
+        session.probe.set_clock(test_params["test_clock"])
 
         test_pass_count = 0
         test_count = 0
@@ -128,10 +124,19 @@ def user_script_test(board_id):
         result.passed = test_count == test_pass_count
         return result
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='pyOCD user script test')
-    parser.add_argument('-d', '--debug', action="store_true", help='Enable debug logging')
-    parser.add_argument("-da", "--daparg", dest="daparg", nargs='+', help="Send setting to DAPAccess layer.")
+    parser = argparse.ArgumentParser(description="pyOCD user script test")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "-da",
+        "--daparg",
+        dest="daparg",
+        nargs="+",
+        help="Send setting to DAPAccess layer.",
+    )
     args = parser.parse_args()
     level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=level)

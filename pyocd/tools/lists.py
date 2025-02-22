@@ -213,8 +213,6 @@ class ListGenerator(object):
         Output version history:
         - 1.0, initial version with debug probe and RTOS plugins
         """
-        from ..probe.aggregator import PROBE_CLASSES
-        from ..rtos import RTOS
         plugin_groups = [
                 'pyocd.probe',
                 'pyocd.rtos',

@@ -21,7 +21,7 @@ import threading
 import errno
 import platform
 import queue
-from typing import List, Optional
+from typing import Optional
 
 from .interface import Interface
 from .common import (
@@ -33,7 +33,6 @@ from .common import (
     )
 from ..dap_access_api import DAPAccessIntf
 from ... import common
-from ....utility.timeout import Timeout
 
 LOG = logging.getLogger(__name__)
 TRACE = LOG.getChild("trace")
@@ -374,7 +373,7 @@ class HasCmsisDapv2Interface:
                 else:
                     LOG.debug(msg)
             return False
-        except (IndexError, NotImplementedError, ValueError, UnicodeDecodeError) as error:
+        except (IndexError, NotImplementedError, ValueError, UnicodeDecodeError):
             return False
 
         if cmsis_dap_interface is None:

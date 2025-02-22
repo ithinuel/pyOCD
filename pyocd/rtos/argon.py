@@ -362,7 +362,7 @@ class ArgonThreadProvider(ThreadProvider):
     def event_handler(self, notification):
         # Invalidate threads list if flash is reprogrammed.
         LOG.debug("Argon: invalidating threads list: %s" % (repr(notification)))
-        self.invalidate();
+        self.invalidate()
 
     def _build_thread_list(self):
         allThreads = TargetList(self._target_context, self._all_threads)

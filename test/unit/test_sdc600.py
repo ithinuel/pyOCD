@@ -16,10 +16,9 @@
 # limitations under the License.
 
 import pytest
-import six
 from unittest import mock
 
-from .test_rom_table import (MockCoreSightComponent, MockCoreSight, MockCSSOC600Components)
+from .test_rom_table import (MockCoreSight, MockCSSOC600Components)
 
 from pyocd.coresight.ap import AccessPort
 from pyocd.coresight.sdc600 import SDC600

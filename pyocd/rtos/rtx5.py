@@ -349,7 +349,7 @@ class RTX5ThreadProvider(ThreadProvider):
 
     def event_handler(self, notification):
         # Invalidate threads list if flash is reprogrammed.
-        self.invalidate();
+        self.invalidate()
 
     def _build_thread_list(self):
         newThreads = {}

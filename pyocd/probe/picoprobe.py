@@ -19,6 +19,7 @@ from array import array
 
 from time import sleep
 from usb import core, util
+
 try:
     from libusb_package import find as usb_find
 except ImportError:
@@ -45,20 +46,20 @@ class PicoLink(object):
     Just to hide details of USB and Picoprobe command layer
     """
 
-    CLASS = 0xFF    # Vendor Specific
+    CLASS = 0xFF  # Vendor Specific
 
     CMD_HDR_LEN = 6  # do not include pico packet header
     PKT_HDR_LEN = 4  # pico packet header
     HDR_LEN = PKT_HDR_LEN + CMD_HDR_LEN
 
-    PROBE_INVALID = 0       # Invalid command
-    PROBE_WRITE_BITS = 1    # Host wants us to write bits
-    PROBE_READ_BITS = 2     # Host wants us to read bits
-    PROBE_SET_FREQ = 3      # Set TCK
-    PROBE_RESET = 4         # Reset all state: it's a no-op!
+    PROBE_INVALID = 0  # Invalid command
+    PROBE_WRITE_BITS = 1  # Host wants us to write bits
+    PROBE_READ_BITS = 2  # Host wants us to read bits
+    PROBE_SET_FREQ = 3  # Set TCK
+    PROBE_RESET = 4  # Reset all state: it's a no-op!
     PROBE_TARGET_RESET = 5  # Reset target (Hardware nreset)
 
-    BUFFER_SIZE = 8192      # Size of buffers in the picoprobe
+    BUFFER_SIZE = 8192  # Size of buffers in the picoprobe
 
     def __init__(self, dev):
         self._dev = dev
@@ -72,10 +73,10 @@ class PicoLink(object):
         # Progressive command id
         self._id = 0
         # Probe command queue
-        self._queue = array('B', (0, 0, 0, 0))
+        self._queue = array("B", (0, 0, 0, 0))
         self._qulen = self.PKT_HDR_LEN
         # Buffer for endpoint reads
-        self._bits = array('B', (0 for _ in range(self.BUFFER_SIZE)))
+        self._bits = array("B", (0 for _ in range(self.BUFFER_SIZE)))
 
     # ------------------------------------------- #
     #          Picoprobe Access functions
@@ -108,16 +109,19 @@ class PicoLink(object):
 
     @classmethod
     def enumerate_picoprobes(cls, uid=None) -> List["PicoLink"]:
-        """@brief Find and return all Picoprobes """
+        """@brief Find and return all Picoprobes"""
         try:
             # Use a custom matcher to make sure the probe is a Picoprobe and accessible.
-            return [PicoLink(probe) for probe in usb_find(find_all=True, custom_match=FindPicoprobe(uid))]
+            return [
+                PicoLink(probe)
+                for probe in usb_find(find_all=True, custom_match=FindPicoprobe(uid))
+            ]
         except core.NoBackendError:
             show_no_libusb_warning()
             return []
 
     def q_read_bits(self, bits):
-        """@brief Queue a read request for 'bits' bits to the probe """
+        """@brief Queue a read request for 'bits' bits to the probe"""
         # Cannot be called with bits = 0
         self._queue_cmd_header(self.PROBE_READ_BITS, bits)
 
@@ -130,19 +134,19 @@ class PicoLink(object):
             bits = 8 * len(data)  # will raise TypeError if data is int
         count = (bits + 7) // 8
         self._queue_cmd_header(self.PROBE_WRITE_BITS, bits, count)
-        self._queue.extend(data if type(data) is not int else data.to_bytes(count, 'little'))
+        self._queue.extend(
+            data if type(data) is not int else data.to_bytes(count, "little")
+        )
 
     def flush_queue(self):
         """@brief Execute all the queued probe actions"""
         # Put in the packet header (byte count)
-        self._queue[:self.PKT_HDR_LEN] = array(
-            'B', self._qulen.to_bytes(4, 'little'))
+        self._queue[: self.PKT_HDR_LEN] = array("B", self._qulen.to_bytes(4, "little"))
         try:
             self._wr_ep.write(self._queue)
         except Exception:
             # Anything from the USB layer assumes probe is no longer connected
-            raise exceptions.ProbeDisconnected(
-                'Cannot access probe ' + self._probe_id)
+            raise exceptions.ProbeDisconnected("Cannot access probe " + self._probe_id)
         finally:
             # Make sure there are no leftovers
             self._clear_queue()
@@ -156,15 +160,16 @@ class PicoLink(object):
             received = self._rd_ep.read(self._bits)
         except Exception:
             # Anything from the USB layer assumes probe is no longer connected
-            raise exceptions.ProbeDisconnected(
-                'Cannot access probe ' + self._probe_id)
+            raise exceptions.ProbeDisconnected("Cannot access probe " + self._probe_id)
 
         # Check for correct length of received data
-        remaining = int.from_bytes(self._bits[:self.PKT_HDR_LEN], 'little')
+        remaining = int.from_bytes(self._bits[: self.PKT_HDR_LEN], "little")
         if remaining != received:
             # Something went wrong, wrong number of bytes received
             raise exceptions.ProbeError(
-                'Mismatched header from %s: expected %d, received %d' % (self._probe_id, remaining, received))
+                "Mismatched header from %s: expected %d, received %d"
+                % (self._probe_id, remaining, received)
+            )
 
         remaining -= self.PKT_HDR_LEN
         offset = self.PKT_HDR_LEN
@@ -172,15 +177,17 @@ class PicoLink(object):
         # Loop over the received data, creating a list of ints
         while remaining > 0:
             # Check for a real read header
-            if self._bits[offset+1] != self.PROBE_READ_BITS:
+            if self._bits[offset + 1] != self.PROBE_READ_BITS:
                 # Something went wrong: wrong command in received header
                 # Possible sign we are misaligned
-                raise exceptions.ProbeError('Wrong header received from %s')
+                raise exceptions.ProbeError("Wrong header received from %s")
             # Get the bytes count for the operation
             # The receiver must know how many bits they are interested in!
-            count = (int.from_bytes(self._bits[offset + 2:offset + 6], 'little') + 7) // 8
+            count = (
+                int.from_bytes(self._bits[offset + 2 : offset + 6], "little") + 7
+            ) // 8
             offset += self.CMD_HDR_LEN
-            result.append(int.from_bytes(self._bits[offset:offset + count], 'little'))
+            result.append(int.from_bytes(self._bits[offset : offset + count], "little"))
             offset += count
             remaining -= self.CMD_HDR_LEN + count
         return result
@@ -225,11 +232,11 @@ class PicoLink(object):
         # update packet header, packet is for sure shorter than 64
         self._qulen += length
         self._queue.extend((id, cmd))
-        self._queue.extend(bits.to_bytes(4, 'little'))
+        self._queue.extend(bits.to_bytes(4, "little"))
 
     def _clear_queue(self):
         # Empty send queue and reset packet header
-        del self._queue[self.PKT_HDR_LEN:]
+        del self._queue[self.PKT_HDR_LEN :]
         self._qulen = self.PKT_HDR_LEN
 
     def start_queue(self):
@@ -238,7 +245,7 @@ class PicoLink(object):
 
 
 class FindPicoprobe(object):
-    """@brief Custom matcher for Picoprobe to be used in core.find() """
+    """@brief Custom matcher for Picoprobe to be used in core.find()"""
 
     VID_PID_CLASS = (0x2E8A, 0x0004, 0x00)  # Match for a Picoprobe
 
@@ -270,18 +277,33 @@ class FindPicoprobe(object):
 
         except core.USBError as error:
             if error.errno == errno.EACCES and platform.system() == "Linux":
-                msg = ("%s while trying to interrogate a USB device "
-                       "(VID=%04x PID=%04x). This can probably be remedied with a udev rule. "
-                       "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help." %
-                       (error, dev.idVendor, dev.idProduct))
+                msg = (
+                    "%s while trying to interrogate a USB device "
+                    "(VID=%04x PID=%04x). This can probably be remedied with a udev rule. "
+                    "See <https://github.com/pyocd/pyOCD/tree/master/udev> for help."
+                    % (error, dev.idVendor, dev.idProduct)
+                )
                 LOG.warning(msg)
             else:
-                LOG.warning("Error accessing USB device (VID=%04x PID=%04x): %s",
-                            dev.idVendor, dev.idProduct, error)
+                LOG.warning(
+                    "Error accessing USB device (VID=%04x PID=%04x): %s",
+                    dev.idVendor,
+                    dev.idProduct,
+                    error,
+                )
             return False
-        except (IndexError, NotImplementedError, ValueError, UnicodeDecodeError) as error:
-            LOG.debug("Error accessing USB device (VID=%04x PID=%04x): %s",
-                      dev.idVendor, dev.idProduct, error)
+        except (
+            IndexError,
+            NotImplementedError,
+            ValueError,
+            UnicodeDecodeError,
+        ) as error:
+            LOG.debug(
+                "Error accessing USB device (VID=%04x PID=%04x): %s",
+                dev.idVendor,
+                dev.idProduct,
+                error,
+            )
             return False
 
         # Check the passed serial number
@@ -295,22 +317,22 @@ class FindPicoprobe(object):
 
 
 class Picoprobe(DebugProbe):
-    """@brief Wraps a Picolink link as a DebugProbe. """
+    """@brief Wraps a Picolink link as a DebugProbe."""
 
     # Address of read buffer register in DP.
     RDBUFF = 0xC
 
     # Bitmasks for AP/DP register address field.
-    A32 = 0x0000000c
+    A32 = 0x0000000C
 
     # SWD command format
-    SWD_CMD_START = (1 << 0)    # always set
-    SWD_CMD_APnDP = (1 << 1)    # set only for AP access
-    SWD_CMD_RnW = (1 << 2)      # set only for read access
-    SWD_CMD_A32 = (3 << 3)      # bits A[3:2] of register addr
-    SWD_CMD_PARITY = (1 << 5)   # parity of APnDP|RnW|A32
-    SWD_CMD_STOP = (0 << 6)     # always clear for synch SWD
-    SWD_CMD_PARK = (1 << 7)     # driven high by host
+    SWD_CMD_START = 1 << 0  # always set
+    SWD_CMD_APnDP = 1 << 1  # set only for AP access
+    SWD_CMD_RnW = 1 << 2  # set only for read access
+    SWD_CMD_A32 = 3 << 3  # bits A[3:2] of register addr
+    SWD_CMD_PARITY = 1 << 5  # parity of APnDP|RnW|A32
+    SWD_CMD_STOP = 0 << 6  # always clear for synch SWD
+    SWD_CMD_PARK = 1 << 7  # driven high by host
 
     # APnDP constants.
     DP = 0
@@ -333,15 +355,15 @@ class Picoprobe(DebugProbe):
         ACK_ALL: exceptions.TransferError("Picoprobe: Protocol fault"),
     }
 
-    SAFESWD_OPTION = 'picoprobe.safeswd'
+    SAFESWD_OPTION = "picoprobe.safeswd"
 
     PARITY_BIT = 0x100000000
 
-    @ classmethod
+    @classmethod
     def get_all_connected_probes(cls, unique_id=None, is_explicit=False):
         return [cls(dev) for dev in PicoLink.enumerate_picoprobes()]
 
-    @ classmethod
+    @classmethod
     def get_probe_with_id(cls, unique_id, is_explicit=False):
         probes = PicoLink.enumerate_picoprobes(unique_id)
         if probes:
@@ -355,36 +377,36 @@ class Picoprobe(DebugProbe):
         self._unique_id = self._link.get_unique_id()
         self._reset = False
 
-    @ property
+    @property
     def description(self):
         return self.vendor_name + " " + self.product_name
 
-    @ property
+    @property
     def vendor_name(self):
         return self._link.vendor_name
 
-    @ property
+    @property
     def product_name(self):
         return self._link.product_name
 
-    @ property
+    @property
     def supported_wire_protocols(self):
         return [DebugProbe.Protocol.DEFAULT, DebugProbe.Protocol.SWD]
 
-    @ property
+    @property
     def unique_id(self):
         return self._unique_id
 
-    @ property
+    @property
     def wire_protocol(self):
         """@brief Only valid after connecting."""
         return DebugProbe.Protocol.SWD if self._is_connected else None
 
-    @ property
+    @property
     def is_open(self):
         return self._is_open
 
-    @ property
+    @property
     def capabilities(self):
         return {DebugProbe.Capability.SWJ_SEQUENCE, DebugProbe.Capability.SWD_SEQUENCE}
 
@@ -464,7 +486,13 @@ class Picoprobe(DebugProbe):
         else:
             reads = self._link.get_bits()
             # Is there a status definition, no check in caller?
-            return (0, [v.to_bytes(l, 'little') for v, l in zip(reads, reads_lengths)])
+            return (
+                0,
+                [
+                    v.to_bytes(length, "little")
+                    for v, length in zip(reads, reads_lengths)
+                ],
+            )
 
     def disconnect(self):
         self._is_connected = False
@@ -474,9 +502,9 @@ class Picoprobe(DebugProbe):
 
     def reset(self):
         self.assert_reset(True)
-        sleep(self.session.options.get('reset.hold_time'))
+        sleep(self.session.options.get("reset.hold_time"))
         self.assert_reset(False)
-        sleep(self.session.options.get('reset.post_delay'))
+        sleep(self.session.options.get("reset.post_delay"))
 
     def assert_reset(self, asserted):
         self._link.assert_target_reset(asserted)
@@ -494,8 +522,8 @@ class Picoprobe(DebugProbe):
 
         # Return the result or the result callback for deferred reads
         def read_dp_result_callback():
-
             return val
+
         return val if now else read_dp_result_callback
 
     def write_dp(self, addr, value):
@@ -506,6 +534,7 @@ class Picoprobe(DebugProbe):
 
         def read_ap_cb():
             return ret
+
         return ret if now else read_ap_cb
 
     def write_ap(self, addr, value):
@@ -565,7 +594,7 @@ class Picoprobe(DebugProbe):
 
         # Parity check
         if any(v & self.PARITY_BIT for v in results):
-            raise exceptions.ProbeError('Bad parity in SWD read')
+            raise exceptions.ProbeError("Bad parity in SWD read")
 
         def read_ap_multiple_result_callback():
             return results
@@ -580,7 +609,7 @@ class Picoprobe(DebugProbe):
         while left > 0:
             chunk = 256 if left > 256 else left
             self._link.start_queue()
-            for value in values[done:done+chunk]:
+            for value in values[done : done + chunk]:
                 # Queue write command
                 self._swd_command(self.WRITE, self.AP, addr)
                 # Prepare the write buffer
@@ -619,7 +648,7 @@ class Picoprobe(DebugProbe):
         par = reg & self.PARITY_BIT
         # Check for correct parity value
         if par != parity32_high(val):
-            raise exceptions.ProbeError('Bad parity in SWD read')
+            raise exceptions.ProbeError("Bad parity in SWD read")
 
         return val
 
@@ -689,17 +718,22 @@ class PicoprobePlugin(Plugin):
     def load(self):
         return Picoprobe
 
-    @ property
+    @property
     def name(self):
         return "picoprobe"
 
-    @ property
+    @property
     def description(self):
         return "Raspberry Pi Pico Probe"
 
-    @ property
+    @property
     def options(self):
         """@brief Returns picoprobe options."""
         return [
-            OptionInfo(Picoprobe.SAFESWD_OPTION, bool, False,
-                       "Use safe but slower SWD transfer functions with Picoprobe.")]
+            OptionInfo(
+                Picoprobe.SAFESWD_OPTION,
+                bool,
+                False,
+                "Use safe but slower SWD transfer functions with Picoprobe.",
+            )
+        ]

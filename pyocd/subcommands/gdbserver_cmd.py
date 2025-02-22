@@ -156,7 +156,7 @@ class GdbserverSubcommand(SubcommandBase):
             if self._args.core is not None:
                 try:
                     core_list = {int(x) for x in self._args.core.split(',')}
-                except ValueError as err:
+                except ValueError:
                     LOG.error("Invalid value passed to --core")
                     return 1
             else:

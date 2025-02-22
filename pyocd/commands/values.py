@@ -335,7 +335,7 @@ class AccessiblePinsValue(ValueBase):
                 desc = "n/a"
             return desc
 
-        self.context.write(f"Protocol pins:")
+        self.context.write("Protocol pins:")
         self.context.write(f"  SWCLK/TCK = {pin_desc(DebugProbe.ProtocolPin.SWCLK_TCK)}")
         self.context.write(f"  SWDIO/TMS = {pin_desc(DebugProbe.ProtocolPin.SWDIO_TMS)}")
         self.context.write(f"  TDI =       {pin_desc(DebugProbe.ProtocolPin.TDI)}")
@@ -347,7 +347,7 @@ class AccessiblePinsValue(ValueBase):
         r_pins, w_pins = self.context.probe.get_accessible_pins(DebugProbe.PinGroup.GPIO_PINS)
 
         if (r_pins | w_pins) != 0:
-            self.context.write(f"GPIO pins:")
+            self.context.write("GPIO pins:")
             for b in range(msb(r_pins | w_pins) + 1):
                 self.context.write(f"  GPIO {b:<6} {pin_desc(1 << b)}")
 

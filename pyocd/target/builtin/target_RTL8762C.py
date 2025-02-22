@@ -15,6 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from ...coresight.coresight_target import CoreSightTarget
+from ...core.memory_map import FlashRegion, RamRegion, MemoryMap
+
+# fmt: off
 FLASH_ALGO = {
     'load_address' : 0x00200000,
 
@@ -390,9 +394,7 @@ FLASH_ALGO = {
         (0x0, 0x1000),
     )
 }
-
-from ...coresight.coresight_target import CoreSightTarget
-from ...core.memory_map import (FlashRegion, RamRegion, MemoryMap)
+# fmt on
 
 class RTL8762C(CoreSightTarget):
 

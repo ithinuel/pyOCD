@@ -15,7 +15,6 @@
 # limitations under the License.
 from __future__ import print_function
 
-import threading
 import multiprocessing
 
 from pyocd.core.helpers import ConnectHelper

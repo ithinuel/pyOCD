@@ -34,7 +34,6 @@ from .common import (
     generate_device_unique_id,
     )
 from ..dap_access_api import DAPAccessIntf
-from ....utility.timeout import Timeout
 
 LOG = logging.getLogger(__name__)
 TRACE = LOG.getChild("trace")
@@ -119,7 +118,7 @@ class PyUSB(Interface):
                 self.kernel_driver_was_attached = True
         except usb.core.USBError as e:
             LOG.warning("USB Kernel Driver Detach Failed ([%s] %s). Attached driver may interfere with pyOCD operations.", e.errno, e.strerror)
-        except NotImplementedError as e:
+        except NotImplementedError:
             # Some implementations don't don't have kernel attach/detach
             LOG.debug("Probe %s: USB kernel driver detaching is not supported. Attached HID driver may interfere with pyOCD operations.", self.serial_number)
 

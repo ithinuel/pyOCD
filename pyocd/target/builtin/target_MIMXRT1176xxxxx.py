@@ -829,7 +829,7 @@ class MIMXRT1176xxxxx_CM7(CoreSightTarget):
 
     def update_sbmr(self, ap):
         sbmr = ap.read32(SRC_SBMR)
-        sbmr |= (0xF << 10);
+        sbmr |= (0xF << 10)
         ap.write32(SRC_SBMR, sbmr)
 
     def find_aps(self):
@@ -911,7 +911,7 @@ class MIMXRT1176xxxxx_CM4(CoreSightTarget):
 
     def update_sbmr(self, ap):
         sbmr = ap.read32(SRC_SBMR)
-        sbmr |= (0xF << 10);
+        sbmr |= (0xF << 10)
         ap.write32(SRC_SBMR, sbmr)
 
     def find_aps(self):

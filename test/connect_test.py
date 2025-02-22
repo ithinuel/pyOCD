@@ -15,11 +15,9 @@
 # limitations under the License.
 from __future__ import print_function
 
-import os
 import sys
 import traceback
 import argparse
-from collections import namedtuple
 import logging
 
 from pyocd.core.helpers import ConnectHelper

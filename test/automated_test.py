@@ -33,7 +33,6 @@ from pyocd.probe.aggregator import DebugProbeAggregator
 
 from test_util import (
     get_env_file_name,
-    TestResult,
     Test,
     IOTee,
     RecordingLogHandler,

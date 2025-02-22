@@ -60,13 +60,13 @@ class PyocdRepl(object):
                 history_len = int(os.environ.get(self.PYOCD_HISTORY_LENGTH_ENV_VAR,
                         session.Session.get_current().options.get('commander.history_length')))
                 readline.set_history_length(history_len)
-            except (NameError, IOError) as err:
+            except (NameError, IOError):
                 pass
 
             # Install exit handler to write out the command history.
             try:
                 atexit.register(readline.write_history_file, self._history_path)
-            except (NameError, IOError) as err:
+            except (NameError, IOError):
                 pass
         except ImportError:
             pass

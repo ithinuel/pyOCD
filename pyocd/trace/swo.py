@@ -15,13 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (TYPE_CHECKING, Generator, Iterable, List, Optional)
+from typing import TYPE_CHECKING, Generator, Iterable, List, Optional
 
 from . import events
 
 if TYPE_CHECKING:
     from ..core.core_target import CoreTarget
     from .sink import TraceEventSink
+
 
 class SWOParser:
     """@brief SWO data stream parser.
@@ -34,7 +35,10 @@ class SWOParser:
     A SWOParser instance can be reused for multiple SWO sessions. If a break in SWO data streaming
     occurs, the reset() method should be called before passing further data to parse().
     """
-    def __init__(self, core: "CoreTarget", sink: Optional["TraceEventSink"] = None) -> None:
+
+    def __init__(
+        self, core: "CoreTarget", sink: Optional["TraceEventSink"] = None
+    ) -> None:
         self.reset()
         self._core = core
         self._sink = sink
@@ -93,13 +97,18 @@ class SWOParser:
                 # queue separately.
                 if event.comparator == self._pending_data_trace.comparator:
                     # Merge the two data trace events.
-                    ev = events.TraceDataTraceEvent(cmpn=event.comparator,
+                    ev = events.TraceDataTraceEvent(
+                        cmpn=event.comparator,
                         pc=(event.pc or self._pending_data_trace.pc),
                         addr=(event.address or self._pending_data_trace.address),
                         value=(event.value or self._pending_data_trace.value),
                         rnw=(event.is_read or self._pending_data_trace.is_read),
-                        sz=(event.transfer_size or self._pending_data_trace.transfer_size),
-                        ts=self._pending_data_trace.timestamp)
+                        sz=(
+                            event.transfer_size
+                            or self._pending_data_trace.transfer_size
+                        ),
+                        ts=self._pending_data_trace.timestamp,
+                    )
                 else:
                     ev = self._pending_data_trace
                 self._pending_events.append(ev)
@@ -145,7 +154,6 @@ class SWOParser:
         generator's send() method to provide the next byte.
         """
         timestamp = 0
-        invalid = False
         while True:
             byte = yield
             hdr = byte
@@ -161,8 +169,7 @@ class SWOParser:
                         packets += 1
                     else:
                         # Get early non-zero packet, reset sync packet counter.
-                        #packets = 0
-                        invalid = True
+                        # packets = 0
                         break
                     byte = yield
                 self._itm_page = 0
@@ -174,7 +181,7 @@ class SWOParser:
                 c = (hdr >> 7) & 0x1
                 d = (hdr >> 4) & 0b111
                 # Local timestamp.
-                if (hdr & 0xf) == 0 and d not in (0x0, 0x3):
+                if (hdr & 0xF) == 0 and d not in (0x0, 0x3):
                     ts = 0
                     tc = 0
                     # Local timestamp packet format 1.
@@ -182,7 +189,7 @@ class SWOParser:
                         tc = (hdr >> 4) & 0x3
                         while c == 1:
                             byte = yield
-                            ts = (ts << 7) | (byte & 0x7f)
+                            ts = (ts << 7) | (byte & 0x7F)
                             c = (byte >> 7) & 0x1
                     # Local timestamp packet format 2.
                     else:
@@ -203,58 +210,62 @@ class SWOParser:
                         ex = 0
                         while c == 1:
                             byte = yield
-                            ex = (ex << 7) | (byte & 0x7f)
+                            ex = (ex << 7) | (byte & 0x7F)
                             c = (byte >> 7) & 0x1
                     if sh == 0:
                         # Extension packet with sh==0 sets ITM stimulus page.
                         self._itm_page = ex
                     else:
-                        #self._send_event(events.TraceEvent("Extension: SH={:d} EX={:#x}\n".format(sh, ex), timestamp))
-                        invalid = True
+                        # self._send_event(events.TraceEvent("Extension: SH={:d} EX={:#x}\n".format(sh, ex), timestamp))
+                        pass
                 # Reserved packet.
                 else:
-                    invalid = True
+                    pass
             # Source packet.
             else:
                 ss = hdr & 0x3
-                l = 1 << (ss - 1)
-                a = (hdr >> 3) & 0x1f
-                if l == 1:
+                length = 1 << (ss - 1)
+                a = (hdr >> 3) & 0x1F
+                if length == 1:
                     payload = yield
-                elif l == 2:
+                elif length == 2:
                     byte1 = yield
                     byte2 = yield
-                    payload = (byte1 |
-                                (byte2 << 8))
+                    payload = byte1 | (byte2 << 8)
                 else:
                     byte1 = yield
                     byte2 = yield
                     byte3 = yield
                     byte4 = yield
-                    payload = (byte1 |
-                                (byte2 << 8) |
-                                (byte3 << 16) |
-                                (byte4 << 24))
+                    payload = byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24)
 
                 # Instrumentation packet.
                 if (hdr & 0x4) == 0:
                     port = (self._itm_page * 32) + a
-                    self._send_event(events.TraceITMEvent(port, payload, l, timestamp))
+                    self._send_event(
+                        events.TraceITMEvent(port, payload, length, timestamp)
+                    )
                 # Hardware source packets...
                 # Event counter
                 elif a == 0:
                     self._send_event(events.TraceEventCounter(payload, timestamp))
                 # Exception trace
                 elif a == 1:
-                    exception_number = payload & 0x1ff
+                    exception_number = payload & 0x1FF
                     # TODO remove exception name and dependency on core
-                    exception_name = self._core.exception_number_to_name(exception_number)
+                    exception_name = self._core.exception_number_to_name(
+                        exception_number
+                    )
                     fn = (payload >> 12) & 0x3
                     if 1 <= fn <= 3:
-                        self._send_event(events.TraceExceptionEvent(
-                                exception_number, exception_name, fn, timestamp))
+                        self._send_event(
+                            events.TraceExceptionEvent(
+                                exception_number, exception_name, fn, timestamp
+                            )
+                        )
+                    # Invalid fn
                     else:
-                        invalid = True
+                        pass
                 # Periodic PC
                 elif a == 2:
                     # A payload of 0 indicates a period PC sleep event.
@@ -266,19 +277,32 @@ class SWOParser:
                     bit3 = (hdr >> 3) & 0x1
                     # PC value
                     if type == 0b01 and bit3 == 0:
-                        self._send_event(events.TraceDataTraceEvent(cmpn=cmpn, pc=payload, ts=timestamp))
+                        self._send_event(
+                            events.TraceDataTraceEvent(
+                                cmpn=cmpn, pc=payload, ts=timestamp
+                            )
+                        )
                     # Address
                     elif type == 0b01 and bit3 == 1:
-                        self._send_event(events.TraceDataTraceEvent(cmpn=cmpn, addr=payload, ts=timestamp))
+                        self._send_event(
+                            events.TraceDataTraceEvent(
+                                cmpn=cmpn, addr=payload, ts=timestamp
+                            )
+                        )
                     # Data value
                     elif type == 0b10:
-                        self._send_event(events.TraceDataTraceEvent(
-                                cmpn=cmpn, value=payload, rnw=(bit3 == 0), sz=l, ts=timestamp))
+                        self._send_event(
+                            events.TraceDataTraceEvent(
+                                cmpn=cmpn,
+                                value=payload,
+                                rnw=(bit3 == 0),
+                                sz=length,
+                                ts=timestamp,
+                            )
+                        )
+                    # Invalid type
                     else:
-                        invalid = True
+                        pass
                 # Invalid DWT 'a' value.
                 else:
-                    invalid = True
-
-
-
+                    pass

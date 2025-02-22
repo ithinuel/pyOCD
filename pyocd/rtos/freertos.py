@@ -364,7 +364,7 @@ class FreeRTOSThreadProvider(ThreadProvider):
         # xDelayedTaskList1 immediately follows pxReadyTasksLists, so subtracting their addresses gives
         # us the total size of the pxReadyTaskLists array. But not trustworthy. Compiler can rearrange things
         delta = self._symbols['xDelayedTaskList1'] - self._symbols['pxReadyTasksLists']
-        delta = self._get_elf_symbol_size('pxReadyTasksLists', self._symbols['pxReadyTasksLists'], delta);
+        delta = self._get_elf_symbol_size('pxReadyTasksLists', self._symbols['pxReadyTasksLists'], delta)
         if delta % LIST_SIZE:
             LOG.warning("FreeRTOS: pxReadyTasksLists size is unexpected, maybe an unsupported version of FreeRTOS." + elfOptHelp)
             return False
@@ -385,7 +385,7 @@ class FreeRTOSThreadProvider(ThreadProvider):
     def event_handler(self, notification):
         # Invalidate threads list if flash is reprogrammed.
         LOG.debug("FreeRTOS: invalidating threads list: %s" % (repr(notification)))
-        self.invalidate();
+        self.invalidate()
 
     def _build_thread_list(self):
         newThreads = {}
