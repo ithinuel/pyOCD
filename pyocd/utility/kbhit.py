@@ -100,14 +100,14 @@ class KBHit:
 
         if os.name == "nt":
             msvcrt.getch()  # skip 0xE0
-            c = msvcrt.getch()
+            c = msvcrt.getch().decode("utf-8")
             vals = [72, 77, 80, 75]
 
         else:
             c = sys.stdin.read(3)[2]
             vals = [65, 67, 66, 68]
 
-        return vals.index(ord(c.decode("utf-8")))
+        return vals.index(ord(c))
 
     def kbhit(self):
         """Returns True if keyboard character was hit, False otherwise."""
