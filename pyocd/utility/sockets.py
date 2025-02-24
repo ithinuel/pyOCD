@@ -17,6 +17,7 @@
 
 import socket
 import select
+from typing import Optional
 
 
 class ListenerSocket(object):
@@ -92,11 +93,13 @@ class ClientSocket(object):
 
     DEFAULT_TIMEOUT = 10.0
 
-    def __init__(self, host, port, packet_size=4096, timeout=None):
+    def __init__(
+        self, host: str, port: int, packet_size=4096, timeout: Optional[float] = None
+    ):
         self._address = (host, port)
         self._packet_size = packet_size
         self._timeout = timeout or self.DEFAULT_TIMEOUT
-        self._socket = None
+        self._socket: Optional[socket.socket] = None
         self._buffer = bytearray()
 
     def connect(self):
