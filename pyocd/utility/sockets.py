@@ -44,6 +44,7 @@ class ListenerSocket(object):
     def connect(self):
         self.conn = None
         self.init()
+        assert self.listener
         rr, _, _ = select.select([self.listener], [], [], 0.5)
         if rr:
             self.conn, _ = self.listener.accept()
@@ -51,11 +52,13 @@ class ListenerSocket(object):
         return self.conn
 
     def read(self, packet_size=None):
+        assert self.conn
         if packet_size is None:
             packet_size = self.packet_size
         return self.conn.recv(packet_size)
 
     def write(self, data):
+        assert self.conn
         return self.conn.send(data)
 
     def close(self):
@@ -73,9 +76,11 @@ class ListenerSocket(object):
             self.listener = None
 
     def set_blocking(self, blocking):
+        assert self.conn
         self.conn.setblocking(blocking)
 
     def set_timeout(self, timeout):
+        assert self.conn
         self.conn.settimeout(timeout)
 
 
@@ -105,13 +110,16 @@ class ClientSocket(object):
             self._socket = None
 
     def set_blocking(self, blocking):
+        assert self._socket
         self._socket.setblocking(blocking)
 
     def set_timeout(self, timeout):
         """@brief Change the socket to blocking with timeout mode."""
+        assert self._socket
         self._socket.settimeout(timeout)
 
     def read(self, packet_size=None):
+        assert self._socket
         if packet_size is None:
             packet_size = self._packet_size
         # Pull from the buffer first.
@@ -123,6 +131,7 @@ class ClientSocket(object):
         return self._socket.recv(packet_size)
 
     def write(self, data):
+        assert self._socket
         return self._socket.sendall(data)
 
     def readline(self):
