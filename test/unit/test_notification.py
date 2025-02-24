@@ -92,7 +92,7 @@ class TestNotification(object):
         notifier.notify(EVENT_B, self)
         assert not subscriber.was_called
         assert s2.was_called
-        assert s2.last_note.event == EVENT_B
+        assert s2.last_note is not None and s2.last_note.event == EVENT_B
 
     def test_src_sub(self, notifier, subscriber):
         notifier.subscribe(subscriber.cb, EVENT_A, source=self)
