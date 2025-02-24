@@ -85,12 +85,11 @@ class ColumnFormatter:
             txt += "\n"
         return txt
 
-    def write(self, output_file: IO[str] = None) -> None:
+    def write(self, output: Optional[IO[str]] = None) -> None:
         """@brief Write the formatted columns to stdout or the specified file.
         @param self The object.
         @param output_file Optional file to which the column printer output will be written. If no specified,
             then sys.stdout is used.
         """
-        if output_file is None:
-            output_file = sys.stdout
+        output_file = output or sys.stdout
         output_file.write(self.format())

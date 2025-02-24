@@ -49,7 +49,7 @@ def dump_hex_data(
     data: Sequence[int],
     start_address: int = 0,
     width: int = 8,
-    output: Optional[IO[str]] = None,
+    output_io: Optional[IO[str]] = None,
     print_ascii: bool = True,
 ) -> None:
     """@brief Prints a canonical hex dump of the given data.
@@ -83,8 +83,7 @@ def dump_hex_data(
         used.
     @param print_ascii Whether to include the printable ASCII column. Defaults to True.
     """
-    if output is None:
-        output = sys.stdout
+    output = output_io or sys.stdout
     if width == 8:
         line_width = 16
     elif width == 16:
@@ -145,5 +144,5 @@ def dump_hex_data_to_str(data, **kwargs):
     @see dump_hex_data()
     """
     sio = io.StringIO()
-    dump_hex_data(data, output=sio, **kwargs)
+    dump_hex_data(data, output_io=sio, **kwargs)
     return sio.getvalue()
