@@ -38,6 +38,9 @@ commands =
 files = "pyocd"
 ignore_missing_imports = true
 
+[tool.pyright]
+exclude = ["pyocd/target"]
+
 [tool.ruff]
 exclude = ["pyocd/target"]
 target-version = "py38"
