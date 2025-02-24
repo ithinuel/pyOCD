@@ -532,7 +532,6 @@ class ArgonTraceEventFilter(TraceEventFilter):
     def __init__(self, threads):
         super(ArgonTraceEventFilter, self).__init__()
         self._threads = threads
-        self._is_thread_event_pending = False
         self._pending_event = None
 
     def filter(self, event):
@@ -544,11 +543,10 @@ class ArgonTraceEventFilter(TraceEventFilter):
                     ArgonTraceEvent.kArTraceThreadCreated,
                     ArgonTraceEvent.kArTraceThreadDeleted,
                 ):
-                    self._is_thread_event_pending = True
                     self._pending_event = event
                     # Swallow the event.
                     return
-            elif event.port == 30 and self._is_thread_event_pending:
+            elif event.port == 30 and self._pending_event is not None:
                 eventID = self._pending_event.data >> 24
                 threadID = event.data
                 name = self._threads.get(threadID, "<unknown thread>")
@@ -559,7 +557,6 @@ class ArgonTraceEventFilter(TraceEventFilter):
                     eventID, threadID, name, state, self._pending_event.timestamp
                 )
 
-                self._is_thread_event_pending = False
                 self._pending_event = None
 
         return event
