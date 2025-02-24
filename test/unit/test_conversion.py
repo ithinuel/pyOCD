@@ -380,10 +380,10 @@ class TestGdbEscape(object):
 
 class TestPairwise(object):
     def test_empty(self):
-        assert list(pairwise([])) == []
+        assert list(pairwise(iter([]))) == []
 
     def test_str(self):
-        assert list(pairwise("abcdef")) == [("a", "b"), ("c", "d"), ("e", "f")]
+        assert list(pairwise(iter("abcdef"))) == [("a", "b"), ("c", "d"), ("e", "f")]
 
     def test_int(self):
-        assert list(pairwise([1, 2, 3, 4, 5, 6])) == [(1, 2), (3, 4), (5, 6)]
+        assert list(pairwise(iter([1, 2, 3, 4, 5, 6]))) == [(1, 2), (3, 4), (5, 6)]
