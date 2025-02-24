@@ -115,7 +115,7 @@ class KBHit:
             return msvcrt.kbhit()
 
         else:
-            dr, dw, de = select([sys.stdin], [], [], 0)
+            dr, _dw, _de = select([sys.stdin], [], [], 0)
             return dr != []
 
 
