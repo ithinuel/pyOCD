@@ -17,7 +17,9 @@
 
 import logging
 
-from .provider import TargetThread
+from pyocd.debug.context import DebugContext
+
+from .provider import TargetThread, ThreadProvider
 from ..core import exceptions
 
 LOG = logging.getLogger(__name__)
@@ -27,7 +29,7 @@ LOG = logging.getLogger(__name__)
 EXC_RETURN_EXT_FRAME_MASK = 1 << 4
 
 
-def read_c_string(context, ptr):
+def read_c_string(context: DebugContext, ptr: int) -> str:
     """@brief Reads a null-terminated C string from the target."""
     if ptr == 0:
         return ""
@@ -68,7 +70,7 @@ class HandlerModeThread(TargetThread):
 
     UNIQUE_ID = 2
 
-    def __init__(self, targetContext, provider):
+    def __init__(self, targetContext: DebugContext, provider: ThreadProvider) -> None:
         super(HandlerModeThread, self).__init__()
         self._target_context = targetContext
         self._provider = provider
@@ -77,21 +79,24 @@ class HandlerModeThread(TargetThread):
         return self._target_context.read_core_register_raw("msp")
 
     @property
-    def priority(self):
+    def priority(self) -> int:
         return 0
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> int:
         return self.UNIQUE_ID
 
     @property
-    def name(self):
+    def name(self) -> str:
         return "Handler mode"
 
     @property
-    def description(self):
-        ipsr = self._target_context.read_core_register("ipsr")
-        return self._target_context.core.exception_number_to_name(ipsr)
+    def description(self) -> str:
+        ipsr = self._target_context.read_core_register_raw("ipsr")
+        return (
+            self._target_context.core.exception_number_to_name(ipsr)
+            or f"exception #{ipsr}"
+        )
 
     @property
     def is_current(self) -> bool:
@@ -101,8 +106,8 @@ class HandlerModeThread(TargetThread):
     def context(self):
         return self._target_context
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<HandlerModeThread@0x%08x>" % (id(self))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
