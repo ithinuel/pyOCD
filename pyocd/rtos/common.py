@@ -73,8 +73,8 @@ class HandlerModeThread(TargetThread):
         self._target_context = targetContext
         self._provider = provider
 
-    def get_stack_pointer(self):
-        return self._target_context.read_core_register("msp")
+    def get_stack_pointer(self) -> int:
+        return self._target_context.read_core_register_raw("msp")
 
     @property
     def priority(self):
@@ -94,7 +94,7 @@ class HandlerModeThread(TargetThread):
         return self._target_context.core.exception_number_to_name(ipsr)
 
     @property
-    def is_current(self):
+    def is_current(self) -> bool:
         return self._target_context.read_core_register("ipsr") > 0
 
     @property

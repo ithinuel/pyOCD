@@ -15,8 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable, Literal, Sequence, Union, overload
+
+from pyocd.core.core_registers import (
+    CoreRegisterNameOrNumberType,
+    CoreRegisterValueType,
+)
+from ..core.core_target import CoreTarget
 from ..core.memory_interface import MemoryInterface
-from ..coresight.component import CoreSightCoreComponent
 from ..coresight.cortex_m_core_registers import CortexMCoreRegisterInfo
 
 
@@ -37,7 +43,7 @@ class DebugContext(MemoryInterface):
     to the core.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent: "CoreTarget | DebugContext") -> None:
         """@brief Debug context constructor.
 
         @param self
@@ -46,42 +52,64 @@ class DebugContext(MemoryInterface):
         """
         self._parent = parent
 
-        if isinstance(self._parent, CoreSightCoreComponent):
-            self._core = parent
-        else:
+        if isinstance(parent, DebugContext):
             self._core = parent.core
+        else:
+            self._core = parent
 
     @property
     def parent(self):
         return self._parent
 
     @property
-    def core(self):
+    def core(self) -> CoreTarget:
         return self._core
 
     @property
     def session(self):
         return self.core.session
 
-    def write_memory(self, addr, value, transfer_size=32):
-        return self._parent.write_memory(addr, value, transfer_size)
+    def write_memory(self, addr, data, transfer_size=32) -> None:
+        self._parent.write_memory(addr, data, transfer_size)
 
-    def read_memory(self, addr, transfer_size=32, now=True):
+    @overload
+    def read_memory(self, addr: int, transfer_size: int = 32) -> int: ...
+
+    @overload
+    def read_memory(
+        self, addr: int, transfer_size: int = 32, now: Literal[True] = True
+    ) -> int: ...
+
+    @overload
+    def read_memory(
+        self, addr: int, transfer_size: int, now: Literal[False]
+    ) -> Callable[[], int]: ...
+
+    @overload
+    def read_memory(
+        self, addr: int, transfer_size: int, now: bool
+    ) -> Union[int, Callable[[], int]]: ...
+
+    def read_memory(
+        self, addr: int, transfer_size: int = 32, now: bool = True
+    ) -> Union[int, Callable[[], int]]:
         return self._parent.read_memory(addr, transfer_size, now)
 
-    def write_memory_block8(self, addr, value):
-        return self._parent.write_memory_block8(addr, value)
+    def write_memory_block8(self, addr, data) -> None:
+        self._parent.write_memory_block8(addr, data)
 
-    def write_memory_block32(self, addr, data):
-        return self._parent.write_memory_block32(addr, data)
+    def write_memory_block32(self, addr, data) -> None:
+        self._parent.write_memory_block32(addr, data)
 
-    def read_memory_block8(self, addr, size):
+    def read_memory_block8(self, addr, size) -> Sequence[int]:
         return self._parent.read_memory_block8(addr, size)
 
-    def read_memory_block32(self, addr, size):
+    def read_memory_block32(self, addr, size) -> Sequence[int]:
         return self._parent.read_memory_block32(addr, size)
 
-    def read_core_register(self, reg):
+    def read_core_register(
+        self, reg: CoreRegisterNameOrNumberType
+    ) -> CoreRegisterValueType:
         """@brief Read one core register.
 
         @param self The debug context.
@@ -97,7 +125,7 @@ class DebugContext(MemoryInterface):
         regValue = self.read_core_register_raw(reg_info.index)
         return reg_info.from_raw(regValue)
 
-    def read_core_register_raw(self, reg):
+    def read_core_register_raw(self, reg: CoreRegisterNameOrNumberType) -> int:
         """@brief Read a core register without type conversion.
 
         @param self The debug context.
@@ -112,7 +140,9 @@ class DebugContext(MemoryInterface):
         vals = self.read_core_registers_raw([reg])
         return vals[0]
 
-    def read_core_registers_raw(self, reg_list):
+    def read_core_registers_raw(
+        self, reg_list: Sequence[CoreRegisterNameOrNumberType]
+    ) -> list[int]:
         """@brief Read one or more core registers.
 
         @param self The debug context.
@@ -127,7 +157,7 @@ class DebugContext(MemoryInterface):
         """
         return self._parent.read_core_registers_raw(reg_list)
 
-    def write_core_register(self, reg, data):
+    def write_core_register(self, reg: CoreRegisterNameOrNumberType, data: int) -> None:
         """@brief Write a CPU register.
 
         @param self The debug context.
@@ -141,7 +171,9 @@ class DebugContext(MemoryInterface):
         reg_info = CortexMCoreRegisterInfo.get(reg)
         self.write_core_register_raw(reg_info.index, reg_info.to_raw(data))
 
-    def write_core_register_raw(self, reg, data):
+    def write_core_register_raw(
+        self, reg: CoreRegisterNameOrNumberType, data: int
+    ) -> None:
         """@brief Write a CPU register without type conversion.
 
         @param self The debug context.
@@ -154,7 +186,9 @@ class DebugContext(MemoryInterface):
         """
         self.write_core_registers_raw([reg], [data])
 
-    def write_core_registers_raw(self, reg_list, data_list):
+    def write_core_registers_raw(
+        self, reg_list: Sequence[CoreRegisterNameOrNumberType], data_list: Sequence[int]
+    ) -> None:
         """@brief Write one or more core registers.
 
         @param self The debug context.
@@ -169,5 +203,5 @@ class DebugContext(MemoryInterface):
         """
         self._parent.write_core_registers_raw(reg_list, data_list)
 
-    def flush(self):
+    def flush(self) -> None:
         self._core.flush()

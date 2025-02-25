@@ -36,6 +36,10 @@ class CoreTarget(TargetGraphNode):
         raise NotImplementedError()
 
     @property
+    def has_fpu(self) -> bool:
+        raise NotImplementedError()
+
+    @property
     def elf(self) -> Optional["ELFBinaryFile"]:
         raise NotImplementedError()
 

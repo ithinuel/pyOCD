@@ -260,7 +260,7 @@ class CortexM(CoreTarget, CoreSightCoreComponent):  # lgtm[py/multiple-calls-to-
         self._arch_version: Tuple[int, int] = (0, 0)
         self._extensions: List[CortexMExtension] = []
         self.core_type = 0
-        self.has_fpu: bool = False
+        self._has_fpu: bool = False
         self._core_number: int = core_num
         self._core_name: str = "Unknown"
         self._run_token: int = 0
@@ -314,6 +314,10 @@ class CortexM(CoreTarget, CoreSightCoreComponent):  # lgtm[py/multiple-calls-to-
     @property
     def core_number(self) -> int:
         return self._core_number
+
+    @property
+    def has_fpu(self) -> bool:
+        return self._has_fpu
 
     @property
     def architecture(self) -> CoreArchitecture:
@@ -545,7 +549,7 @@ class CortexM(CoreTarget, CoreSightCoreComponent):  # lgtm[py/multiple-calls-to-
         """
         # FPU is not supported in these architectures.
         if self.architecture in (CoreArchitecture.ARMv6M, CoreArchitecture.ARMv8M_BASE):
-            self.has_fpu = False
+            self._has_fpu = False
             return
 
         # Determine presence of an FPU by checking if single- and/or double-precision floating
@@ -565,7 +569,7 @@ class CortexM(CoreTarget, CoreSightCoreComponent):  # lgtm[py/multiple-calls-to-
         dp_val = (
             mvfr0 & CortexM.MVFR0_DOUBLE_PRECISION_MASK
         ) >> CortexM.MVFR0_DOUBLE_PRECISION_SHIFT
-        self.has_fpu = (sp_val == self.MVFR0_SINGLE_PRECISION_SUPPORTED) or (
+        self._has_fpu = (sp_val == self.MVFR0_SINGLE_PRECISION_SUPPORTED) or (
             dp_val == self.MVFR0_DOUBLE_PRECISION_SUPPORTED
         )
 

@@ -14,7 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Sequence
 import logging
+from typing import Literal, overload
+
+from pyocd.core.target import Target
+from pyocd.debug.symbols import SymbolProvider
 
 LOG = logging.getLogger(__name__)
 
@@ -38,7 +43,7 @@ class TargetThread(object):
         raise NotImplementedError()
 
     @property
-    def is_current(self):
+    def is_current(self) -> bool:
         raise NotImplementedError()
 
     @property
@@ -49,14 +54,29 @@ class TargetThread(object):
 class ThreadProvider(object):
     """@brief Base class for RTOS support plugins."""
 
-    def __init__(self, target):
+    def __init__(self, target: Target):
         self._target = target
         self._target_context = self._target.get_target_context()
         self._last_run_token = -1
         self._read_from_target = False
 
-    def _lookup_symbols(self, symbolList, symbolProvider, allowPartial=False):
-        syms = {}
+    @overload
+    def _lookup_symbols(
+        self, symbolList, symbolProvider, allowPartial: Literal[False]
+    ) -> dict[str, int] | None: ...
+
+    @overload
+    def _lookup_symbols(
+        self, symbolList, symbolProvider, allowPartial: Literal[True]
+    ) -> dict[str, int]: ...
+
+    def _lookup_symbols(
+        self,
+        symbolList: Sequence[str],
+        symbolProvider: SymbolProvider,
+        allowPartial: bool = False,
+    ) -> dict[str, int] | None:
+        syms: dict[str, int] = {}
         for name in symbolList:
             addr = symbolProvider.get_symbol_value(name)
             LOG.debug(

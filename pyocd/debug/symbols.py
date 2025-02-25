@@ -18,5 +18,5 @@
 class SymbolProvider(object):
     """@brief Abstract class for getting information about symbols in the target program."""
 
-    def get_symbol_value(self, name):
+    def get_symbol_value(self, name: str) -> int | None:
         raise NotImplementedError()
