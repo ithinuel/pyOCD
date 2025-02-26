@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Generator, List, Mapping, Sequence
+
+from pyocd.core.core_registers import CoreRegisterNameOrNumberType
+from pyocd.debug.symbols import SymbolProvider
 from .provider import TargetThread, ThreadProvider
 from .common import read_c_string, HandlerModeThread, EXC_RETURN_EXT_FRAME_MASK
 from ..core import exceptions
@@ -46,11 +50,11 @@ LOG = logging.getLogger(__name__)
 
 
 class TargetList(object):
-    def __init__(self, context, ptr):
+    def __init__(self, context: DebugContext, ptr: int):
         self._context = context
         self._list = ptr
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[int, Any, None]:
         next = 0
         head = self._context.read32(self._list)
         node = head
@@ -154,13 +158,14 @@ class ArgonThreadContext(DebugContext):
         # (reserved word: 196)
     }
 
-    def __init__(self, parent, thread):
-        super(ArgonThreadContext, self).__init__(parent)
+    def __init__(self, parent: DebugContext, thread: "ArgonThread") -> None:
+        super().__init__(parent)
         self._thread = thread
         self._has_fpu = self.core.has_fpu
 
-    def read_core_registers_raw(self, reg_list):
-        reg_list = [index_for_reg(reg) for reg in reg_list]
+    def read_core_registers_raw(
+        self, reg_list: Sequence[CoreRegisterNameOrNumberType]
+    ) -> list[int]:
         reg_vals = []
 
         isCurrent = self._thread.is_current
@@ -176,7 +181,7 @@ class ArgonThreadContext(DebugContext):
         # by HandlerModeThread
         if inException:
             # Reasonable to assume PSP is still valid
-            sp = self._parent.read_core_register("psp")
+            sp = self._parent.read_core_register_raw("psp")
         else:
             sp = self._thread.get_stack_pointer()
 
@@ -190,7 +195,7 @@ class ArgonThreadContext(DebugContext):
                 exceptionLR = self._parent.read_core_register("lr")
 
                 # Check bit 4 of the exception LR to determine if FPU registers were stacked.
-                hasExtendedFrame = (exceptionLR & EXC_RETURN_EXT_FRAME_MASK) == 0
+                hasExtendedFrame = (int(exceptionLR) & EXC_RETURN_EXT_FRAME_MASK) == 0
             else:
                 # Can't really rely on finding live LR after initial
                 # vector catch, so retrieve LR stored by OS on last
@@ -202,7 +207,10 @@ class ArgonThreadContext(DebugContext):
                 hwStacked = 0x68
                 swStacked = 0x60
 
-        for reg in reg_list:
+        reg_indices = [
+            index_for_reg(reg) if isinstance(reg, str) else reg for reg in reg_list
+        ]
+        for reg in reg_indices:
             # Must handle stack pointer specially.
             if reg == 13:
                 if inException:
@@ -272,7 +280,7 @@ class ArgonThread(TargetThread):
         except exceptions.TransferError:
             LOG.debug("Transfer error while reading thread info")
 
-    def get_stack_pointer(self):
+    def get_stack_pointer(self) -> int:
         # Get stack pointer saved in thread struct.
         try:
             return self._target_context.read32(self._base + THREAD_STACK_POINTER_OFFSET)
@@ -348,17 +356,19 @@ class ArgonThread(TargetThread):
         return str(self)
 
 
-class ArgonThreadProvider(ThreadProvider):
+class ArgonThreadProvider(ThreadProvider[ArgonThread | HandlerModeThread]):
     """@brief Base class for RTOS support plugins."""
 
-    def __init__(self, target):
-        super(ArgonThreadProvider, self).__init__(target)
-        self.g_ar = None
-        self.g_ar_objects = None
-        self._all_threads = None
-        self._threads = {}
+    ThreadType = ArgonThread
 
-    def init(self, symbolProvider):
+    def __init__(self, target) -> None:
+        super().__init__(target)
+        self.g_ar = None
+        self.g_ar_objects: int | None = None
+        self._all_threads: int | None = None
+        self._threads: dict[int, ArgonThread | HandlerModeThread] = {}
+
+    def init(self, symbolProvider: SymbolProvider) -> bool:
         self.g_ar = symbolProvider.get_symbol_value("g_ar")
         if self.g_ar is None:
             return False
@@ -378,17 +388,18 @@ class ArgonThreadProvider(ThreadProvider):
 
         return True
 
-    def invalidate(self):
+    def invalidate(self) -> None:
         self._threads = {}
 
-    def event_handler(self, notification):
+    def event_handler(self, notification) -> None:
         # Invalidate threads list if flash is reprogrammed.
         LOG.debug("Argon: invalidating threads list: %s" % (repr(notification)))
         self.invalidate()
 
-    def _build_thread_list(self):
+    def _build_thread_list(self) -> None:
+        assert self._all_threads
         allThreads = TargetList(self._target_context, self._all_threads)
-        newThreads = {}
+        newThreads: dict[int, ArgonThread | HandlerModeThread] = {}
         for threadBase in allThreads:
             try:
                 # Reuse existing thread objects if possible.
@@ -396,7 +407,8 @@ class ArgonThreadProvider(ThreadProvider):
                     t = self._threads[threadBase]
 
                     # Ask the thread object to update its state and priority.
-                    t.update_info()
+                    if isinstance(t, ArgonThread):
+                        t.update_info()
                 else:
                     t = ArgonThread(self._target_context, self, threadBase)
                 LOG.debug("Thread 0x%08x (%s)", threadBase, t.name)
@@ -412,57 +424,60 @@ class ArgonThreadProvider(ThreadProvider):
 
         self._threads = newThreads
 
-    def get_threads(self):
+    def get_threads(self) -> List[ArgonThread | HandlerModeThread]:
         if not self.is_enabled:
             return []
         self.update_threads()
         return list(self._threads.values())
 
-    def get_thread(self, threadId):
+    def get_thread(self, threadId) -> ArgonThread | HandlerModeThread | None:
         if not self.is_enabled:
             return None
         self.update_threads()
         return self._threads.get(threadId, None)
 
     @property
-    def is_enabled(self):
-        return self.g_ar is not None and self.get_is_running()
+    def is_enabled(self) -> bool:
+        return self.get_is_running()
 
     @property
-    def current_thread(self):
+    def current_thread(self) -> ArgonThread | HandlerModeThread | None:
         if not self.is_enabled:
             return None
         self.update_threads()
         id = self.get_current_thread_id()
-        try:
-            return self._threads[id]
-        except KeyError:
+        if id is None:
+            LOG.debug("No current thread found")
+            return None
+
+        thread = self._threads.get(id, None)
+        if thread is None:
             LOG.debug(
-                "key error getting current thread id=%s; self._threads = %s",
+                "Current thread id=%s not found in self._threads = %s",
                 ("%x" % id) if (id is not None) else id,
                 repr(self._threads),
             )
-            return None
+        return thread
 
-    def is_valid_thread_id(self, threadId):
+    def is_valid_thread_id(self, threadId) -> bool:
         if not self.is_enabled:
             return False
         self.update_threads()
         return threadId in self._threads
 
-    def get_current_thread_id(self):
+    def get_current_thread_id(self) -> int | None:
         if not self.is_enabled:
             return None
         if self._target_context.read_core_register("ipsr") > 0:
             return HandlerModeThread.UNIQUE_ID
         return self.get_actual_current_thread_id()
 
-    def get_actual_current_thread_id(self):
-        if not self.is_enabled:
+    def get_actual_current_thread_id(self) -> int | None:
+        if not self.is_enabled or self.g_ar is None:
             return None
         return self._target_context.read32(self.g_ar)
 
-    def get_is_running(self):
+    def get_is_running(self) -> bool:
         if self.g_ar is None:
             return False
         try:
@@ -482,8 +497,8 @@ class ArgonTraceEvent(events.TraceEvent):
     kArTraceThreadCreated = 2  # 1 value
     kArTraceThreadDeleted = 3  # 1 value
 
-    def __init__(self, eventID, threadID, name, state, ts=0):
-        super(ArgonTraceEvent, self).__init__("argon", ts)
+    def __init__(self, eventID: int, threadID: int, name: str, state: int, ts: int = 0):
+        super().__init__("argon", ts)
         self._event_id = eventID
         self._thread_id = threadID
         self._thread_name = name
@@ -529,10 +544,10 @@ class ArgonTraceEventFilter(TraceEventFilter):
     of ArgonTraceEvent.
     """
 
-    def __init__(self, threads):
-        super(ArgonTraceEventFilter, self).__init__()
+    def __init__(self, threads: Mapping[int, str]) -> None:
+        super().__init__()
         self._threads = threads
-        self._pending_event = None
+        self._pending_event: events.TraceITMEvent | None = None
 
     def filter(self, event):
         if isinstance(event, events.TraceITMEvent):

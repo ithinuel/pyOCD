@@ -23,6 +23,7 @@ from typing import Any, List, Generator, Mapping, Optional, Sequence
 from pyocd.core.core_registers import (
     CoreRegisterNameOrNumberType,
 )
+from pyocd.debug.symbols import SymbolProvider
 
 from .provider import TargetThread, ThreadProvider
 from .common import read_c_string, HandlerModeThread
@@ -297,7 +298,7 @@ class ZephyrThread(TargetThread):
         return str(self)
 
 
-class ZephyrThreadProvider(ThreadProvider):
+class ZephyrThreadProvider(ThreadProvider[ZephyrThread | HandlerModeThread]):
     """@brief Thread provider for Zephyr."""
 
     ## Required Zephyr symbols.
@@ -329,7 +330,7 @@ class ZephyrThreadProvider(ThreadProvider):
         self._curr_thread: int | None = None
         self._threads: Mapping[int, ZephyrThread | HandlerModeThread] = {}
 
-    def init(self, symbolProvider) -> bool:
+    def init(self, symbolProvider: SymbolProvider) -> bool:
         # Lookup required symbols.
         self._symbols = self._lookup_symbols(self.ZEPHYR_SYMBOLS, symbolProvider, True)
         if len(self._symbols) == 0:

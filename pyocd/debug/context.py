@@ -21,7 +21,7 @@ from pyocd.core.core_registers import (
     CoreRegisterNameOrNumberType,
     CoreRegisterValueType,
 )
-from ..core.core_target import CoreTarget
+from ..coresight.cortex_m import CortexM
 from ..core.memory_interface import MemoryInterface
 from ..coresight.cortex_m_core_registers import CortexMCoreRegisterInfo
 
@@ -43,7 +43,7 @@ class DebugContext(MemoryInterface):
     to the core.
     """
 
-    def __init__(self, parent: "CoreTarget | DebugContext") -> None:
+    def __init__(self, parent: "CortexM | DebugContext") -> None:
         """@brief Debug context constructor.
 
         @param self
@@ -62,7 +62,7 @@ class DebugContext(MemoryInterface):
         return self._parent
 
     @property
-    def core(self) -> CoreTarget:
+    def core(self) -> CortexM:
         return self._core
 
     @property

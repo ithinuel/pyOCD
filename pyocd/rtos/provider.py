@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import Sequence
+from abc import ABC, abstractmethod
 import logging
-from typing import Literal, overload
+from typing import Generic, List, Literal, TypeVar, overload, Sequence
 
 from pyocd.core.target import Target
 from pyocd.debug.symbols import SymbolProvider
@@ -51,10 +51,13 @@ class TargetThread(object):
         raise NotImplementedError()
 
 
-class ThreadProvider(object):
+T = TypeVar("T", bound=TargetThread)
+
+
+class ThreadProvider(Generic[T], ABC):
     """@brief Base class for RTOS support plugins."""
 
-    def __init__(self, target: Target):
+    def __init__(self, target: Target) -> None:
         self._target = target
         self._target_context = self._target.get_target_context()
         self._last_run_token = -1
@@ -62,12 +65,18 @@ class ThreadProvider(object):
 
     @overload
     def _lookup_symbols(
-        self, symbolList, symbolProvider, allowPartial: Literal[False]
+        self,
+        symbolList: Sequence[str],
+        symbolProvider: SymbolProvider,
+        allowPartial: Literal[False],
     ) -> dict[str, int] | None: ...
 
     @overload
     def _lookup_symbols(
-        self, symbolList, symbolProvider, allowPartial: Literal[True]
+        self,
+        symbolList: Sequence[str],
+        symbolProvider: SymbolProvider,
+        allowPartial: Literal[True],
     ) -> dict[str, int]: ...
 
     def _lookup_symbols(
@@ -90,16 +99,16 @@ class ThreadProvider(object):
                 return None
         return syms
 
-    def init(self, symbolProvider):
+    def init(self, symbolProvider: SymbolProvider) -> bool:
         """@retval True The provider was successfully initialzed.
         @retval False The provider could not be initialized successfully.
         """
         raise NotImplementedError()
 
-    def _build_thread_list(self):
+    def _build_thread_list(self) -> None:
         raise NotImplementedError()
 
-    def _is_thread_list_dirty(self):
+    def _is_thread_list_dirty(self) -> bool:
         token = self._target.run_token
         if token == self._last_run_token:
             # Target hasn't run since we last updated threads, so there is nothing to do.
@@ -111,21 +120,21 @@ class ThreadProvider(object):
         if self._is_thread_list_dirty() and self._read_from_target:
             self._build_thread_list()
 
-    def get_threads(self):
-        raise NotImplementedError()
+    @abstractmethod
+    def get_threads(self) -> List[T]: ...
 
-    def get_thread(self, threadId):
-        raise NotImplementedError()
+    @abstractmethod
+    def get_thread(self, threadId: int) -> T | None: ...
 
-    def invalidate(self):
+    def invalidate(self) -> None:
         raise NotImplementedError()
 
     @property
-    def read_from_target(self):
+    def read_from_target(self) -> bool:
         return self._read_from_target
 
     @read_from_target.setter
-    def read_from_target(self, value):
+    def read_from_target(self, value: bool):
         if value != self._read_from_target:
             self.invalidate()
         self._read_from_target = value
@@ -138,13 +147,13 @@ class ThreadProvider(object):
     def current_thread(self):
         raise NotImplementedError()
 
-    def is_valid_thread_id(self, threadId):
+    def is_valid_thread_id(self, threadId: int) -> bool:
         raise NotImplementedError()
 
-    def get_current_thread_id(self):
+    def get_current_thread_id(self) -> int | None:
         """From GDB's point of view, where Handler Mode is a thread"""
         raise NotImplementedError()
 
-    def get_actual_current_thread_id(self):
+    def get_actual_current_thread_id(self) -> int | None:
         """From OS's point of view, so the current OS thread even in Handler Mode"""
         raise NotImplementedError()
