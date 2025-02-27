@@ -35,7 +35,12 @@ class StreamServer(threading.Thread):
     """
 
     def __init__(
-        self, port, serve_local_only=True, name=None, is_read_only=True, extra_info=None
+        self,
+        port: int,
+        serve_local_only: bool = True,
+        name: str | None = None,
+        is_read_only: bool = True,
+        extra_info: str | None = None,
     ):
         """@brief Constructor.
 
@@ -52,13 +57,10 @@ class StreamServer(threading.Thread):
             it can be read with the read() methods.
         @param extra_info Optional string with extra information about the server, e.g. "core 0".
         """
-        super(StreamServer, self).__init__()
-        self.name = name
-        self._name = name
+        super().__init__(name=name)
         self._extra_info = extra_info
         self._formatted_name = (name + " ") if (name is not None) else ""
         self._is_read_only = is_read_only
-        self._abstract_socket = None
         self._abstract_socket = ListenerSocket(port, 4096)
         if not serve_local_only:
             # We really should be binding to explicit interfaces, not all available.
@@ -67,7 +69,7 @@ class StreamServer(threading.Thread):
         self._port = self._abstract_socket.port
         self._buffer = bytearray()
         self._buffer_lock = threading.Lock()
-        self.connected = None
+        self.connected: socket.socket | None = None
         self._shutdown_event = threading.Event()
         self._is_running: bool = False
         self.daemon = True
@@ -132,7 +134,7 @@ class StreamServer(threading.Thread):
             self._abstract_socket.cleanup()
         LOG.info("%sserver stopped", self._formatted_name)
 
-    def write(self, data):
+    def write(self, data) -> int:
         """@brief Write bytes into the connection."""
         # If nobody is connected, act like all data was written anyway.
         if self.connected is None:
@@ -147,7 +149,7 @@ class StreamServer(threading.Thread):
                 data = data[count:]
         return size
 
-    def _get_input(self, length=-1):
+    def _get_input(self, length=-1) -> bytearray:
         """@brief Extract requested amount of data from the read buffer."""
         self._buffer_lock.acquire()
         try:
@@ -164,7 +166,7 @@ class StreamServer(threading.Thread):
         finally:
             self._buffer_lock.release()
 
-    def read(self, size=-1):
+    def read(self, size=-1) -> bytearray | None:
         """@brief Return bytes read from the connection."""
         if self.connected is None:
             return None
@@ -174,7 +176,7 @@ class StreamServer(threading.Thread):
 
         return data
 
-    def readinto(self, b):
+    def readinto(self, b) -> int | None:
         """@brief Read bytes into a mutable buffer."""
         if self.connected is None:
             return None

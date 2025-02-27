@@ -24,6 +24,9 @@ import io
 from xml.etree.ElementTree import Element, SubElement, tostring
 from typing import Dict, List, Optional, Tuple
 
+from pyocd.core.session import Session
+from pyocd.rtos.provider import ThreadProvider
+
 from ..core import exceptions
 from ..core.target import Target
 from ..flash.loader import FlashLoader
@@ -112,9 +115,13 @@ class GDBServer(threading.Thread):
     ## Timer delay for sending the notification that the server is listening.
     START_LISTENING_NOTIFY_DELAY = 0.03  # 30 ms
 
-    def __init__(self, session, core=None):
+    core: int
+    target: Target
+
+    def __init__(self, session: Session, core: Optional[int] = None) -> None:
         super().__init__()
         self.session = session
+        assert session.board
         self.board = session.board
         if core is None:
             self.core = 0
@@ -163,7 +170,7 @@ class GDBServer(threading.Thread):
 
         self.packet_size = 2048
         self.packet_io = None
-        self.gdb_features = []
+        self.gdb_features: list[bytes] = []
         self.non_stop = False
         self._is_extended_remote = False
         self.is_target_running = self.target.get_state() == Target.State.RUNNING
@@ -992,7 +999,7 @@ class GDBServer(threading.Thread):
         self.target_facade.set_register_context(data)
         return self.create_rsp_packet(b"OK")
 
-    def handle_query(self, msg):
+    def handle_query(self, msg: bytes):
         query = msg.split(b":")
         LOG.debug("GDB received query: %s", query)
 
@@ -1094,7 +1101,7 @@ class GDBServer(threading.Thread):
                 continue
             try:
                 LOG.debug("Attempting to load %s", rtos_name)
-                rtos = rtos_class(self.target)
+                rtos: ThreadProvider = rtos_class(self.target)
                 if rtos.init(symbol_provider):
                     LOG.info("%s loaded successfully", rtos_name)
                     self.thread_provider = rtos

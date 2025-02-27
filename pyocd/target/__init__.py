@@ -16,6 +16,9 @@
 # limitations under the License.
 
 import string
+from typing import Mapping
+
+from pyocd.core.soc_target import SoCTarget
 
 from .builtin import BUILTIN_TARGETS
 
@@ -23,7 +26,7 @@ from .builtin import BUILTIN_TARGETS
 #
 # This table starts off with only the builtin targets. At runtime it may be extended with
 # additional targets from CMSIS DFPs or other sources.
-TARGET = BUILTIN_TARGETS.copy()
+TARGET: Mapping[str, type[SoCTarget]] = BUILTIN_TARGETS.copy()
 
 ## @brief Legal characters in target type names.
 #

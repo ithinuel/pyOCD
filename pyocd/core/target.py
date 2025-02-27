@@ -17,8 +17,10 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, List, Optional, Sequence, TYPE_CHECKING, Set
+
 
 from .memory_interface import MemoryInterface
 from .memory_map import MemoryMap
@@ -26,6 +28,7 @@ from .target_delegate import DelegateHavingMixIn
 from ..utility.graph import GraphNode
 
 if TYPE_CHECKING:
+    from pyocd.debug.elf.elf import ELFBinaryFile
     from .session import Session
     from .core_registers import (
         CoreRegistersIndex,
@@ -39,68 +42,68 @@ if TYPE_CHECKING:
     from ..utility.sequencer import CallSequence
 
 
-class Target(MemoryInterface, DelegateHavingMixIn):
+class Target(MemoryInterface, DelegateHavingMixIn, ABC):
     class State(Enum):
         """@brief States a target processor can be in."""
 
-        ## Core is executing code.
+        # Core is executing code.
         RUNNING = 1
-        ## Core is halted in debug mode.
+        # Core is halted in debug mode.
         HALTED = 2
-        ## Core is being held in reset.
+        # Core is being held in reset.
         RESET = 3
-        ## Core is sleeping due to a wfi or wfe instruction.
+        # Core is sleeping due to a wfi or wfe instruction.
         SLEEPING = 4
-        ## Core is locked up.
+        # Core is locked up.
         LOCKUP = 5
 
     class SecurityState(Enum):
         """@brief Security states for a processor with the Security extension."""
 
-        ## PE is in the Non-secure state.
+        # PE is in the Non-secure state.
         NONSECURE = 0
-        ## PE is in the Secure state.
+        # PE is in the Secure state.
         SECURE = 1
 
     class ResetType(Enum):
         """@brief Available reset methods."""
 
-        ## Hardware reset via the nRESET signal.
+        # Hardware reset via the nRESET signal.
         HW = 1
-        ## Software reset using the core's default software reset method.
+        # Software reset using the core's default software reset method.
         SW = 2
-        ## Software reset the entire system .
+        # Software reset the entire system .
         SW_SYSTEM = 3
-        ## Software reset using the AIRCR.SYSRESETREQ bit (alias of #SW_SYSTEM).
+        # Software reset using the AIRCR.SYSRESETREQ bit (alias of #SW_SYSTEM).
         SW_SYSRESETREQ = SW_SYSTEM
-        ## Software reset the core only.
+        # Software reset the core only.
         SW_CORE = 4
-        ## Software reset using the AIRCR.VECTRESET bit (alias of #SW_CORE).
+        # Software reset using the AIRCR.VECTRESET bit (alias of #SW_CORE).
         #
         # v6-M and v8-M targets do not support VECTRESET, so they will fall back to SW_EMULATED,
         # unless a target-specific core reset method is made available.
         SW_VECTRESET = SW_CORE
-        ## Emulated software reset.
+        # Emulated software reset.
         SW_EMULATED = 5
 
     class BreakpointType(Enum):
         """@brief Types of breakpoints."""
 
-        ## Hardware breakpoint.
+        # Hardware breakpoint.
         HW = 1
-        ## Software breakpoint.
+        # Software breakpoint.
         SW = 2
-        ## Auto will select the best type given the address and available breakpoints.
+        # Auto will select the best type given the address and available breakpoints.
         AUTO = 3
 
     class WatchpointType(Enum):
         """@brief Types of watchpoints."""
 
-        ## Watchpoint on read accesses.
+        # Watchpoint on read accesses.
         READ = 1
-        ## Watchpoint on write accesses.
+        # Watchpoint on write accesses.
         WRITE = 2
-        ## Watchpoint on either read or write accesses.
+        # Watchpoint on either read or write accesses.
         READ_WRITE = 3
 
     class VectorCatch:
@@ -109,26 +112,27 @@ class Target(MemoryInterface, DelegateHavingMixIn):
         These constants can be OR'd together to form any combination of vector catch settings.
         """
 
-        ## Disable vector catch.
+        # Disable vector catch.
         NONE = 0
-        ## Trap on HardFault exception.
+        # Trap on HardFault exception.
         HARD_FAULT = 1 << 0
-        ## Trap on BusFault exception.
+        # Trap on BusFault exception.
         BUS_FAULT = 1 << 1
-        ## Trap on MemManage exception.
+        # Trap on MemManage exception.
         MEM_FAULT = 1 << 2
-        ## Trap on fault occurring during exception entry or exit.
+        # Trap on fault occurring during exception entry or exit.
         INTERRUPT_ERR = 1 << 3
-        ## Trap on UsageFault exception caused by state information error, such as an undefined
+        # Trap on UsageFault exception caused by state information error, such as an undefined
         # instruction exception.
         STATE_ERR = 1 << 4
-        ## Trap on UsageFault exception caused by checking error, for example an alignment check error.
+        # Trap on UsageFault exception caused by checking error, for example an alignment check
+        # error.
         CHECK_ERR = 1 << 5
-        ## Trap on UsageFault exception caused by a failed access to a coprocessor.
+        # Trap on UsageFault exception caused by a failed access to a coprocessor.
         COPROCESSOR_ERR = 1 << 6
-        ## Trap on local reset.
+        # Trap on local reset.
         CORE_RESET = 1 << 7
-        ## Trap SecureFault.
+        # Trap SecureFault.
         SECURE_FAULT = 1 << 8
         ALL = (
             HARD_FAULT
@@ -145,36 +149,36 @@ class Target(MemoryInterface, DelegateHavingMixIn):
     class Event(Enum):
         """Target notification events."""
 
-        ## Sent after completing the initialisation sequence.
+        # Sent after completing the initialisation sequence.
         POST_CONNECT = 1
-        ## Sent prior to disconnecting cores and powering down the DP.
+        # Sent prior to disconnecting cores and powering down the DP.
         PRE_DISCONNECT = 2
-        ## Sent prior to resume or step.
+        # Sent prior to resume or step.
         #
         # Associated data is a RunType enum.
         PRE_RUN = 3
-        ## Sent after a resume or step operation.
+        # Sent after a resume or step operation.
         #
         # For resume, this event will be sent while the target is still running. Use a halt event
         # to trap when the target stops running.
         #
         # Associated data is a RunType enum.
         POST_RUN = 4
-        ## Sent prior to a user-invoked halt.
+        # Sent prior to a user-invoked halt.
         #
         # Associated data is a HaltReason enum, which will currently always be HaltReason.USER.
         PRE_HALT = 5
-        ## Sent after the target halts.
+        # Sent after the target halts.
         #
         # Associated data is a HaltReason enum.
         POST_HALT = 6
-        ## Sent before executing a reset operation.
+        # Sent before executing a reset operation.
         PRE_RESET = 7
-        ## Sent after the target has been reset.
+        # Sent after the target has been reset.
         POST_RESET = 8
-        ## Sent before programming target flash.
+        # Sent before programming target flash.
         PRE_FLASH_PROGRAM = 9
-        ## Sent after target flash has been reprogrammed.
+        # Sent after target flash has been reprogrammed.
         POST_FLASH_PROGRAM = 10
 
     class RunType(Enum):
@@ -183,9 +187,9 @@ class Target(MemoryInterface, DelegateHavingMixIn):
         An enum of this type is set as the data attribute on PRE_RUN and POST_RUN notifications.
         """
 
-        ## Target is being resumed.
+        # Target is being resumed.
         RESUME = 1
-        ## Target is being stepped one instruction.
+        # Target is being stepped one instruction.
         STEP = 2
 
     class HaltReason(Enum):
@@ -195,19 +199,19 @@ class Target(MemoryInterface, DelegateHavingMixIn):
         attribute on PRE_HALT and POST_HALT notifications.
         """
 
-        ## Target halted due to user action.
+        # Target halted due to user action.
         USER = 1
-        ## Target halted because of a halt or step event.
+        # Target halted because of a halt or step event.
         DEBUG = 2
-        ## Breakpoint event.
+        # Breakpoint event.
         BREAKPOINT = 3
-        ## DWT watchpoint event.
+        # DWT watchpoint event.
         WATCHPOINT = 4
-        ## Vector catch event.
+        # Vector catch event.
         VECTOR_CATCH = 5
-        ## External debug request.
+        # External debug request.
         EXTERNAL = 6
-        ## PMU event. v8.1-M only.
+        # PMU event. v8.1-M only.
         PMU = 7
 
     def __init__(
@@ -240,6 +244,10 @@ class Target(MemoryInterface, DelegateHavingMixIn):
     def supported_reset_types(self) -> Set[ResetType]:
         """@brief Set of reset types that can be used with this target."""
         raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def elf(self) -> Optional[ELFBinaryFile]: ...
 
     def is_locked(self) -> bool:
         return False

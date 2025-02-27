@@ -29,16 +29,13 @@ if len(data) % 4 != 0:
 print("Data length %i" % len(data))
 data = unpack("<%iL" % words, data)
 
-str = "analyzer = (\n    "
-count = 0
-for val in data:
-    if count % 8 == 7:
-        str += "0x{:08x},\n    ".format(val)
+s = "analyzer = (\n    "
+for idx, val in enumerate(data):
+    if idx % 8 == 7:
+        s += "0x{:08x},\n    ".format(val)
     else:
-        str += "0x{:08x}, ".format(val)
-    count += 1
-str += "\n    )"
-data = str
+        s += "0x{:08x}, ".format(val)
+s += "\n    )"
 
 with open(OUTPUT_FILENAME, "w") as f:
-    f.write(data)
+    f.write(s)

@@ -16,11 +16,12 @@
 # limitations under the License.
 
 import logging
+from typing import Any
 
 from pyocd.debug.context import DebugContext
 
 from .provider import TargetThread, ThreadProvider
-from ..core import exceptions
+from pyocd.core import exceptions
 
 LOG = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ def read_c_string(context: DebugContext, ptr: int) -> str:
     s = ""
     done = False
     count = 0
-    badCount = 0
+    bad_count = 0
     try:
         while not done and count < 256:
             data = context.read_memory_block8(ptr, 16)
@@ -48,17 +49,17 @@ def read_c_string(context: DebugContext, ptr: int) -> str:
                 if c == 0:
                     done = True
                     break
-                elif c > 127:
+                if c > 127:
                     # Replace non-ASCII characters. If there is a run of invalid characters longer
                     # than 4, then terminate the string early.
-                    badCount += 1
-                    if badCount > 4:
+                    bad_count += 1
+                    if bad_count > 4:
                         done = True
                         break
                     s += "?"
                 else:
                     s += chr(c)
-                    badCount = 0
+                    bad_count = 0
     except exceptions.TransferError:
         LOG.debug("TransferError while trying to read 16 bytes at 0x%08x", ptr)
 
@@ -70,10 +71,11 @@ class HandlerModeThread(TargetThread):
 
     UNIQUE_ID = 2
 
-    def __init__(self, targetContext: DebugContext, provider: ThreadProvider) -> None:
-        super(HandlerModeThread, self).__init__()
-        self._target_context = targetContext
-        self._provider = provider
+    def __init__(
+        self, target_context: DebugContext, _provider: ThreadProvider[Any]
+    ) -> None:
+        super().__init__()
+        self._target_context = target_context
 
     def get_stack_pointer(self) -> int:
         return self._target_context.read_core_register_raw("msp")
@@ -103,7 +105,7 @@ class HandlerModeThread(TargetThread):
         return self._target_context.read_core_register("ipsr") > 0
 
     @property
-    def context(self):
+    def context(self) -> DebugContext:
         return self._target_context
 
     def __str__(self) -> str:

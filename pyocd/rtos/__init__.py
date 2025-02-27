@@ -14,25 +14,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
-from .provider import ThreadProvider
+from typing import Any, Dict, Type
+from .provider import TargetThread, ThreadProvider
 from .argon import ArgonThreadProvider
 from .freertos import FreeRTOSThreadProvider
 from .zephyr import ZephyrThreadProvider
 from .rtx5 import RTX5ThreadProvider
-from ..core.plugin import load_plugin_classes_of_type
+from pyocd.core.plugin import load_plugin_classes_of_type
 
 __all__ = [
-    "ThreadProvider",
+    "RTOS",
     "ArgonThreadProvider",
     "FreeRTOSThreadProvider",
-    "ZephyrThreadProvider",
     "RTX5ThreadProvider",
-    "RTOS",
+    "ThreadProvider",
+    "ZephyrThreadProvider",
 ]
 
 ## @brief Dictionary of loaded RTOS plugins, indexed by name.
-RTOS = {}
+RTOS: Dict[str, Type[ThreadProvider[Any[TargetThread]]]] = {}
 
 # Load RTOS plugins when this module is loaded.
 load_plugin_classes_of_type("pyocd.rtos", RTOS, ThreadProvider)

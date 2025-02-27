@@ -13,17 +13,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
+from typing import Any, Generator, Mapping, Sequence, TYPE_CHECKING
 
 from .provider import TargetThread, ThreadProvider
 from .common import read_c_string, HandlerModeThread, EXC_RETURN_EXT_FRAME_MASK
-from ..core import exceptions
-from ..core.target import Target
-from ..core.plugin import Plugin
-from ..debug.context import DebugContext
-from ..coresight.cortex_m_core_registers import index_for_reg
-from ..coresight.core_ids import CoreArchitecture
+from pyocd.core import exceptions
+from pyocd.core.target import Target
+from pyocd.core.plugin import Plugin
+from pyocd.debug.context import DebugContext
+from pyocd.coresight.cortex_m_core_registers import index_for_reg
+from pyocd.coresight.core_ids import CoreArchitecture
 
 import logging
+
+if TYPE_CHECKING:
+    from pyocd.utility.notification import Notification
+    from pyocd.debug.symbols import SymbolProvider
+    from pyocd.core.core_registers import CoreRegisterNameOrNumberType
 
 TX_THREAD_ID = 0x54485244  # 'THRD'
 THREAD_ID_OFFSET = 0
@@ -40,17 +48,17 @@ LOG = logging.getLogger(__name__)
 
 
 class TargetList(object):
-    def __init__(self, context, ptr):
+    def __init__(self, context: DebugContext, ptr: int) -> None:
         self._context = context
         self._list = ptr
 
-    def __iter__(self):
-        next = 0
+    def __iter__(self) -> Generator[int, Any, None]:
+        next_node = 0
         head = self._context.read32(self._list)
         node = head
         is_valid = head != 0
 
-        while is_valid and next != head:
+        while is_valid and next_node != head:
             try:
                 # Check if this is really a thread
                 if self._context.read32(node) == TX_THREAD_ID:
@@ -63,9 +71,9 @@ class TargetList(object):
                         "Wrong thread ID found. Memory corruption or unknown extensions"
                     )
 
-                next = self._context.read32(node + THREAD_NEXT_OFFSET)
-                node = next
-            except exceptions.TransferError:
+                next_node = self._context.read32(node + THREAD_NEXT_OFFSET)
+                node = next_node
+            except exceptions.TransferError:  # noqa: PERF203
                 LOG.warning(
                     "TransferError while reading list elements (list=0x%08x, node=0x%08x), terminating list",
                     self._list,
@@ -83,7 +91,7 @@ class ThreadXThreadContext(DebugContext):
     # combined software + hardware stacked registers. In exception case,
     # software registers are not stacked, so appropriate amount must be
     # subtracted.
-    NOFPU_REGISTER_OFFSETS = {
+    NOFPU_REGISTER_OFFSETS: Mapping[int, int] = {
         # Software stacked
         -1: 0,  # lr (exception)
         4: 4,  # r4
@@ -106,7 +114,7 @@ class ThreadXThreadContext(DebugContext):
     }
 
     # Cortex-m0 port of threadx reverses r4-7 and r8-11
-    NOFPU_REGISTER_OFFSETS_V6M = {
+    NOFPU_REGISTER_OFFSETS_V6M: Mapping[int, int] = {
         # Software stacked
         4: 20,  # r4
         5: 24,  # r5
@@ -118,7 +126,7 @@ class ThreadXThreadContext(DebugContext):
         11: 16,  # r11
     }
 
-    FPU_REGISTER_OFFSETS = {
+    FPU_REGISTER_OFFSETS: Mapping[int, int] = {
         # Software stacked
         -1: 0,  # lr (exception)
         0x50: 4,  # s16
@@ -174,81 +182,85 @@ class ThreadXThreadContext(DebugContext):
         # (reserved word: 200)
     }
 
-    def __init__(self, parent, thread):
-        super(ThreadXThreadContext, self).__init__(parent)
+    def __init__(self, parent: DebugContext, thread: "ThreadXThread") -> None:
+        super().__init__(parent)
         self._thread = thread
         self._has_fpu = self.core.has_fpu
         if self.core.architecture != CoreArchitecture.ARMv6M:
             # Use the default offsets for this istance
-            self._nofpu_register_offsets = self.NOFPU_REGISTER_OFFSETS
+            self._nofpu_register_offsets = dict(self.NOFPU_REGISTER_OFFSETS)
         else:
             # Use a copy with the Cortex-M0 specific offsets for this istance
-            self._nofpu_register_offsets = self.NOFPU_REGISTER_OFFSETS.copy()
+            self._nofpu_register_offsets = dict(self.NOFPU_REGISTER_OFFSETS)
             self._nofpu_register_offsets.update(self.NOFPU_REGISTER_OFFSETS_V6M)
 
-    def read_core_registers_raw(self, reg_list):
-        reg_list = [index_for_reg(reg) for reg in reg_list]
-        reg_vals = []
+    def read_core_registers_raw(  # noqa: C901
+        self, reg_list: Sequence[CoreRegisterNameOrNumberType]
+    ) -> list[int]:
+        reg_vals: list[int] = []
 
-        isCurrent = self._thread.is_current
-        inException = isCurrent and self._parent.read_core_register("ipsr") > 0
+        is_current = self._thread.is_current
+        in_exception = is_current and self._parent.read_core_register("ipsr") > 0
 
         # If this is the current thread and we're not in an exception, just read the live registers.
-        if isCurrent and not inException:
+        if is_current and not in_exception:
             return self._parent.read_core_registers_raw(reg_list)
 
         # Because of above tests, from now on, inException implies isCurrent;
         # we are generating the thread view for the RTOS thread where the
         # exception occurred; the actual Handler Mode thread view is produced
         # by HandlerModeThread
-        if inException:
+        if in_exception:
             # Reasonable to assume PSP is still valid
-            sp = self._parent.read_core_register("psp")
+            sp = self._parent.read_core_register_raw("psp")
         else:
             sp = self._thread.get_stack_pointer()
 
         # Determine which register offset table to use and the offsets past the saved state.
-        hwStacked = 0x20
-        swStacked = 0x24
-        table = self._nofpu_register_offsets
+        hw_stacked = 0x20
+        sw_stacked = 0x24
+        table: dict[int, int] = self._nofpu_register_offsets
         if self._has_fpu:
             try:
-                if inException and self.core.is_vector_catch():
+                if in_exception and self.core.is_vector_catch():
                     # Vector catch has just occurred, take live LR
-                    exceptionLR = self._parent.read_core_register("lr")
+                    exception_lr = self._parent.read_core_register_raw("lr")
                 else:
                     # Read stacked exception return LR.
                     offset = self.FPU_REGISTER_OFFSETS[-1]
-                    exceptionLR = self._parent.read32(sp + offset)
+                    exception_lr = self._parent.read32(sp + offset)
 
                 # Check bit 4 of the exception LR to determine if FPU registers were stacked.
-                if (exceptionLR & EXC_RETURN_EXT_FRAME_MASK) == 0:
-                    table = self.FPU_REGISTER_OFFSETS
-                    hwStacked = 0x68
-                    swStacked = 0x64
+                if (exception_lr & EXC_RETURN_EXT_FRAME_MASK) == 0:
+                    table = dict(self.FPU_REGISTER_OFFSETS)
+                    hw_stacked = 0x68
+                    sw_stacked = 0x64
             except exceptions.TransferError:
                 LOG.debug("Transfer error while reading thread's saved LR")
 
-        for reg in reg_list:
+        reg_indices = [
+            index_for_reg(reg) if isinstance(reg, str) else reg for reg in reg_list
+        ]
+        for reg in reg_indices:
             # Must handle stack pointer specially.
             if reg == 13:
-                if inException:
-                    reg_vals.append(sp + hwStacked)
+                if in_exception:
+                    reg_vals.append(sp + hw_stacked)
                 else:
-                    reg_vals.append(sp + swStacked + hwStacked)
+                    reg_vals.append(sp + sw_stacked + hw_stacked)
                 continue
 
             # Look up offset for this register on the stack.
-            spOffset = table.get(reg, None)
-            if spOffset is None:
+            sp_offset = table.get(reg, None)
+            if sp_offset is None:
                 reg_vals.append(self._parent.read_core_register_raw(reg))
                 continue
-            if inException:
-                spOffset -= swStacked
+            if in_exception:
+                sp_offset -= sw_stacked
 
             try:
-                if spOffset >= 0:
-                    reg_vals.append(self._parent.read32(sp + spOffset))
+                if sp_offset >= 0:
+                    reg_vals.append(self._parent.read32(sp + sp_offset))
                 else:
                     # Not available - try live one
                     reg_vals.append(self._parent.read_core_register_raw(reg))
@@ -261,7 +273,7 @@ class ThreadXThreadContext(DebugContext):
 class ThreadXThread(TargetThread):
     """@brief A ThreadX task."""
 
-    STATE_NAMES = {
+    STATE_NAMES: Mapping[int, str] = {
         0: "Ready",
         1: "Completed",
         2: "Terminated",
@@ -284,9 +296,11 @@ class ThreadXThread(TargetThread):
     PRIORITYCHANGE = 14
     UNKNOWN = 99
 
-    def __init__(self, targetContext, provider, base):
+    def __init__(
+        self, target_context: DebugContext, provider: ThreadXThreadProvider, base: int
+    ) -> None:
         super(ThreadXThread, self).__init__()
-        self._target_context = targetContext
+        self._target_context = target_context
         self._provider = provider
         self._base = base
         self._state = self._target_context.read32(self._base + THREAD_STATE_OFFSET)
@@ -294,14 +308,14 @@ class ThreadXThread(TargetThread):
             self._base + THREAD_PRIORITY_OFFSET
         )
         self._name = ""
-        namePtr = self._target_context.read32(self._base + THREAD_NAME_OFFSET)
-        if namePtr != 0:
-            self._name = read_c_string(self._target_context, namePtr)
+        name_ptr = self._target_context.read32(self._base + THREAD_NAME_OFFSET)
+        if name_ptr != 0:
+            self._name = read_c_string(self._target_context, name_ptr)
         if len(self._name) == 0:
             self._name = "Unnamed"
         self._thread_context = ThreadXThreadContext(self._target_context, self)
 
-    def get_stack_pointer(self):
+    def get_stack_pointer(self) -> int:
         # Get stack pointer saved in thread struct.
         try:
             return self._target_context.read32(self._base + THREAD_STACK_POINTER_OFFSET)
@@ -312,7 +326,7 @@ class ThreadXThread(TargetThread):
             )
             return 0
 
-    def update_info(self):
+    def update_info(self) -> None:
         try:
             self._priority = self._target_context.read32(
                 self._base + THREAD_PRIORITY_OFFSET
@@ -324,50 +338,50 @@ class ThreadXThread(TargetThread):
             LOG.debug("Transfer error while reading thread info")
 
     @property
-    def state(self):
+    def state(self) -> int:
         return self._state
 
     @state.setter
-    def state(self, value):
+    def state(self, value: int) -> None:
         self._state = value
 
     @property
-    def priority(self):
+    def priority(self) -> int:
         return self._priority
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> int:
         return self._base
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def description(self):
+    def description(self) -> str:
         # return "%s; Priority %d" % (self.STATE_NAMES[self.state], self.priority)
         return "%s; Priority %d" % (self.STATE_NAMES[self.state], self.priority)
 
     @property
-    def is_current(self):
+    def is_current(self) -> bool:
         return self._provider.get_actual_current_thread_id() == self.unique_id
 
     @property
-    def context(self):
+    def context(self) -> ThreadXThreadContext:
         return self._thread_context
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<ThreadXThread@0x%08x id=%x name=%s>" % (
             id(self),
             self.unique_id,
             self.name,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
 
-class ThreadXThreadProvider(ThreadProvider):
+class ThreadXThreadProvider(ThreadProvider[ThreadXThread | HandlerModeThread]):
     """@brief Thread provider for ThreadX.
 
     To successfully initialize, the following ThreadX symbols are needed:
@@ -380,146 +394,149 @@ class ThreadXThreadProvider(ThreadProvider):
     # Scheduler not yet up
     TX_INITIALIZE_IN_PROGRESS = 0xF0F0F0F0
 
-    def __init__(self, target):
+    def __init__(self, target: Target) -> None:
         super(ThreadXThreadProvider, self).__init__(target)
-        self._created_ptr = None
-        self._created_cnt = None
-        self._current_ptr = None
-        self._system_state = None
-        self._threads = {}
+        self._created_ptr = 0
+        self._created_cnt = 0
+        self._current_ptr = 0
+        self._system_state = 0
+        self._threads: dict[int, ThreadXThread | HandlerModeThread] = {}
 
-    def init(self, symbolProvider):
-        self._created_ptr = symbolProvider.get_symbol_value("_tx_thread_created_ptr")
-        if self._created_ptr is None:
+    def init(self, symbol_provider: SymbolProvider) -> bool:
+        created_ptr = symbol_provider.get_symbol_value("_tx_thread_created_ptr")
+        if created_ptr is None:
             return False
         LOG.debug("ThreadX: _tx_thread_created_ptr = 0x%08x", self._created_ptr)
+        self._created_ptr = created_ptr
 
-        self._created_cnt = symbolProvider.get_symbol_value("_tx_thread_created_count")
-        if self._created_cnt is None:
+        created_cnt = symbol_provider.get_symbol_value("_tx_thread_created_count")
+        if created_cnt is None:
             return False
+        self._created_cnt = created_cnt
         LOG.debug("ThreadX: _tx_thread_created_cnt = 0x%08x", self._created_cnt)
 
-        self._current_ptr = symbolProvider.get_symbol_value("_tx_thread_current_ptr")
-        if self._current_ptr is None:
+        current_ptr = symbol_provider.get_symbol_value("_tx_thread_current_ptr")
+        if current_ptr is None:
             return False
         LOG.debug("ThreadX: _tx_thread_current_ptr = 0x%08x", self._current_ptr)
+        self._current_ptr = current_ptr
 
-        self._system_state = symbolProvider.get_symbol_value("_tx_thread_system_state")
-        if self._system_state is None:
+        system_state = symbol_provider.get_symbol_value("_tx_thread_system_state")
+        if system_state is None:
             return False
         LOG.debug("ThreadX: _tx_thread_system_state = 0x%08x", self._current_ptr)
+        self._system_state = system_state
 
-        self._target.session.subscribe(
+        self._target.session.subscribe(  # pyright: ignore
             self.event_handler, Target.Event.POST_FLASH_PROGRAM
         )
-        self._target.session.subscribe(self.event_handler, Target.Event.POST_RESET)
+        self._target.session.subscribe(self.event_handler, Target.Event.POST_RESET)  # pyright: ignore
 
         return True
 
-    def invalidate(self):
+    def invalidate(self) -> None:
         self._threads = {}
 
-    def event_handler(self, notification):
+    def event_handler(self, notification: Notification) -> None:
         # Invalidate threads list if flash is reprogrammed.
-        LOG.debug("ThreadX: invalidating threads list: %s" % (repr(notification)))
+        LOG.debug("ThreadX: invalidating threads list: %s", repr(notification))
         self.invalidate()
 
-    def _build_thread_list(self):
+    def _build_thread_list(self) -> None:
         # Read the number of threads.
-        threadCount = self._target_context.read32(self._created_cnt)
+        thread_count = self._target_context.read32(self._created_cnt)
 
         # Build up list of all the threads
-        allThreads = TargetList(self._target_context, self._created_ptr)
-        newThreads = {}
-        for threadBase in allThreads:
+        all_threads = TargetList(self._target_context, self._created_ptr)
+        new_threads: dict[int, ThreadXThread | HandlerModeThread] = {}
+        for thread_base in all_threads:
             try:
                 # Reuse existing thread objects if possible.
-                if threadBase in self._threads:
-                    t = self._threads[threadBase]
+                if thread_base in self._threads:
+                    t = self._threads[thread_base]
 
                     # Ask the thread object to update its state and priority.
-                    t.update_info()
+                    if isinstance(t, ThreadXThread):
+                        t.update_info()
                 else:
-                    t = ThreadXThread(self._target_context, self, threadBase)
-                LOG.debug("Thread 0x%08x (%s)", threadBase, t.name)
-                newThreads[t.unique_id] = t
-            except exceptions.TransferError:
-                LOG.debug("TransferError while examining thread 0x%08x", threadBase)
+                    t = ThreadXThread(self._target_context, self, thread_base)
+                LOG.debug("Thread 0x%08x (%s)", thread_base, t.name)
+                new_threads[t.unique_id] = t
+            except exceptions.TransferError:  # noqa: PERF203
+                LOG.debug("TransferError while examining thread 0x%08x", thread_base)
 
         # Is the number of threads correct?
-        if len(newThreads) != threadCount:
+        if len(new_threads) != thread_count:
             LOG.warning(
                 "ThreadX: thread count mismatch, %d expected, %d found",
-                threadCount,
-                len(newThreads),
+                thread_count,
+                len(new_threads),
             )
 
         # Create fake handler mode thread.
         if self._target_context.read_core_register("ipsr") > 0:
             LOG.debug("ThreadX: creating handler mode thread")
             t = HandlerModeThread(self._target_context, self)
-            newThreads[t.unique_id] = t
+            new_threads[t.unique_id] = t
 
-        self._threads = newThreads
+        self._threads = new_threads
 
-    def get_threads(self):
+    def get_threads(self) -> list[ThreadXThread | HandlerModeThread]:
         if not self.is_enabled:
             return []
         self.update_threads()
         return list(self._threads.values())
 
-    def get_thread(self, threadId):
+    def get_thread(self, thread_id: int) -> ThreadXThread | HandlerModeThread | None:
         if not self.is_enabled:
             return None
         self.update_threads()
-        return self._threads.get(threadId, None)
+        return self._threads.get(thread_id, None)
 
     @property
-    def is_enabled(self):
+    def is_enabled(self) -> bool:
         # The _tx_thread_system_state global is used to determine whether
         # the kernel is running. Before the kernel starts, it'll contain
         # TX_INITIALIZE_IN_PROGRESS and possibly TX_INITIALIZE_IN_PROGRESS+1.
         # On cortex-m ports it should otherwise be 0.
         # As it's used in other ports to indicate the interrupt nesting level, it's
         # safer to compare it with TX_INITIALIZE_IN_PROGRESS.
-        if self._system_state is None:
-            return False
+
         try:
             return (
                 self._target_context.read32(self._system_state)
                 < self.TX_INITIALIZE_IN_PROGRESS
             )
         except exceptions.TransferFaultError:
-            LOG.warn(
+            LOG.warning(
                 "ThreadX: read system state failed, target memory might not be initialized yet."
             )
             return False
 
     @property
-    def current_thread(self):
+    def current_thread(self) -> ThreadXThread | HandlerModeThread | None:
         if not self.is_enabled:
             return None
         self.update_threads()
-        id = self.get_current_thread_id()
-        try:
-            return self._threads[id]
-        except KeyError:
+        thread_id = self.get_current_thread_id()
+        if thread_id is None:
             return None
+        return self._threads.get(thread_id, None)
 
-    def is_valid_thread_id(self, threadId):
+    def is_valid_thread_id(self, thread_id: int) -> bool:
         if not self.is_enabled:
             return False
         self.update_threads()
-        return threadId in self._threads
+        return thread_id in self._threads
 
-    def get_current_thread_id(self):
+    def get_current_thread_id(self) -> int | None:
         if not self.is_enabled:
             return None
         if self._target_context.read_core_register("ipsr") > 0:
             return HandlerModeThread.UNIQUE_ID
         return self.get_actual_current_thread_id()
 
-    def get_actual_current_thread_id(self):
+    def get_actual_current_thread_id(self) -> int | None:
         if not self.is_enabled:
             return None
         return self._target_context.read32(self._current_ptr)
@@ -528,13 +545,13 @@ class ThreadXThreadProvider(ThreadProvider):
 class ThreadXPlugin(Plugin):
     """@brief Plugin class for ThreadX."""
 
-    def load(self):
+    def load(self) -> type[ThreadXThreadProvider]:
         return ThreadXThreadProvider
 
     @property
-    def name(self):
+    def name(self) -> str:
         return "threadx"
 
     @property
-    def description(self):
+    def description(self) -> str:
         return "ThreadX"

@@ -14,8 +14,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import os
+from typing import Literal, NamedTuple
 from elftools.elf.elffile import ELFFile
 from elftools.dwarf.constants import DW_LNE_set_address
 from intervaltree import IntervalTree
@@ -27,17 +29,23 @@ LOG = logging.getLogger(__name__)
 
 FunctionInfo = namedtuple("FunctionInfo", "name subprogram low_pc high_pc")
 LineInfo = namedtuple("LineInfo", "cu filename dirname line")
-SymbolInfo = namedtuple("SymbolInfo", "name address size type")
+
+
+class SymbolInfo(NamedTuple):
+    name: str
+    address: int
+    size: int
+    type: Literal["STT_FUNC"] | Literal["STT_OBJECT"]
 
 
 class ElfSymbolDecoder(object):
-    def __init__(self, elf):
-        assert isinstance(elf, ELFFile)
+    def __init__(self, elf: ELFFile):
+        assert isinstance(elf, ELFFile)  # noqa: S101
         self.elffile = elf
 
         self.symtab = self.elffile.get_section_by_name(".symtab")
         self.symcount = self.symtab.num_symbols()
-        self.symbol_dict = {}
+        self.symbol_dict: dict[str, SymbolInfo] = {}
         self.symbol_tree = None
 
         # Build indices.
@@ -53,7 +61,7 @@ class ElfSymbolDecoder(object):
         except IndexError:
             return None
 
-    def get_symbol_for_name(self, name):
+    def get_symbol_for_name(self, name: str) -> SymbolInfo | None:
         try:
             return self.symbol_dict[name]
         except KeyError:

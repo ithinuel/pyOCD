@@ -2,10 +2,10 @@
 # These are the assumed default build requirements from pip:
 # https://pip.pypa.io/en/stable/reference/pip/#pep-517-and-518-support
 requires = [
-    "setuptools>=51",
-    "wheel",
-    "setuptools_scm[toml]>=6.0,<7.0; python_version < \"3.7\"",
-    "setuptools_scm[toml]>=7.0; python_version >= \"3.7\"",
+  "setuptools>=51",
+  "wheel",
+  "setuptools_scm[toml]>=6.0,<7.0; python_version < \"3.7\"",
+  "setuptools_scm[toml]>=7.0; python_version >= \"3.7\"",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -39,10 +39,11 @@ files = "pyocd"
 ignore_missing_imports = true
 
 [tool.pyright]
-exclude = ["pyocd/target"]
+include = ["pyocd/rtos"]
+strict = ["pyocd/rtos", "src"]
 
 [tool.ruff]
-exclude = ["pyocd/target"]
+include = ["pyocd/rtos/**/*.py", "src/**/*.py"]
 target-version = "py38"
 lint.select = [
   "ANN",
