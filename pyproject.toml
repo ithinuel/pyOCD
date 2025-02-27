@@ -44,3 +44,29 @@ exclude = ["pyocd/target"]
 [tool.ruff]
 exclude = ["pyocd/target"]
 target-version = "py38"
+lint.select = [
+  "ANN",
+  "TC",
+  "B",
+  "S",
+  "N",
+  "ARG",
+  "TID",
+  "TD",
+  "SIM",
+  "SLF",
+  "RET",
+  "Q",
+  "PIE",
+  "G",
+  "LOG",
+  "ICN",
+  "ISC",
+  "FA",
+  "C4",
+  "A",
+  "C90",
+  "PERF",
+  "F",
+  "RUF",
+]
